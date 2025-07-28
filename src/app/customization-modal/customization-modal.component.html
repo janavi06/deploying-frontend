@@ -1,0 +1,65 @@
+<ng-container *ngIf="product">
+  <div class="customization-modal">
+    <!-- HEADER -->
+    <div class="modal-header">
+      <div class="header-left">
+        <!-- ProductName • Price -->
+        <span class="item-name">{{ product.productName }}</span>
+        <span class="dot-separator">•</span>
+        <span class="item-price">₹{{ product.price }}</span>
+      </div>
+      <!-- Close button -->
+      <button class="close-btn" (click)="cancel()">×</button>
+    </div>
+
+    <!-- TITLE -->
+    <!-- <div class="modal-title-text">
+      Customize as per your taste
+    </div> -->
+    <hr class="divider" />
+
+    <!-- BODY: Quantity / Customization Options -->
+    <div class="modal-body">
+      <div class="section-label">Quantity</div>
+
+      <div class="customization-options">
+       <div *ngFor="let option of product.customizationOptions" class="option-item">
+          <label>
+            <!-- Hide the native radio; we’ll draw a custom circle next to it -->
+            <input
+              type="radio"
+              [value]="option.customizationOptionID"
+              name="customOption"
+              [(ngModel)]="selectedOption"
+            />
+            <span class="checkmark"></span>
+            <span class="option-name">{{ option.name }}</span>
+           <span class="option-price">
+             ₹{{ option.fixedPrice | number:'1.0-0' }}
+           </span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- FOOTER: Total + “View Customized Item” + Add to Cart -->
+    <div class="modal-footer">
+      <div class="footer-left">
+      <span class="total-price">₹{{ getSelectedPrice() }}</span>
+        <!-- <a
+          href="#"
+          class="view-customized"
+          (click)="$event.preventDefault()"
+          >View Customized Item</a
+        > -->
+      </div>
+      <button
+        class="add-to-cart-btn"
+        [disabled]="selectedOption === null"
+        (click)="confirm()"
+      >
+        Add Item to cart
+      </button>
+    </div>
+  </div>
+</ng-container>

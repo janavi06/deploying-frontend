@@ -1,0 +1,412 @@
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+<!-- Global Loader -->
+<div *ngIf="isLoading" class="text-center mt-5">
+  <div class="spinner-border text-primary" role="status"></div>
+  <p class="mt-2">Loading menu...</p>
+</div>
+
+<!-- Step 1: Menu Page -->
+<div *ngIf="currentStep === OrderStep.MENU" class="container-fluid mt-3">
+
+  <!-- Call Waiter -->
+  <div class="call-waiter-container position-absolute top-0 end-0 mt-2 me-2">
+    <div class="dropdown d-inline-block">
+      <button class="btn btn-call-waiter dropdown-toggle rounded-pill px-4" (click)="toggleWaiterOptions()" type="button">
+        Call Waiter
+      </button>
+      <div [ngClass]="{ 'dropdown-menu mt-2': true, show: showWaiterOptions }">
+        <button class="dropdown-item" (click)="alertWaiter('Cleaner Requested!')">Request Table Cleaning</button>
+        <button class="dropdown-item" (click)="alertWaiter('Drinking Water Requested!')">Request Drinking Water</button>
+        <button class="dropdown-item" (click)="alertWaiter('Cutlery Requested!')">Need Extra Cutlery</button>
+        <button class="dropdown-item" (click)="alertWaiter('Menu Help Requested!')">Request Menu Help</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Restaurant Header -->
+  <div class="restaurant-header d-flex align-items-start mb-4">
+    <img [src]="restaurantLogoUrl" alt="{{ restaurantName }} Logo" class="restaurant-logo me-3">
+    <div class="restaurant-header-text">
+      <h1 class="h3">{{ restaurantName }}</h1>
+      <p class="text-muted">{{ restaurantDescription }}</p>
+    </div>
+  </div>
+
+  <!-- Search -->
+<div class="swiggy-search-container d-flex align-items-center justify-content-between mx-2 mb-3 rounded-pill shadow-sm px-3">
+  <i class="bi bi-search text-muted me-2"></i>
+  <input type="text"
+         class="form-control border-0 shadow-none bg-transparent"
+         [(ngModel)]="searchQuery"
+         placeholder="Search for dishes"
+         style="flex: 1; font-size: 0.95rem;" />
+</div>
+
+
+<!-- Filter -->
+<div class="veg-filter-container d-flex justify-content-start mb-3 px-2 gap-2">
+  <button 
+    class="btn veg-filter-btn" 
+    [ngClass]="{ 'selected-veg': selectedFilter === 'veg' }" 
+    (click)="toggleFilter('veg')">
+    veg
+  </button>
+
+  <button 
+    class="btn nonveg-filter-btn" 
+    [ngClass]="{ 'selected-nonveg': selectedFilter === 'nonveg' }" 
+    (click)="toggleFilter('nonveg')">
+    non-veg
+  </button>
+</div>
+
+
+
+  <div class="menu-divider"></div>
+
+  <!-- Category & Menu Items Panel -->
+  <div class="items-panel">
+    <div *ngIf="showCategorySelector" class="py-4 px-0">
+      <h4 class="text-center mb-4">Choose a Category</h4>
+      <div *ngFor="let cat of categories" (click)="selectCategory(cat.categoryID)" [ngClass]="{'category-line': true, 'active': cat.categoryID === selectedCategoryID}">
+        {{ cat.categoryName }}
+      </div>
+    </div>
+
+    <ng-template #itemList>
+      <div class="mb-3 px-2">
+        <button class="btn select-category-btn" (click)="changeCategory()">Select Category</button>
+      </div>
+<div class="menu-container" [ngClass]="{ 'has-footer': (newCart.length > 0 || (orderID && newCart.length === 0)) && currentStep === OrderStep.MENU }">
+        <ng-container *ngFor="let category of categories">
+          <ng-container *ngIf="category.categoryID === selectedCategoryID">
+            <h3 class="category-header">{{ category.categoryName }}</h3>
+
+            <ng-container *ngIf="category.subCategories?.length; else noSubCategories">
+              <ng-container *ngFor="let subCategory of category.subCategories">
+                <ng-container *ngIf="shouldDisplaySubCategory(subCategory)">
+                  <h4 (click)="toggleSubCategory(subCategory.subCategoryID)"
+                      class="subcategory-header"
+                      [ngClass]="{'active': isSubCategoryOpen(subCategory.subCategoryID)}">
+                    {{ subCategory.subCategoryName }}
+                    <i class="bi bi-chevron-down"></i>
+                  </h4>
+                  <div class="subcategory-items" *ngIf="isSubCategoryOpen(subCategory.subCategoryID)">
+                    <ng-container *ngFor="let item of getFilteredMenuItems(undefined, subCategory.subCategoryID)">
+                      <div class="menu-item" [class.available]="item.isAvailable">
+                        <div class="menu-info">
+                          <h6 class="item-name">{{ item.productName }}</h6>
+                          <p class="item-description">{{ item.productDescription }}</p>
+                          <p class="item-price">₹{{ item.basePrice || 0 }}</p>
+                          <div *ngIf="!item.isAvailable" class="out-of-stock"><span>Out of Stock</span></div>
+                        </div>
+                        <div class="image-control-container">
+                          <img *ngIf="getImageUrl(item.imagePath)" 
+                               [src]="getImageUrl(item.imagePath)" 
+                               alt="{{ item.productName }}"
+                               class="product-image"
+                               loading="lazy"
+                               (error)="hideImage($event)" />
+                          <div class="quantity-control">
+                            <button [disabled]="!item.isAvailable" (click)="updateQuantityForNewItems(item, -1)" class="btn-quantity">−</button>
+                            <span class="quantity-display">{{ item.quantity || 0 }}</span>
+                            <button [disabled]="!item.isAvailable" (click)="updateQuantityForNewItems(item, 1)" class="btn-quantity">+</button>
+                          </div>
+                        </div>
+                      </div>
+                    </ng-container>
+                  </div>
+                </ng-container>
+              </ng-container>
+            </ng-container>
+
+            <ng-template #noSubCategories>
+              <ng-container *ngFor="let item of getFilteredMenuItems(category.categoryID)">
+                <div class="menu-item" [class.available]="item.isAvailable">
+                  <div class="menu-info">
+                    <h6 class="item-name">{{ item.productName }}</h6>
+                    <p class="item-description">{{ item.productDescription }}</p>
+                    <p class="item-price">₹{{ item.basePrice || 0 }}</p>
+                    <div *ngIf="!item.isAvailable" class="out-of-stock"><span>Out of Stock</span></div>
+                  </div>
+                  <div class="image-control-container">
+                    <img *ngIf="getImageUrl(item.imagePath)" 
+                         [src]="getImageUrl(item.imagePath)" 
+                         alt="{{ item.productName }}"
+                         class="product-image"
+                         loading="lazy"
+                         (error)="hideImage($event)" />
+                    <div class="quantity-control">
+                      <button [disabled]="!item.isAvailable" (click)="updateQuantityForNewItems(item, -1)" class="btn-quantity">−</button>
+                      <span class="quantity-display">{{ item.quantity || 0 }}</span>
+                      <button [disabled]="!item.isAvailable" (click)="updateQuantityForNewItems(item, 1)" class="btn-quantity">+</button>
+                    </div>
+                  </div>
+                </div>
+              </ng-container>
+            </ng-template>
+
+          </ng-container>
+        </ng-container>
+      </div>
+    </ng-template>
+
+    <ng-container *ngIf="showCategorySelector; else itemList"></ng-container>
+  </div>
+</div>
+
+<!-- Step 1 Footer -->
+<div *ngIf="newCart.length > 0 && currentStep === OrderStep.MENU" class="footer-step1">
+  <button class="btn-place-order" (click)="showConfirmationModal = true">Place Order</button>
+
+  <div class="quantity-display">{{ getTotalNewCartQuantity() }}</div>
+</div>
+
+<div *ngIf="currentStep === OrderStep.MENU && orderID && newCart.length === 0" class="footer-step1">
+  <button class="btn-footer btn-back" style="background-color: #007bff; color: white;" (click)="goToStep(OrderStep.ORDER_SUMMARY)">
+    <i class="bi bi-arrow-left"></i> Back to Summary
+  </button>
+</div>
+
+
+
+<!-- Step 2: Order Summary Page -->
+<div *ngIf="currentStep === OrderStep.ORDER_SUMMARY" class="order-flat-wrapper">
+
+  <!-- Call Waiter (Repeated) -->
+  <div class="call-waiter-container position-absolute top-0 end-0 mt-2 me-2">
+    <div class="dropdown d-inline-block">
+      <button class="btn btn-call-waiter dropdown-toggle rounded-pill px-4" (click)="toggleWaiterOptions()" type="button">Call Waiter</button>
+      <div [ngClass]="{ 'dropdown-menu mt-2': true, show: showWaiterOptions }">
+        <button class="dropdown-item" (click)="alertWaiter('Cleaner Requested!')">Request Table Cleaning</button>
+        <button class="dropdown-item" (click)="alertWaiter('Drinking Water Requested!')">Request Drinking Water</button>
+        <button class="dropdown-item" (click)="alertWaiter('Cutlery Requested!')">Need Extra Cutlery</button>
+        <button class="dropdown-item" (click)="alertWaiter('Menu Help Requested!')">Request Menu Help</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="order-alert mb-4 text-center text-success fw-bold fs-5">
+    Your order has been submitted.
+  </div>
+
+  <div class="order-details mb-4 text-center">
+    <p class="order-detail-text mb-0"><strong>Table No:</strong> {{ restaurantTableID }}</p>
+  </div>
+
+  <!-- ✅ FIXED: Use safe chaining and ngIf-as syntax -->
+  <ng-container *ngIf="orderSummaryDetails?.orderItems as items">
+    <div *ngIf="items.length > 0" class="order-items-section mb-5 px-3">
+      <div *ngFor="let item of items" class="d-flex justify-content-between align-items-center border-bottom py-2">
+        <div>
+          <div class="fw-semibold">{{ getProductName(item.productID) }}</div>
+          <div class="text-muted small">₹{{ item.unitPrice | number:'1.2-2' }}</div>
+        </div>
+        <div class="fw-medium">Qty: {{ item.quantity }}</div>
+      </div>
+    </div>
+    <div *ngIf="items.length === 0" class="text-center text-muted mt-3">
+      No items found in this order.
+    </div>
+  </ng-container>
+
+  <!-- Step 2 Footer -->
+  <div class="footer-step2 fixed-footer d-flex justify-content-between px-3 py-2 bg-white border-top">
+    <button class="btn-footer btn-back" (click)="goToStep(OrderStep.MENU)">
+      <i class="bi bi-arrow-left"></i> Order More
+    </button>
+    <button class="btn-footer btn-download" (click)="goToStep(OrderStep.PAYMENT)">
+      <i class="bi bi-wallet2"></i> Pay Now
+    </button>
+  </div>
+</div>
+
+<!-- Step 3: Summary & Bill Page -->
+<div *ngIf="currentStep === OrderStep.PAYMENT" class="summary-modern-wrapper container py-4 pt-5">
+
+  <!-- Call Waiter (Repeated) -->
+  <div class="call-waiter-container position-absolute top-0 end-0 mt-2 me-2">
+    <div class="dropdown d-inline-block">
+      <button class="btn btn-call-waiter dropdown-toggle rounded-pill px-4" (click)="toggleWaiterOptions()" type="button">Call Waiter</button>
+      <div [ngClass]="{ 'dropdown-menu mt-2': true, show: showWaiterOptions }">
+        <button class="dropdown-item" (click)="alertWaiter('Cleaner Requested!')">Request Table Cleaning</button>
+        <button class="dropdown-item" (click)="alertWaiter('Drinking Water Requested!')">Request Drinking Water</button>
+        <button class="dropdown-item" (click)="alertWaiter('Cutlery Requested!')">Need Extra Cutlery</button>
+        <button class="dropdown-item" (click)="alertWaiter('Menu Help Requested!')">Request Menu Help</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Order Header -->
+  <div class="d-flex justify-content-between align-items-start mb-3 mt-4">
+    <div>
+      <h4 class="fw-bold mb-1">Order #{{ orderID }}</h4>
+      <!-- <small class="text-muted">
+{{ getFormattedDate(orderCreatedAt) }}
+      </small> -->
+    </div>
+    <div class="text-end">
+      <p class="mb-0"><strong>Table No:</strong> {{ restaurantTableID }}</p>
+    </div>
+  </div>
+
+
+<!-- ✅ Applied Offer Info -->
+<div *ngIf="appliedOffer?.description" class="alert alert-success d-flex align-items-center justify-content-between px-3 py-2 rounded-4 mb-3 shadow-sm">
+  <div>
+    <i class="bi bi-tag-fill me-2"></i>
+<strong>Offer Applied:</strong> {{ appliedOffer?.description }}
+   
+  </div>
+</div>
+
+
+  <!-- Bill Summary Card -->
+  <div class="card mb-4 shadow-sm border-0 rounded-4">
+    <div class="card-body p-4">
+      <h5 class="fw-semibold mb-3">Bill Summary</h5>
+      <table class="table table-hover align-middle bill-table">
+        <thead class="table-light">
+          <tr>
+            <th>Item</th>
+            <th class="text-center">Qty</th>
+            <th class="text-end">Price</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of orderSummaryDetails?.orderItems">
+            <td>{{ getProductName(item.productID) }}</td>
+            <td class="text-center">{{ item.quantity }}</td>
+            <td class="text-end">₹{{ item.lineTotal | number:'1.2-2' }}</td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr class="fw-bold">
+            <td colspan="2">Subtotal</td>
+            <td class="text-end">₹{{ orderSummaryDetails?.subtotal | number:'1.2-2' }}</td>
+          </tr>
+          <tr *ngIf="appliedOffer" class="text-success">
+            <td colspan="2">
+              Discount ({{ appliedOffer.description }})
+            </td>
+            <td class="text-end">− ₹{{ discountAmount | number:'1.2-2' }}</td>
+          </tr>
+          <tr class="text-primary fw-bold fs-5">
+            <td colspan="2">Total</td>
+<td class="text-end">
+  ₹{{ orderSummaryDetails?.totalAmount | number:'1.2-2' }}
+</td>
+
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+  <!-- Payment Options Card -->
+<div class="card mb-5 pb-5 shadow-sm border-0 rounded-4">  <!-- ✅ even more bottom space -->
+  <div class="card-body p-4">
+    <h5 class="fw-semibold mb-3">Choose Payment Method</h5>
+    <div class="d-flex gap-3 flex-wrap">
+     <button class="btn btn-outline-success flex-fill" (click)="selectPaymentMethod('cash')">
+  <i class="bi bi-cash-coin me-2"></i> Pay with Cash
+</button>
+<button class="btn btn-outline-primary flex-fill" (click)="selectPaymentMethod('upi')">
+  <i class="bi bi-qr-code-scan me-2"></i> Pay via UPI
+</button>
+
+    </div>
+  </div>
+</div>
+
+
+  <!-- Step 3 Footer -->
+  <div *ngIf="currentStep === OrderStep.PAYMENT" class="footer-step3 fixed-footer">
+    <button class="btn-footer btn-back" (click)="goToStep(OrderStep.ORDER_SUMMARY)">
+      <i class="bi bi-arrow-left"></i> Back
+    </button>
+    <button class="btn-footer btn-download" (click)="downloadBill()">
+      <i class="bi bi-download"></i> Download Bill
+    </button>
+  </div>
+</div>
+
+
+<!-- UPI Modal -->
+<div *ngIf="showUPIModal" class="upi-modal">
+  <div class="upi-modal-content text-center p-4 rounded-4 shadow">
+    <button type="button" class="btn-close float-end" (click)="closeUPIPaymentModal()"></button>
+    <h5 class="mb-3">Scan & Pay</h5>
+    <qrcode [qrdata]="paymentQrData" [elementType]="'canvas'" [errorCorrectionLevel]="'M'"></qrcode>
+    <p class="mt-3 fw-semibold">₹{{ orderSummaryDetails?.totalAmount | number:'1.2-2' }}</p>
+    <p class="text-muted small">UPI ID: {{ paymentLinks?.upiId }}</p>
+    <button class="btn btn-success w-100 mt-3" (click)="confirmUPIPayment()">I Have Paid</button>
+  </div>
+</div>
+<!-- Order Confirmation Modal -->
+<!-- Order Confirmation Modal -->
+<div class="confirmation-modal" *ngIf="showConfirmationModal">
+  <div class="confirmation-backdrop" (click)="showConfirmationModal = false"></div>
+  <div class="confirmation-card">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <h6 class="fw-bold mb-0">Confirm Your Order</h6>
+      <button class="btn-close small" (click)="showConfirmationModal = false"></button>
+    </div>
+
+    <div *ngFor="let item of newCart" class="d-flex justify-content-between align-items-center mb-2">
+      <div>
+        <small><strong>{{ getProductName(item.productID) }}</strong></small><br />
+        <small style="color: black;">Qty: {{ item.quantity }} • ₹{{ item.unitPrice }}</small>
+      </div>
+      <button class="btn btn-sm btn-outline-secondary" (click)="removeFromCart(item.productID)">
+        <i class="bi bi-trash text-black"></i>
+      </button>
+    </div>
+
+    <div class="d-flex justify-content-between fw-bold mt-2 small" style="color: black;">
+      <span>Total</span>
+      <span>₹{{ getCartTotalAmount() }}</span>
+    </div>
+
+    <div class="text-danger text-center mt-2" style="font-size: 0.75rem;">
+      * Once confirmed, order cannot be cancelled
+    </div>
+
+    <div class="d-grid mt-3">
+      <button class="btn btn-success btn-sm" (click)="placeFinalOrder()">Place Order</button>
+    </div>
+  </div>
+</div>
+
+    <!-- All your component HTML above -->
+
+<!-- ✅ Simplified Payment Confirmation Modal -->
+<div *ngIf="showPaymentConfirmModal" class="confirmation-modal">
+  <div class="confirmation-backdrop" (click)="showPaymentConfirmModal = false"></div>
+  <div class="confirmation-card p-3">
+
+    <!-- 🔼 Title + Download -->
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <h6 class="fw-bold mb-0">Confirm Payment Method:</h6>
+      <button class="btn btn-outline-primary btn-sm" (click)="downloadBill()">
+        <i class="bi bi-download me-1"></i> Download Bill
+      </button>
+    </div>
+
+    <!-- ✅ Just show selected payment method in bold -->
+    <div class="text-center mb-3">
+      <p class="fw-bold text-dark mb-0">
+        {{ selectedPaymentMethod === 'cash' ? 'Cash Payment' : 'UPI Payment' }}
+      </p>
+    </div>
+
+    <!-- ✅ Confirm & Cancel buttons -->
+    <div class="d-flex justify-content-between mt-3">
+      <button class="btn btn-secondary w-50 me-2" (click)="showPaymentConfirmModal = false">Cancel</button>
+      <button class="btn btn-success w-50" (click)="confirmPaymentMethod()">Confirm</button>
+    </div>
+
+  </div>
+</div>

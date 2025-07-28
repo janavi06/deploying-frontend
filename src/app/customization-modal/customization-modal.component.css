@@ -1,0 +1,215 @@
+/* ====================
+   Container + Modal Styling
+   ==================== */
+.customization-modal {
+  background-color: #ffffff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 520px;
+  /* Add a subtle drop‐shadow so it pops out */
+  box-shadow: 0px 4px 16px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* ====================
+   HEADER
+   ==================== */
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  font-size: 1rem;
+  color: #333333;
+}
+
+.header-left .item-name {
+  font-weight: 600;
+}
+
+.header-left .dot-separator {
+  margin: 0 8px;
+  color: #777777;
+}
+
+.header-left .item-price {
+  font-weight: 600;
+  color: #333333;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  color: #777777;
+}
+
+/* Change color on hover of close */
+.close-btn:hover {
+  color: #333333;
+}
+
+/* ====================
+   TITLE & DIVIDER
+   ==================== */
+.modal-title-text {
+  padding: 0 24px;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #222222;
+  line-height: 1.4;
+  margin-bottom: 8px;
+}
+
+.divider {
+  border: none;
+  border-top: 1px solid #e0e0e0;
+  margin: 0 24px;
+}
+
+/* ====================
+   BODY (Quantity + Options)
+   ==================== */
+.modal-body {
+  padding: 16px 24px;
+}
+
+.section-label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #555555;
+  margin-bottom: 12px;
+}
+
+/* Container wrapping all options */
+.customization-options {
+  background-color: #f9f9f9;
+  border-radius: 12px;
+  padding: 12px;
+}
+
+/* Each option row */
+.option-item {
+  margin-bottom: 8px;
+}
+
+.option-item:last-child {
+  margin-bottom: 0;
+}
+
+/* Hide the native radio input */
+.option-item input[type="radio"] {
+  display: none;
+}
+
+/* Custom circle (checkmark) */
+.option-item .checkmark {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #4caf50; /* green border for "veg" icon style */
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 12px;
+  position: relative;
+}
+
+/* When the radio is checked, we draw the orange dot inside */
+.option-item input[type="radio"]:checked + .checkmark::after {
+  content: '';
+  width: 10px;
+  height: 10px;
+  background-color: #ff5722; /* orange / #FF5722 to match the “selected” circle in your image */
+  border-radius: 50%;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+}
+
+/* The label text, flex container to space out name + price */
+.option-item label {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  cursor: pointer;
+}
+
+/* Option name (e.g. “Half”, “Full”) */
+.option-item .option-name {
+  flex: 1;
+  font-size: 0.95rem;
+  color: #333333;
+}
+
+/* Option price on the far right */
+.option-item .option-price {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #333333;
+}
+
+/* ====================
+   FOOTER
+   ==================== */
+.modal-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  background-color: #ffffff;
+  border-top: 1px solid #e0e0e0;
+}
+
+/* Left side (total price + link) */
+.footer-left {
+  display: flex;
+  flex-direction: column;
+}
+
+.footer-left .total-price {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #333333;
+}
+
+.footer-left .view-customized {
+  font-size: 0.85rem;
+  color: #ff5722; /* same orange used for selected dot */
+  text-decoration: none;
+  margin-top: 4px;
+}
+
+.footer-left .view-customized:hover {
+  text-decoration: underline;
+}
+
+/* Right side “Add to cart” button */
+.add-to-cart-btn {
+  background-color: #22c55e; /* green (Tailwind “emerald-500”) */
+  color: white;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 24px;
+  cursor: pointer;
+}
+
+/* Disabled state */
+.add-to-cart-btn:disabled {
+  background-color: #a3a3a3;
+  cursor: not-allowed;
+}
+
+.add-to-cart-btn:not(:disabled):hover {
+  background-color: #16a34a; /* a slightly darker green on hover */
+}

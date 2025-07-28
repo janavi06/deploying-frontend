@@ -1,0 +1,697 @@
+/* Sidebar */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: -240px;
+  width: 240px;
+  height: 100%;
+  background: #2c3e50;
+  transition: left 0.3s ease;
+  overflow-y: auto;
+  color: #ecf0f1;
+  z-index: 1000;
+}
+
+.sidebar.open {
+  left: 0;
+}
+
+.sidebar-header {
+  padding: 1rem;
+  text-align: center;
+  background: #1a252f;
+}
+
+.sidebar-menu {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sidebar-menu li {
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+}
+
+.sidebar-menu li.active,
+.sidebar-menu li:hover {
+  background: #34495e;
+}
+
+/* Main content shifts right when sidebar is open */
+.main-content {
+  margin-left: 0;
+  transition: margin-left 0.3s ease;
+  padding: 1rem;
+}
+
+.main-content.sidebar-open {
+  margin-left: 240px;
+}
+
+/* Dashboard header */
+.dashboard-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.sidebar-toggle {
+  font-size: 1.5rem;
+  margin-right: 1rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+/* History table */
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.history-table th,
+.history-table td {
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+}
+
+/* Modal override (Bootstrap base) */
+.modal.show {
+  background-color: rgba(0,0,0,0.5);
+}
+
+
+/* Sidebar spacing tweaks */
+.manager-dashboard .controls {
+  gap: .5rem;
+}
+
+/* Card grid adjustments */
+.card {
+  border-radius: .5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.card-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.card-text {
+  font-size: .9rem;
+  color: #555;
+}
+
+.badge {
+  margin-right: .25rem;
+}
+
+/* Ensure modal appears above grid */
+.modal {
+  z-index: 1050;
+}
+
+
+
+/* manager.component.css */
+/* Card Styles */
+.menu-item-card {
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transition: transform 0.2s ease;
+}
+
+.menu-item-card:hover {
+  transform: translateY(-2px);
+}
+
+.menu-item-card .card-body {
+  padding: 1.25rem;
+}
+
+/* Form Switch */
+.form-switch .form-check-input {
+  width: 2.75em;
+  height: 1.5em;
+  margin-left: 0;
+}
+
+.form-switch .form-check-input:checked {
+  background-color: #00b14f;
+  border-color: #00b14f;
+}
+
+/* Category Tabs */
+.nav-tabs .nav-link {
+  color: #666;
+  border: none;
+  padding: 0.75rem 1.5rem;
+}
+
+.nav-tabs .nav-link.active {
+  color: #00b14f;
+  border-bottom: 3px solid #00b14f;
+  font-weight: 500;
+}
+
+/* Add Button */
+.btn-primary {
+  background-color: #00b14f;
+  border-color: #00b14f;
+  padding: 0.5rem 1.25rem;
+}
+
+.btn-primary:hover {
+  background-color: #009a43;
+  border-color: #009a43;
+}
+
+/* Modal Styles */
+.modal-content {
+  border-radius: 12px;
+
+}
+
+.modal-header {
+  border-bottom: none;
+  padding: 1.5rem;
+}
+
+.modal-title {
+  font-weight: 600;
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+
+/* e.g. style the button yourself */
+.edit-menu-section button {
+  padding: 0.5rem 1rem;
+  background-color: #1b84e7;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.edit-menu-section button:hover {
+  background-color: #186fc5;
+}
+
+/* align that wrapper div to the left if needed */
+.edit-menu-section > .container-fluid > div {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+
+
+
+/* 2. Bump up font‐sizes throughout the dashboard */
+.manager-dashboard,
+.manager-dashboard .table th,
+.manager-dashboard .table td,
+.manager-dashboard .filter-bar label,
+.manager-dashboard .search-wrapper input,
+.manager-dashboard .btn {
+  font-size:22px !important;
+}
+
+/* Slightly larger headers */
+.dashboard-header h1 {
+  font-size: 2rem !important;
+}
+.edit-menu-section h2 {
+  font-size: 1.5rem !important;
+}
+
+/* Edit Button */
+.edit-btn {
+  background-color: #ffd438 !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: 4px !important;
+  padding: 0.4rem 0.7rem !important;
+  transition: background-color 0.2s ease !important;
+}
+
+.edit-btn:hover {
+  background-color: #e3b40b !important;
+}
+
+/* Delete Button */
+.delete-btn {
+  background-color: #e81212 !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: 4px !important;
+  padding: 0.4rem 0.7rem !important;
+  transition: background-color 0.2s ease !important;
+}
+
+.delete-btn:hover {
+  background-color: #c81010 !important;
+}
+
+
+
+
+/* Toggle-switch styling */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 42px;
+  height: 22px;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  border-radius: 22px;
+  transition: background-color 0.3s;
+}
+
+.toggle-slider::before {
+  content: "";
+  position: absolute;
+  height: 18px;
+  width: 18px;
+  left: 2px;
+  top: 2px;
+  background-color: #fff;
+  border-radius: 50%;
+  transition: transform 0.3s;
+}
+
+/* Checked state */
+.toggle-switch input:checked + .toggle-slider {
+  background-color: #1b84e7;
+}
+
+.toggle-switch input:checked + .toggle-slider::before {
+  transform: translateX(20px);
+}
+
+/* Optional: focus outline */
+.toggle-switch input:focus + .toggle-slider {
+  box-shadow: 0 0 0 3px rgba(27,132,231,0.3);
+}
+
+
+
+
+/* Enhanced search bar */
+.search-wrapper {
+  display: flex !important;
+  justify-content: flex-start !important;
+  margin: 0 !important;
+  /* make the wrapper take up to 80% of its container */
+  width: 80%;
+  max-width: 500px;
+  padding-bottom: 30px;
+}
+
+.search-wrapper input {
+  width: 100%;
+height: 50px;
+  padding: 0.5rem 1rem;
+  font-size: 1.125rem;
+  border: 1px solid #ccd0d5;
+  border-radius: 8px;
+  background-color: #fff;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  
+}
+
+
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .menu-item-card {
+    margin-bottom: 1rem;
+  }
+  
+  .nav-tabs .nav-link {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+  }
+}
+
+
+/* Sidebar */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: -240px;
+  width: 240px;
+  height: 100%;
+  background: #2c3e50;
+  transition: left 0.3s ease;
+  overflow-y: auto;
+  color: #ecf0f1;
+  z-index: 1000;
+  box-shadow: 3px 0 15px rgba(0,0,0,0.1);
+}
+
+/* Search Bar Adjustments */
+.search-wrapper {
+  flex: 1 1 300px;
+  max-width: 500px;
+  padding-bottom: 0;
+}
+
+@media (max-width: 768px) {
+  .search-wrapper {
+    flex: 1 1 100%;
+    order: 3;
+    margin-top: 1rem;
+  }
+}
+
+/* Button Color Changes */
+.edit-btn {
+  background-color: #1b84e7 !important;
+}
+
+.delete-btn {
+  background-color: #dc3545 !important;
+}
+
+.delete-btn:hover {
+  background-color: #bb2d3b !important;
+}
+
+/* Larger Toggle Switch */
+.toggle-switch {
+  width: 60px;
+  height: 34px;
+}
+
+.toggle-slider {
+  border-radius: 34px;
+}
+
+.toggle-slider::before {
+  height: 26px;
+  width: 26px;
+  top: 4px;
+  left: 4px;
+}
+
+.toggle-switch input:checked + .toggle-slider::before {
+  transform: translateX(26px);
+}
+
+/* Modern Table Styling */
+.history-table {
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.history-table th,
+.history-table td {
+  padding: 1rem;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.history-table thead {
+  background: #1b84e7;
+  color: white;
+}
+
+.history-table tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+/* Enhanced Modal Styling */
+.modal-content {
+  border: none;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+.modal-header {
+  background: #f8f9fa;
+  border-bottom: 1px solid #dee2e6;
+}
+
+/* Better Form Controls */
+.form-control, .form-select {
+  border: 1px solid #ced4da;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  transition: border-color 0.3s ease;
+}
+
+.form-control:focus, .form-select:focus {
+  border-color: #1b84e7;
+  box-shadow: 0 0 0 3px rgba(27,132,231,0.1);
+}
+
+/* Improved Card Interactions */
+.menu-item-card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.menu-item-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+}
+
+/* Add to manager.component.css */
+.card {
+  border-radius: 15px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+canvas {
+  max-height: 400px;
+  margin: 1rem 0;
+}
+
+.display-4 {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #2c3e50;
+}
+
+/* Revenue Section Styles */
+.revenue-section .card {
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.revenue-section .card-header {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #eaeaea;
+}
+
+.revenue-section .table-sm td, 
+.revenue-section .table-sm th {
+  padding: 0.5rem;
+}
+
+.text-success {
+  color: #28a745 !important;
+}
+
+.text-danger {
+  color: #dc3545 !important;
+}
+
+.bi-arrow-up {
+  color: #28a745;
+}
+
+.bi-arrow-down {
+  color: #dc3545;
+}
+
+/* Make charts responsive */
+canvas {
+  max-width: 100%;
+  height: auto !important;
+}
+.manager-dashboard,
+.manager-dashboard .table th,
+.manager-dashboard .table td,
+.manager-dashboard .filter-bar label,
+.manager-dashboard .search-wrapper input,
+.manager-dashboard .btn {
+  font-size: 14px !important;
+}
+.dashboard-header h1 {
+  font-size: 1.5rem !important;
+}
+.sidebar-menu li {
+  padding: 0.5rem 1rem;
+  font-size: 14px;
+}
+.card-title,
+.revenue-section h5,
+.edit-menu-section h2 {
+  font-size: 1rem !important;
+}
+.history-table th,
+.history-table td {
+  padding: 0.5rem 0.75rem;
+  font-size: 13px;
+}
+.form-control, .form-select {
+  padding: 0.5rem 0.75rem;
+  font-size: 14px;
+}
+.btn, .btn-sm {
+  padding: 0.3rem 0.75rem !important;
+  font-size: 13px !important;
+}
+.modal-body {
+  padding: 1rem;
+}
+.modal-header {
+  padding: 1rem;
+}
+canvas {
+  max-height: 280px;
+  margin: 0.5rem 0;
+}
+.manager-dashboard {
+  font-size: 13px;
+}
+/* Order History Styles */
+.history-section {
+  padding: 20px;
+}
+
+.summary-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.summary-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.kpi-card {
+  border-left: 4px solid #3b82f6;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.kpi-card .card-body {
+  padding: 1.25rem;
+}
+
+.item-details {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.item-details.show {
+  max-height: 500px;
+}
+
+/* Reports Styles */
+.report-section {
+  padding: 20px;
+}
+
+.chart-container {
+  position: relative;
+  min-height: 300px;
+}
+
+/* Table Styles */
+.table-responsive {
+  overflow-x: auto;
+}
+
+.table-hover tbody tr:hover {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+/* Pagination Styles */
+.pagination {
+  margin-bottom: 0;
+}
+
+/* Badge Styles */
+.badge {
+  font-weight: 500;
+  padding: 5px 8px;
+}
+
+/* Tooltip Styles */
+[tooltip] {
+  position: relative;
+  cursor: pointer;
+}
+
+[tooltip]:hover::after {
+  content: attr(tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #333;
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  z-index: 100;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .dashboard-toolbar .btn-group {
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+  
+  .kpi-card {
+    margin-bottom: 15px;
+  }
+}
+
+.modal-body {
+  max-height: 80vh;
+  overflow-y: auto;
+}
+@media (max-width: 768px) {
+  .edit-menu-section .row {
+    flex-direction: column;
+  }
+
+  .search-wrapper {
+    width: 100% !important;
+    margin-top: 10px;
+  }
+
+  .edit-menu-section .btn {
+    width: 100%;
+  }
+
+  .edit-menu-section .table {
+    font-size: 14px;
+  }
+}

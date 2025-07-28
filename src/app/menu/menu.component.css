@@ -1,0 +1,4428 @@
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: 'Poppins', sans-serif;
+}
+
+body {
+  background: linear-gradient(135deg, #1d2671, #c33764);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+/* Container with Equal Left & Right Padding */
+.container, .container-fluid {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* Header */
+h1.text-center {
+  margin-top: 20px;
+  font-size: 3rem;
+  letter-spacing: 2px;
+  text-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+  text-align: center;
+}
+
+/* Order ID Box */
+.order-id-box {
+  margin: 20px auto;
+  max-width: 400px;
+  padding: 10px 20px;
+  background: rgba(237, 237, 237, 0.15);
+  border-radius: 30px;
+  text-align: center;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.37);
+}
+
+/* Call Waiter Button */
+.call-waiter-container {
+  margin: 0;
+  z-index: 1100;
+}
+
+/* Button Gradient */
+.btn-gradient-orange-red {
+  background: linear-gradient(45deg, #ff416c, #ff4b2b);
+  border: none;
+  color: #fff;
+  font-weight: 600;
+  padding: 10px 20px;
+  border-radius: 50px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  margin-left: 165px;
+}
+.btn-gradient-orange-red:hover {
+  transform: scale(1.05);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* Dropdown Menu */
+.dropdown-menu {
+  background: rgb(255, 255, 255);
+  border: none;
+  border-radius: 10px;
+  margin-bottom: 80px;
+}
+.dropdown-item {
+  color: #000;
+  padding: 0.5rem 1rem;
+  transition: background 0.2s;
+}
+.dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Search Bar */
+.search-bar {
+  text-align: center;
+  width: 100%;
+  margin: 80px 0 60px;
+  background: #fff;
+  z-index: 100;
+  padding: 0 15px;
+}
+.search-bar input {
+  width: 100%;
+  max-width: 900px;
+  border: 1px solid #9a8b8b;
+  border-radius: 5px;
+  padding: 12px 20px;
+  font-size: 28px;
+  color: #221e1e;
+  text-align: center;
+  outline: none;
+  transition: border-color 0.3s;
+
+}
+.search-bar input::placeholder {
+  color: #999;
+}
+.search-bar input:focus {
+  border-color: #999;
+}
+
+/* Divider Between Search & Menu */
+.menu-divider {
+  width: 100%;
+  height: 1px;
+  background: rgba(0, 0, 0, 0.2);
+  margin: 20px 0;
+}
+
+/* Category Header */
+.category-header {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #000;
+  margin: 1rem 0 0.5rem;
+}
+
+/* Subcategory Header */
+/* Subcategory Header Styling */
+.subcategory-header {
+  font-size: 1.3rem;
+  font-weight: 500;
+  color: #060606;
+  margin: 18px 0;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  background: #f8f9fa;
+  border: none;
+  width: 100%;
+  text-align: left;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Change background on hover */
+.subcategory-header:hover {
+  background: #e9ecef;
+}
+
+/* Arrow Icon Transition */
+.subcategory-header i {
+  transition: transform 0.3s ease;
+}
+
+/* Rotate arrow when active/open */
+.subcategory-header.active i {
+  transform: rotate(180deg);
+}
+
+
+/* Menu Items */
+.menu-container, .category-card {
+  width: 100%;
+  padding: 0;
+  margin: 0;
+}
+.menu-item {
+  width: 100%;
+  padding: 10px 0;
+  border-bottom: 1px solid #ddd;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: background 0.2s;
+ 
+}
+.menu-item:hover {
+  background: transparent;
+}
+.menu-item .menu-info {
+  flex-grow: 1;
+}
+.menu-item h6 {
+  font-size: 1.2rem;
+  font-weight: bold;
+  margin-bottom: 0.25rem;
+}
+.menu-item p {
+  margin: 3px 0;
+  font-size: 16px;
+}
+.menu-item .item-price {
+  font-size: 1rem;
+  color: #ff4942;
+  font-weight: bold;
+}
+
+
+/* Quantity Controls */
+.quantity-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.quantity-control button {
+  width: 30px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: #000;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.quantity-control button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Inline-only Quantity Display (no box) */
+.quantity-control .quantity-display {
+  font-size: 1.3rem;
+  font-weight: bold;
+  margin: 0 4px;     /* space between buttons */
+  padding: 0;        /* remove box padding */
+  background: none;  /* transparent */
+  border: none;      /* no border */
+  min-width: auto;   /* shrink to content */
+  text-align: center;
+}
+
+/* Floating Cart */
+.floating-cart {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: #fff;
+  padding: 20px;
+  box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.15);
+  height: auto;
+  z-index: 1050;
+}
+.floating-cart-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+
+/* Special Instructions */
+.special-instructions textarea {
+  width: 100%;
+  width: 300px;
+  padding: 10px 14px;
+  font-size: 1.1rem;
+  border: 2px solid #ddd;
+  border-radius: 10px;
+  background-color: #f9f9f9;
+  color: #333;
+  height: 45px;
+  resize: none;
+  overflow: hidden;
+  transition: border-color 0.3s, box-shadow 0.3s;
+  
+}
+.special-instructions textarea:focus {
+  border-color: #28a745;
+  box-shadow: 0 0 8px rgba(40, 167, 69, 0.5);
+  outline: none;
+}
+
+/* Order Actions: Place Order Button & Total Quantity Display Side by Side */
+.order-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: stretch;
+  margin-top: 20px;
+  width: 100%;
+  gap: 20px;
+  flex-wrap: nowrap;
+}
+
+.order-actions > .btn-place-order,
+.order-actions > .quantity-display {
+  flex: 1;
+  margin: 0;
+}
+
+/* Place Order Button */
+.btn-place-order {
+  background-color: #28a745;
+  color: #fff;
+  padding: 16px 20px;
+  font-size: 1.4rem;
+  font-weight: bold;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  text-align: center;
+}
+
+/* Media Queries */
+@media (max-width: 768px) {
+  .search-bar input {
+    font-size: 24px;
+    padding: 10px 15px;
+  }
+  .category-header {
+    font-size: 1.2rem;
+  }
+  .subcategory-header {
+    font-size: 1rem;
+  }
+  .menu-item h6 {
+    font-size: 1rem;
+    color: #000000;
+  }
+  .quantity-control button {
+    width: 28px;
+    height: 28px;
+    font-size: 20px;
+  }
+  /* Maintain side-by-side order actions for mobile tablets */
+  .order-actions {
+    flex-direction: row;
+    gap: 10px;
+  }
+  .order-actions > .btn-place-order,
+  .order-actions > .quantity-display {
+    padding: 12px 20px;
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 576px) {
+  body {
+    padding: 10px;
+  }
+  .search-bar input {
+    font-size: 18px;
+    padding: 8px 12px;
+  }
+  .menu-item {
+    padding: 8px 0;
+  }
+  /* Ensure the order actions remain side by side on very small devices */
+  .order-actions {
+    flex-direction: row;
+    gap: 28px;
+    align-items: stretch;
+  }
+  .order-actions > .btn-place-order,
+  .order-actions > .quantity-display {
+    flex: 1;
+    padding: 12px 15px;
+    font-size: 20px;
+    min-width: unset;
+  }
+  .floating-cart {
+    padding: 15px;
+  }
+}
+
+
+/* Wrap the image and overlay with relative positioning */
+.image-container {
+  position: relative;
+  display: inline-block;
+}
+
+/* The overlay is absolutely positioned relative to the image container */
+.quantity-control-overlay {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translate(-50%, 50%); /* This moves the control so that about half sits on the image and half below */
+  background: rgba(255, 255, 255, 0.9);
+  padding: 5px 10px;
+  border-radius: 20px;
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15); /* Optional: adds a slight shadow for clarity */
+}
+
+/* Optionally adjust the product image if needed */
+.product-image {
+  width: 90px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 8px;
+  display: block;
+}
+
+/* page 2  */
+
+
+
+/* General Layout */
+.container {
+  background-color: #fff;
+  padding: 2rem;
+  border-radius: 1rem;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.05);
+}
+
+/* Step 2: Order Page */
+.order-page {
+  background-color: #f8f9fa;
+}
+
+.order-alert {
+  background-color: #ffffff;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  text-align: center;
+  font-size: 20px;
+  margin-bottom: 1.5rem;
+}
+
+.order-details p {
+  margin-bottom: 0.5rem;
+  font-size: 18px;
+}
+
+.order-items-section {
+  background-color: #fff;
+  border-radius: 0.75rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.order-items-title {
+  font-weight: 600;
+  font-size: 1.2rem;
+}
+
+.order-item-img {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 0.5rem;
+}
+
+.custom-qty-badge {
+  font-size: 0.85rem;
+  background-color: #ffc107;
+  color: #000;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+/* Step 3: Summary Page */
+.summary-page {
+  background-color: #fefefe;
+}
+
+.order-summary {
+  background-color: #fff;
+  padding: 1.5rem;
+  border-radius: 0.75rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+}
+
+.charges-summary {
+  margin-top: 1.5rem;
+  font-size: 1rem;
+}
+
+.charges-summary span {
+  font-weight: 500;
+}
+
+/* Step 4: Payment Page */
+.payment-container {
+  background-color: #f8f9fa;
+  padding: 2rem;
+  border-radius: 1rem;
+  text-align: center;
+}
+
+.payment-title {
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+
+.payment-description {
+  font-size: 1rem;
+  color: #666;
+  margin-bottom: 1.5rem;
+}
+
+.upi-actions {
+  margin-bottom: 1.5rem;
+}
+
+.btn-upi-pay {
+  background-color: #0d6efd;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  font-size: 1.1rem;
+  border-radius: 0.5rem;
+  border: none;
+  transition: background 0.3s ease;
+}
+
+.btn-upi-pay:hover {
+  background-color: #0b5ed7;
+}
+
+.amount-text {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-top: 1rem;
+}
+
+.confirmation-text {
+  margin-top: 2rem;
+  font-weight: 500;
+}
+
+.btn-confirm {
+  background-color: #28a745;
+  color: white;
+  padding: 0.6rem 1.25rem;
+  font-size: 1rem;
+  border-radius: 0.5rem;
+  border: none;
+  margin-top: 0.5rem;
+}
+
+.btn-confirm:hover {
+  background-color: #218838;
+}
+
+/* Fixed Footers */
+.fixed-footer,
+.fixed-footer-page3 {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background-color: #ffffff;
+  border-top: 1px solid #ddd;
+  padding: 1rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  z-index: 1000;
+}
+
+.btn-order-more {
+  background-color: #3da3fd;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  border: none;
+}
+
+.btn-generate-bill {
+  background-color: #28a745;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  border: none;
+}
+
+.btn-generate-bill:hover {
+  background-color: #bb2d3b;
+}
+
+.small-btn {
+  padding: 0.5rem 1.25rem;
+  font-size: 0.9rem;
+}
+
+.large-btn {
+  padding: 0.75rem 1.75rem;
+  font-size: 1.1rem;
+}
+
+
+/* Flex container for table number and status */
+.order-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Adjust order detail paragraphs */
+.order-detail-text {
+  margin: 0;
+  font-size: 1rem;
+  flex: 1;
+}
+
+/* If you need to adjust spacing separately for the status or table elements, 
+   you can add more specific styles */
+.order-meta p:first-child {
+  text-align: left;
+}
+.order-meta p:last-child {
+  text-align: right;
+}
+
+
+/* Order Page Container */
+.order-page {
+  background-color: transparent;  /* Removed white background */
+  padding: 1rem 20px;
+}
+
+/* Order Alert */
+.order-alert {
+  background: transparent;         /* No card background */
+  text-align: center;
+  font-size: 20px;
+  margin-bottom: 1.5rem;
+}
+
+/* Order Details Section */
+.order-details {
+  margin-bottom: 1rem;
+}
+
+/* Flex container for Table No and Status */
+.order-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+/* Order Details Text */
+.order-detail-text {
+  margin: 0;
+  font-size: 1rem;
+  flex: 1;
+}
+
+/* Confirmed Items Section */
+.order-items-section {
+  background-color: transparent;   /* Removing the card look */
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.order-items-title {
+  font-weight: 600;
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+}
+
+/* Order Item Image */
+.order-item-img {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 0.5rem;
+}
+
+/* Custom Quantity Badge */
+.custom-qty-badge {
+  font-size: 0.85rem;
+  background-color: #ffc107;
+  color: #000;
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-top: 4px;
+}
+
+/* Fixed Footer for "Order More" and "Generate Bill" */
+.fixed-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: transparent;          /* Transparent background */
+  padding: 1rem 2rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.3);
+  display: flex;
+  justify-content: space-between;
+  z-index: 1000;
+}
+
+/* Footer Buttons */
+.btn-order-more {
+  background-color: #3da3fd;
+  color: #fff;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+}
+
+.btn-generate-bill {
+  background-color: #28a745;
+  color: #fff;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  transition: background-color 0.3s ease;
+}
+
+.btn-generate-bill:hover {
+  background-color: #28a745;
+}
+
+/* Call Waiter Button */
+.call-waiter-container {
+  text-align: center;
+  margin-bottom: 1rem;
+  position: relative;
+  z-index: 1100;
+}
+
+.btn-gradient-orange-red {
+  background: linear-gradient(45deg, #ff416c, #ff4b2b);
+  border: none;
+  color: #fff;
+  font-weight: 600;
+  padding: 10px 20px;
+  border-radius: 50px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  margin: 0 auto;  /* Center the button */
+}
+
+.btn-gradient-orange-red:hover {
+  transform: scale(1.05);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* Dropdown Menu (for Call Waiter options) */
+.dropdown-menu {
+  background: rgb(255, 255, 255);
+  border: none;
+  border-radius: 10px;
+  margin-top: 0.5rem;
+}
+
+.dropdown-item {
+  color: #000;
+  padding: 0.5rem 1rem;
+  transition: background 0.2s;
+}
+
+.dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .order-detail-text {
+    font-size: 0.9rem;
+  }
+  .btn-order-more,
+  .btn-generate-bill {
+    padding: 0.6rem 1.2rem;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .order-detail-text {
+    font-size: 0.8rem;
+  }
+  .btn-order-more,
+  .btn-generate-bill {
+    padding: 0.5rem 1rem;
+    font-size: 0.8rem;
+  }
+}  
+
+
+.btn-filter {
+  padding: 0.5rem 1.2rem;
+  border-radius: 6px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  outline: none;
+  transition: background-color 0.3s ease, color 0.3s ease, transform 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  background-color: #e0e0e0;
+  color: #333;
+  margin-left: 16px;
+  
+}
+
+.btn-filter:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+}
+
+/* Active state */
+.active-filter {
+  color: white;
+}
+
+/* Specific styles for Veg and Non-Veg buttons */
+.btn-filter.veg {
+  background-color: #43a047; /* light green */
+  color: #ffffff;
+}
+
+.btn-filter.veg.active-filter {
+  background-color: #43a047; /* rich green */
+  border-color: #388e3c;
+  color: white;
+}
+
+.btn-filter.nonveg {
+  background-color: #e53935; /* light red */
+  color: #ffffff;
+}
+
+.btn-filter.nonveg.active-filter {
+  background-color: #e53935; /* rich red */
+  border-color: #b71c1c;
+  color: white;
+}
+
+
+/* Out of Stock Styling as plain bold black text */
+.out-of-stock {
+  display: inline;            /* normal inline text flow */
+  color: #000;                /* black text */
+  font-weight: 700;           /* bolder */
+  font-size: 18px;
+  margin-top: 0.25rem;
+  font-weight: lighter;
+}
+
+/* Quantity Display Background (smaller pill) */
+.quantity-display {
+  display: inline-block;
+  min-width: 1.2rem;           /* narrower width */
+  padding: 0.1rem 0.3rem;      /* smaller padding */
+  background: #f1f5f9;         /* light grey background */
+  border-radius: 0.2rem;       /* small pill shape */
+  text-align: center;          /* center the number */
+  font-size: 0.9rem;
+}
+
+/* Disabled Item Styling—keep the fade */
+.menu-item:not(.available) {
+  position: relative;
+  background-color: #f8fafc;
+}
+
+.menu-item:not(.available) .item-name {
+  color: #64748b;
+}
+
+.menu-item:not(.available) .item-description,
+.menu-item:not(.available) .item-price {
+  opacity: 0.7;               /* fade effect kept */
+}
+
+/* Quantity Controls Tooltip */
+.btn-quantity:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  position: relative;
+}
+.btn-quantity:disabled:hover::before {
+  content: "Unavailable";
+  position: absolute;
+  top: -25px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #ffffff;
+  color: white;
+  padding: 0.2rem 0.5rem;
+  border-radius: 0.2rem;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  z-index: 2;
+}
+
+
+
+/* Rating Page Styles */
+.rating-page {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.star-rating {
+  display: flex;
+  gap: 5px;
+}
+
+.star-btn {
+  background: none;
+  border: none;
+  font-size: 1.8rem;
+  color: #ccc;
+  cursor: pointer;
+  transition: color 0.2s;
+  padding: 0 5px;
+}
+
+.star-btn.active {
+  color: #ffd700;
+}
+
+.star-btn:hover {
+  color: #ffd700;
+}
+
+.btn-submit-ratings {
+  background-color: #28a745;
+  color: white;
+  padding: 12px 30px;
+  font-size: 1.1rem;
+  border-radius: 25px;
+}
+
+.btn-submit-ratings:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
+.rating-item {
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+
+/* --------------- */
+/* Flat-wrapper to center and neutralize */
+.summary-flat-wrapper {
+  width: 100%;
+  padding: 20px 15px;        /* small gutters on mobile */
+  background: transparent; 
+  box-shadow: none;
+  margin: 0 auto;
+}
+
+/* Make each section sit at your desired max-width and center it */
+.summary-flat-wrapper .table-responsive,
+.summary-flat-wrapper .charges-summary,
+.summary-flat-wrapper .fixed-footer-page3 {
+  width: 100%;
+  max-width: 900px;          /* match your menu’s max-width */
+  margin: 0 auto;
+  background: transparent !important;
+  box-shadow: none        !important;
+  padding: 0               !important;
+}
+
+/* If your <table> still has extra padding or borders, you can adjust here too */
+.summary-flat-wrapper table {
+  margin-bottom: 1.5rem;
+}
+
+/* Optional: push the footer buttons down a bit on small screens */
+@media (max-width: 576px) {
+  .summary-flat-wrapper .fixed-footer-page3 {
+    padding-bottom: 20px;
+  }
+}
+
+
+/* Flat‐wrapper container */
+.order-flat-wrapper {
+  width: 100%;
+  max-width: 900px;        /* match your menu width */
+  margin: 3rem auto;       /* vertical space + center */
+  padding: 0 1rem;         /* small side gutters */
+  background: transparent;
+  box-shadow: none;
+}
+
+/* Neutralize inner boxes and add breathing room */
+.order-flat-wrapper .order-alert,
+.order-flat-wrapper .order-details,
+.order-flat-wrapper .order-items-section {
+  background: transparent !important;
+  box-shadow: none         !important;
+  padding: 0               !important;
+  margin-bottom: 2rem;     /* space between sections */
+}
+
+/* Tweak fixed-footer to remove card look */
+.order-flat-wrapper .fixed-footer {
+  background: transparent;
+  border-top: 1px solid rgba(0,0,0,0.1);
+  padding-top: 1rem;
+  box-shadow: none;
+}
+
+/* Make sure the “Call Waiter” stays centered */
+.order-flat-wrapper .call-waiter-container {
+  margin-bottom: 20px;
+}
+
+
+
+
+/* Call Waiter Button - Top Right */
+.call-waiter-container {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+}
+
+.btn-gradient-orange-red {
+  background: linear-gradient(45deg, #ff416c, #ff4b2b);
+  border: none;
+  color: #fff;
+  font-weight: 600;
+  padding: 10px 20px;
+  border-radius: 50px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Floating Cart Quantity Display */
+.floating-cart .quantity-display {
+  background: #f8f9fa;
+  color: #000;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  min-width: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Step 2: Order Summary Page Improvements */
+.order-flat-wrapper {
+  padding: 2rem 1.5rem;
+}
+
+.order-alert {
+  margin-bottom: 2rem;
+  font-size: 1.2rem;
+}
+
+.order-details {
+  margin-bottom: 2.5rem;
+}
+
+.order-detail-text {
+  font-size: 1.1rem;
+  margin-bottom: 0.75rem;
+}
+
+.order-items-section {
+  margin-bottom: 3rem;
+}
+
+.order-items-title {
+  margin-bottom: 1.5rem;
+  font-size: 1.3rem;
+}
+
+/* Remove borders from order items */
+.order-items-section .border-bottom {
+  border-bottom: none !important;
+  padding: 1rem 0;
+  margin: 0.5rem 0;
+}
+
+/* Step 3: Bill Summary Spacing */
+.summary-flat-wrapper .table-responsive {
+  margin-bottom: 2.5rem;
+}
+
+.charges-summary {
+  margin-top: 2.5rem;
+  padding-top: 2rem;
+}
+
+.charges-summary hr {
+  margin: 1.5rem 0;
+}
+
+/* Adjust fixed footer buttons */
+.fixed-footer-page3 {
+  padding: 1.5rem 2rem;
+  gap: 1rem;
+}
+
+.btn-secondary.small-btn {
+  padding: 0.8rem 1.5rem;
+}
+
+.btn-success.large-btn {
+  padding: 0.8rem 2rem;
+}
+
+/* General Spacing Improvements */
+h2, h3, h4 {
+  margin-bottom: 1.5rem;
+}
+
+.table th, .table td {
+  padding: 1rem 0.75rem;
+}
+
+.text-muted {
+  opacity: 0.8;
+}
+
+/* Rating Page Adjustments */
+.rating-item {
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.star-rating {
+  gap: 8px;
+}
+
+.star-btn {
+  font-size: 2rem;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .call-waiter-container {
+    position: static;
+    text-align: center;
+    margin-bottom: 1.5rem;
+  }
+  
+  .order-flat-wrapper {
+    padding: 1.5rem;
+  }
+  
+  .fixed-footer-page3 {
+    flex-direction: column;
+  }
+  
+  .btn-secondary.small-btn,
+  .btn-success.large-btn {
+    width: 100%;
+    border-radius: 0;
+  }
+}
+
+/* in your styles.css, after all other rules */
+.order-flat-wrapper .order-items-section {
+  background: transparent !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  margin-bottom: 16px;
+}
+
+
+.category-header {
+  cursor: pointer;
+  user-select: none;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #e0e0e0;
+}
+.category-header.active {
+  font-weight: 600;
+}
+.subcategory-header {
+  cursor: pointer;
+  user-select: none;
+  margin-bottom: 0.25rem;
+}
+.subcategory-header.active {
+  font-weight: 500;
+}
+.menu-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.menu-item + .menu-item {
+  margin-top: 0.5rem;
+}
+
+
+.categories-accordion {
+  margin-top: 20px;
+}
+
+.accordion-button {
+  font-weight: 600;
+  padding: 12px 20px;
+}
+
+.accordion-item {
+  margin-bottom: 8px;
+  border-radius: 8px !important;
+  overflow: hidden;
+  border: 1px solid #dee2e6;
+}
+
+.btn-back {
+  background-color: #f8f9fa;
+  border: 1px solid #ddd;
+  padding: 5px 15px;
+  border-radius: 20px;
+  font-size: 14px;
+}
+
+.btn-back:hover {
+  background-color: #e9ecef;
+}
+
+.category-box {
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  cursor: pointer;
+}
+
+.category-box:hover {
+  background-color: #f8d7da; /* light highlight */
+  transform: scale(1.02);
+}
+.flat-category-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.flat-category-item {
+  width: 100%;
+  padding: 16px 24px;
+  font-size: 1.25rem;
+  font-weight: 500;
+  border-bottom: 1px solid #ddd;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.flat-category-item:hover {
+  background-color: #f9f9f9;
+}
+.category-line {
+  width: 100%;
+  padding: 16px 24px;
+  font-size: 1.25rem;
+  font-weight: 500;
+  border-bottom: 1px solid #ddd;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.category-line:hover {
+  background-color: #f5f5f5;
+}
+
+
+.payment-container {
+  padding: 2rem;
+  background-color: #f8f9fa;
+  border-radius: 1rem;
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.08);
+}
+
+.payment-title {
+  font-weight: 600;
+  font-size: 1.8rem;
+  color: #333;
+}
+
+.payment-option-card {
+  background: #fff;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  padding: 2rem 1.5rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.payment-option-card:hover {
+  border-color: #ffa500;
+  background-color: #fff8ed;
+  transform: translateY(-5px);
+}
+
+.payment-option-card h5 {
+  font-weight: 600;
+  margin-top: 1rem;
+  color: #222;
+}
+
+.payment-option-card p {
+  color: #666;
+  font-size: 0.95rem;
+}
+
+.payment-icon {
+  font-size: 2.5rem;
+  color: #ff6600;
+}
+
+.amount-text {
+  font-size: 1.2rem;
+  font-weight: 500;
+  color: #333;
+}
+.restaurant-header {
+  display: flex;
+  align-items: flex-start;
+  text-align: left;
+  margin-bottom: 1rem;
+  gap: 1rem;
+}
+
+.restaurant-logo {
+  max-height: 80px;
+  width: auto;
+}
+
+.restaurant-header-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.restaurant-header h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  line-height: 1.2;
+}
+
+.restaurant-header p {
+  margin: 0.25rem 0 0 0;
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+/* Container aligned to top-right */
+.call-waiter-container {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+}
+
+/* Call Waiter Button Style - Red with white text */
+.btn-call-waiter {
+  background-color: #ff051e; /* Bootstrap's red */
+  color: white;
+  border: none;
+  font-weight: 500;
+  transition: background 0.3s ease;
+  height: 50px;
+  margin-bottom: 20px;
+  padding: 12px;
+}
+
+.btn-call-waiter:hover {
+  background-color: #c82333; /* Darker red on hover */
+  color: white;
+}
+
+/* Dropdown Menu Styling */
+.dropdown-menu {
+  background: #ffffff;
+  border: none;
+  border-radius: 10px;
+  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
+  margin-top: 0.5rem;
+  right: 0; /* aligns dropdown to the button's right */
+  left: auto;
+  min-width: 160px;
+  margin-left: 19px;
+}
+
+/* Dropdown Items */
+.dropdown-item {
+  color: #000;
+  padding: 0.5rem 1rem;
+  transition: background 0.2s ease;
+  font-weight: 500;
+}
+
+.dropdown-item:hover {
+  background-color: rgba(220, 53, 69, 0.1); /* light red hover effect */
+}
+.star-btn {
+  background: none;
+  border: none;
+  font-size: 2.5rem;
+  color: #ccc;
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 0 5px;
+}
+
+.star-btn.active {
+  color: #ffc107; /* Gold/yellow color for active stars */
+}
+
+.star-btn:hover:not(.active) {
+  color: #ffc107;
+  transform: scale(1.1);
+}
+
+.rating-instructions.text-success {
+  color: #28a745;
+  font-weight: bold;
+  font-size: 1.2rem;
+}
+
+/* Small devices (≤576px) tweaks */
+@media (max-width: 576px) {
+  /* Stack quantity controls under image */
+  .menu-item {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+  }
+  .image-control-container {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .product-image {
+    width: 100%;
+    height: auto;
+    margin-bottom: 0.5rem;
+  }
+  .quantity-control {
+    width: 100%;
+    justify-content: space-around;
+  }
+
+  /* Full-width filters & search */
+  .search-bar input {
+    width: 100% !important;
+  }
+  .veg-filter-container {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center !important;
+  }
+
+  /* Buttons & footers */
+  .btn-call-waiter,
+  .btn-place-order,
+  .btn-generate-bill,
+  .btn-submit-ratings {
+    width: 100% !important;
+  }
+  .fixed-footer {
+    padding: 0.75rem;
+  }
+}
+.payment-flat-wrapper .flat-box {
+  background-color: #f8f9fa; /* light grey */
+  border: 1px solid #e2e3e5;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+.payment-card {
+  cursor: pointer;
+  transition: transform 0.1s ease-in-out;
+}
+.payment-card:hover {
+  transform: translateY(-2px);
+}
+/* Call Waiter container full-width (default now) */
+.call-waiter-container {
+  position: relative;
+  z-index: 1000;
+}
+
+/* Button style remains same */
+.btn-call-waiter {
+  background-color: #ff051e;
+  color: white;
+  border: none;
+  font-weight: 500;
+  transition: background 0.3s ease;
+  height: 50px;
+}
+
+.btn-call-waiter:hover {
+  background-color: #c82333;
+  color: white;
+}
+
+/* Dropdown Menu */
+.dropdown-menu {
+  background: #ffffff;
+  border: none;
+  border-radius: 10px;
+  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
+  margin-top: 0.5rem;
+  right: 0;
+  left: auto;
+  min-width: 160px;
+}
+
+.dropdown-item {
+  color: #000;
+  padding: 0.5rem 1rem;
+  transition: background 0.2s ease;
+  font-weight: 500;
+}
+
+.dropdown-item:hover {
+  background-color: rgba(220, 53, 69, 0.1);
+}
+
+/* Restaurant Header under button */
+.restaurant-header {
+  display: flex;
+  align-items: flex-start;
+  text-align: left;
+  gap: 1rem;
+}
+
+.restaurant-logo {
+  max-height: 80px;
+  width: auto;
+}
+
+.restaurant-header-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.restaurant-header h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  line-height: 1.2;
+}
+
+.restaurant-header p {
+  margin: 0.25rem 0 0 0;
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+
+.select-category-btn {
+  background-color: #ff7043;         /* Soft food-themed orange */
+  color: #fff;                       /* White text */
+  font-weight: 600;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 10px;               /* Smooth box shape */
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+  transition: all 0.3s ease-in-out;
+  display: inline-block;
+}
+
+.select-category-btn:hover {
+  background-color: #f4511e;         /* Darker orange on hover */
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+  cursor: pointer;
+}
+
+.select-category-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(255, 112, 67, 0.3);
+}
+.item-price {
+  color: black;
+}
+.items-panel {
+  padding: 20px;
+  font-family: 'Segoe UI', sans-serif;
+  background-color: #fff;
+}
+
+/* Category Selector */
+.category-line {
+  padding: 12px 16px;
+  margin: 6px 0;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+  background-color: #f9f9f9;
+}
+
+.category-line:hover {
+  background-color: #e9ecef;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.05);
+}
+
+/* Category Title */
+h4.text-center {
+  font-size: 1.3rem;
+  font-weight: 500;
+  color: #333;
+}
+
+/* Select Category Button */
+.select-category-btn {
+  background-color: #007bff;
+  color: #fff;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  transition: background-color 0.2s ease;
+}
+
+.select-category-btn:hover {
+  background-color: #0056b3;
+}
+/* Add to your component's CSS */
+.btn-invoice {
+  background-color: #28a745;
+  color: white;
+  border: none;
+  margin-left: 10px;
+}
+
+.btn-invoice:hover {
+  background-color: #218838;
+}
+
+/* For the admin-only button */
+.btn-invoice.owner {
+  background-color: #6c757d;
+}
+
+.btn-invoice.owner:hover {
+  background-color: #5a6268;
+}  
+
+/* Menu Item Styling - Consistent across all screen sizes */
+.menu-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 10px 0;
+  border-bottom: 1px solid #ddd;
+  transition: background 0.2s;
+  height: auto; /* Remove fixed height */
+}
+
+/* Image container styling */
+.image-control-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-left: 15px; /* Space between text and image */
+}
+
+/* Product image styling */
+.product-image {
+  width: 90px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 8px;
+  display: block;
+  margin-bottom: 8px; /* Space between image and quantity controls */
+}
+
+/* Quantity controls styling */
+.quantity-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Mobile-specific adjustments */
+@media (max-width: 768px) {
+  .menu-item {
+    flex-direction: row; /* Keep horizontal layout */
+    padding: 12px 0;
+  }
+  
+  .image-control-container {
+    margin-left: 10px;
+  }
+  
+  .product-image {
+    width: 80px;
+    height: 70px;
+  }
+}
+
+@media (max-width: 576px) {
+  .menu-item {
+    padding: 10px 0;
+  }
+  
+  .product-image {
+    width: 70px;
+    height: 60px;
+  }
+  
+  .quantity-control button {
+    width: 28px;
+    height: 28px;
+    font-size: 20px;
+  }
+  
+  .quantity-control .quantity-display {
+    font-size: 1.1rem;
+  }
+}
+
+.call-waiter-container {
+  position: absolute;
+  top: 0;
+  right: 0;
+  margin: 0.5rem;
+  z-index: 10;
+}
+
+/* Ensure the header always starts below it */
+.restaurant-header {
+  clear: both;
+  margin-top: 4rem; /* adjust as needed to sit below the call‑waiter button */
+  display: flex;
+  align-items: start;
+  gap: 1rem;
+}
+.category-line {
+  padding: 0.75rem 1rem;
+  margin: 0.25rem 0;
+  background: #fff;           /* white bg */
+  color: #060606;                /* grey text */
+  border-radius: 0.25rem;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.category-line:hover,
+.category-line.active {
+  background: #e0e0e0;        /* light grey bg */
+  color: #222;                /* dark text */
+}
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem;
+  border-bottom: 1px solid #ddd;
+}
+
+.menu-info {
+  flex: 1 1 auto;
+  min-width: 150px;  /* ensure it doesn’t collapse too much */
+}
+
+.image-control-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #ddd;
+
+  /* new: keep everything on one line */
+  flex-wrap: nowrap;
+}
+
+.menu-info {
+  flex: 1 1 auto;
+  min-width: 0;  /* allow it to shrink instead of pushing controls down */
+}
+
+.image-control-container {
+  flex: 0 0 auto;  /* don’t grow or shrink */
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+
+/* 1) Always keep the menu‐item in one row */
+.menu-item {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  flex-wrap: nowrap !important;      /* never wrap */
+}
+
+/* 2) Force the image+controls to sit side‑by‑side, even on small screens */
+.image-control-container {
+  display: flex !important;
+  flex-direction: row !important;    /* row, not column */
+  align-items: center !important;
+  gap: 0.5rem !important;
+}
+
+/* 3) Remove your “stack on mobile” override */
+@media (max-width: 576px) {
+  .menu-item {
+    flex-direction: row !important;   /* override any column setting */
+  }
+  .image-control-container {
+    flex-direction: row !important;   /* stay row */
+  }
+}
+/* 1) Stack the image ABOVE the quantity controls */
+.image-control-container {
+  flex-direction: column !important;   /* column instead of row */
+  align-items: center !important;      /* center everything */
+  gap: 0.25rem !important;             /* smaller gap between image & controls */
+}
+
+/* 2) Reduce image size slightly so it doesn’t dominate */
+.product-image {
+  width: 70px !important;
+  height: 60px !important;
+}
+
+/* 3) Shrink the quantity buttons and tighten their spacing */
+.quantity-control button {
+  width: 24px !important;
+  height: 24px !important;
+  font-size: 18px !important;
+}
+
+.quantity-control {
+  gap: 0.25rem !important;             /* smaller gap between buttons and number */
+}
+
+/* 4) Reduce the font and margins for the quantity display */
+.quantity-control .quantity-display {
+  font-size: 1rem !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* 5) Ensure the parent row still won’t wrap */
+.menu-item {
+  flex-wrap: nowrap !important;
+}
+/* Container for image + controls: align to right */
+.image-control-container {
+  margin-left: auto !important;     /* push it to the far right */
+}
+
+/* Shrink the whole control wrapper */
+.quantity-control {
+  gap: 0.2rem !important;           /* very tight spacing */
+  padding: 0 !important;
+  background: none !important;
+  width: 60px;
+}
+
+/* Make the minus/plus buttons square and small */
+.quantity-control button {
+  width: 20px !important;
+  height: 20px !important;
+  font-size: 16px !important;
+  line-height: 1 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* Tighter number display */
+.quantity-control .quantity-display {
+  font-size: 0.9rem !important;
+  min-width: 1.2em !important;      /* just wide enough for “10” */
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Ensure image sits above, controls below, both right‑aligned */
+.image-control-container {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-end !important;
+  width: 100px;
+}
+.mb-3.px-2 {
+  text-align: left;
+  margin-left: 3px;
+}
+
+.select-category-btn {
+  display: inline-block; /* so margin auto won’t center it */
+  margin: 0;
+}
+.order-alert {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 1.1rem; /* slightly larger than base text */
+  font-weight: normal; /* semi-bold */
+  color: #155724; /* dark green for success message */
+  background-color: #d4edda; /* light green background */
+  border: 1px solid #c3e6cb;
+  padding: 15px 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+
+}
+.fixed-footer {
+  display: flex;
+  justify-content: space-between;
+  padding: 1rem 2rem;
+  background: transparent;
+  border-top: 1px solid rgba(255, 255, 255, 0.3);
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1000;
+}
+
+/* Make both buttons the same fixed width, disable flex-grow */
+.fixed-footer .btn-order-more,
+.fixed-footer .btn-generate-bill {
+  flex: 0 0 auto;      /* don't grow or shrink */
+  width: 80px;        /* fixed width */
+  margin: 0;           /* remove any auto margins */
+}
+
+/* Center the text inside */
+.fixed-footer .btn-order-more,
+.fixed-footer .btn-generate-bill {
+  text-align: center;
+  width: 40px;
+}
+.fixed-footer {
+  display: flex;
+  justify-content: center;   /* center the pair */
+  gap: 12px;                 /* space between buttons */
+  padding: 1rem 2rem;
+  background: transparent;
+  border-top: 1px solid rgba(255,255,255,0.3);
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1000;
+}
+
+.fixed-footer .btn-order-more,
+.fixed-footer .btn-generate-bill {
+  flex: 0 0 auto;            /* no grow/shrink */
+  width: 120px;              /* exact same width */
+  height: 40px;              /* exact same height */
+  line-height: 40px;         /* vertical centering */
+  padding: 0;                /* remove default padding */
+  text-align: center;
+  font-size: 0.9rem;         /* adjust to fit */
+}
+@media (max-width: 576px) {
+  .fixed-footer {
+    justify-content: space-between; /* spread them out */
+    padding: 0.5rem 1rem;
+    gap: 0;
+  }
+  .fixed-footer .btn-order-more,
+  .fixed-footer .btn-generate-bill {
+    flex: 0 0 48%;     /* each about half width (with 4% total gap) */
+    width: 48%;
+    height: 36px;      /* slightly smaller on mobile */
+    line-height: 36px;
+    font-size: 0.85rem;
+    padding: 0;
+  }
+}
+/* Add these new styles for the 3-step flow */
+
+/* Step 2: Combined Order Summary & Payment */
+.order-items-section {
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 20px;
+}
+
+.charges-summary, .payment-options {
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 15px;
+}
+
+.btn-payment-option {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 12px;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.btn-payment-option:hover {
+  background-color: #f8f9fa;
+  border-color: #adb5bd;
+}
+
+/* Rating Page */
+.rating-page {
+  min-height: 60vh;
+  display: flex;
+  align-items: center;
+}
+
+.star-btn {
+  background: none;
+  border: none;
+  font-size: 2.5rem;
+  color: #ddd;
+  padding: 0 5px;
+  transition: all 0.2s;
+}
+
+.star-btn.active {
+  color: #ffc107;
+}
+
+.star-btn:hover:not(.active) {
+  color: #ffe69c;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .order-items-section, 
+  .charges-summary, 
+  .payment-options {
+    padding: 10px;
+  }
+  
+  .btn-payment-option {
+    padding: 10px;
+    font-size: 0.9rem;
+  }
+  
+  .star-btn {
+    font-size: 2rem;
+  }
+}
+
+/* push everything below the Call Waiter dropdown */
+.call-waiter-spacer {
+  padding-top: 4rem;    /* Adjust to taste */
+}
+
+/* if you want it only on desktop, use a media query */
+@media (min-width: 768px) {
+  .call-waiter-spacer {
+    padding-top: 4.5rem;
+  }
+}
+
+/* Add these new styles at the bottom of your existing CSS */
+
+/* Payment Method Selector Styles */
+.payment-method-selector {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  margin-bottom: 16px;
+}
+
+.btn-payment-selector {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 12px !important;
+  font-weight: 500;
+  transition: all 0.2s;
+  color: #333;
+}
+
+.btn-payment-selector:hover {
+  border-color: #0d6efd;
+  background: #f8f9fa;
+}
+
+.payment-options-dropdown {
+  position: absolute;
+  width: 100%;
+  background: white;
+  border: 1px solid #eee;
+  border-radius: 0 0 12px 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  z-index: 10;
+  margin-top: -8px;
+}
+
+.payment-option {
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  transition: background 0.2s;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.payment-option:last-child {
+  border-bottom: none;
+}
+
+.payment-option:hover {
+  background: #f8f9fa;
+}
+
+.payment-icon {
+  font-size: 1.5rem;
+  margin-right: 12px;
+  width: 32px;
+  text-align: center;
+}
+
+.payment-icon.upi { color: #5f2ee5; }
+.payment-icon.card { color: #fd7e14; }
+.payment-icon.netbanking { color: #20c997; }
+.payment-icon.cash { color: #28a745; }
+
+.payment-method-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.payment-method-name {
+  font-weight: 500;
+}
+
+.selected-icon {
+  margin-left: 16px;
+  color: #0d6efd;
+  font-size: 1.2rem;
+}
+
+/* Sticky Footer */
+.sticky-footer-buttons {
+  position: sticky;
+  bottom: 0;
+  background: white;
+  padding: 16px;
+  border-top: 1px solid #eee;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+}
+
+/* Payment Button */
+.btn-pay-now {
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 1.1rem;
+  padding: 12px;
+}
+
+.footer-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  background-color: #f8f9fa;
+  box-shadow: 0 -1px 4px rgba(0,0,0,0.1);
+}
+
+
+/* Payment Method Styles */
+.btn-payment-method {
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  padding: 10px 15px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 100px;
+  transition: all 0.3s;
+}
+
+.btn-payment-method.active {
+  border-color: #0d6efd;
+  background-color: #f0f7ff;
+}
+
+.btn-payment-method i {
+  margin-bottom: 5px;
+}
+
+.btn-pay-now {
+  background: linear-gradient(135deg, #4e54c8, #8f94fb);
+  color: white;
+  padding: 10px 30px;
+  border-radius: 30px;
+  font-weight: 500;
+  border: none;
+  transition: all 0.3s;
+}
+
+.btn-pay-now:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.btn-pay-now:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.upi-qr-container {
+  max-width: 300px;
+  margin: 0 auto;
+  border: 1px solid #eee;
+}
+
+/* Container */
+.payment-options-section {
+  margin-bottom: 1.5rem;   /* matches mb-4 */
+  padding: 0.5rem 1rem;     /* matches px-2 */
+
+}
+
+/* Label */
+.payment-options-section .form-label {
+  font-weight: 600;
+  font-size: 1rem;
+  color: #333;
+  margin-right: 12px;
+}
+
+/* Payment‑method buttons */
+.btn-payment-method {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid #ddd;
+  background-color: #fff;
+  border-radius: 0.5rem;
+  font-size: 0.9rem;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+.btn-payment-method i {
+  /* ensure the icon and text sit nicely */
+  font-size: 1.2rem;
+  line-height: 1;
+}
+.btn-payment-method:hover {
+  background-color: #f8f8f8;
+}
+.btn-payment-method.active {
+  background-color: #e8e8e8;
+  border-color: #ccc;
+}
+
+/* “Pay/Confirm” button */
+.btn-pay-now {
+  padding: 0.5rem 1.2rem;
+  border: none;
+  border-radius: 0.3rem;
+  font-size: 0.95rem;
+  background-color: #28a745;
+  color: #fff;
+  transition: opacity 0.2s;
+}
+.btn-pay-now:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Optional: tighten up the row gutters */
+.payment-options-section .row {
+  margin-left: 0;
+  margin-right: 0;
+}
+.payment-options-section .col,
+.payment-options-section .col-auto {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* Outer grey background */
+/* .summary-flat-wrapper {
+  background-color: #f5f5f5;
+  padding: 2rem 1rem;
+  min-height: calc(100vh - 60px);
+  box-sizing: border-box;
+} */
+
+/* White card styling */
+.summary-flat-wrapper .summary-card {
+  max-width: 800px;
+  margin: 0 auto 1.5rem;
+  border-radius: 0;
+  box-shadow: none;
+  border: none;
+  background-color: transparent;
+}
+
+
+/* Card titles */
+.summary-card .card-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+/* Payment‑method buttons */
+.btn-payment-method {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid #ddd;
+  border-radius: 0.5rem;
+  background-color: #fff;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+.btn-payment-method.active {
+  background-color: #e8e8e8;
+  border-color: #ccc;
+}
+.btn-payment-method:hover {
+  background-color: #f8f8f8;
+}
+
+/* Pay/Confirm button */
+.btn-pay-now {
+  padding: 0.5rem 1.2rem;
+  border: none;
+  border-radius: 0.3rem;
+  background-color: #28a745;
+  color: #fff;
+  transition: opacity 0.2s;
+}
+.btn-pay-now:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-color: #28a745;
+}
+
+/* Table inside card */
+.summary-card .table {
+  margin-bottom: 0;
+}
+.fixed-footer {
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.08);
+  z-index: 1050; /* Keep above all content */
+}
+.btn-download-bill {
+  background-color: #28a745;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-download-bill:hover {
+  background-color: #218838;
+  color: white;
+}
+
+.fixed-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  padding: 10px;
+  display: flex;
+  justify-content: space-between;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+  z-index: 1000;
+}
+
+/* Bill Page Styles */
+.summary-flat-wrapper {
+  padding: 20px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.bill-header {
+  border-bottom: 2px solid #eee;
+  padding-bottom: 15px;
+}
+
+.restaurant-name {
+  font-size: 24px;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 5px;
+}
+
+.bill-title {
+  font-size: 20px;
+  color: #444;
+  margin-bottom: 5px;
+}
+
+.bill-details {
+  color: #666;
+  font-size: 14px;
+  margin-bottom: 0;
+}
+
+.bill-table-container {
+  margin: 20px 0;
+}
+
+.bill-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.bill-table th {
+  background-color: #f8f9fa;
+  padding: 10px;
+  border-bottom: 2px solid #dee2e6;
+  font-weight: 600;
+}
+
+.bill-table td {
+  padding: 10px;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.subtotal-row td {
+  border-top: 2px solid #dee2e6;
+  padding-top: 15px;
+}
+
+.total-row td {
+  border-top: 2px solid #333;
+  padding-top: 15px;
+  font-size: 1.1em;
+}
+
+.thank-you-message {
+  font-style: italic;
+  color: #666;
+  padding: 10px 0;
+}
+
+.payment-method-section {
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 8px;
+  margin-top: 20px;
+}
+
+.section-title {
+  font-size: 18px;
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.payment-options {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.btn-payment {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid #ddd;
+  background: white;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-payment.active {
+  border-color: #0d6efd;
+  background-color: #e7f1ff;
+  color: #0d6efd;
+}
+
+.btn-pay-now {
+  width: 100%;
+  padding: 12px;
+  background-color: #0d6efd;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-weight: 500;
+}
+
+.btn-pay-now:disabled {
+  background-color: #6c757d;
+  opacity: 0.65;
+}
+
+/* Fixed Footer */
+.fixed-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  padding: 10px 20px;
+  display: flex;
+  justify-content: space-between;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+  z-index: 1000;
+  height: 80px;
+}
+
+.btn-footer {
+  padding: 10px 15px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+
+.btn-back {
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  color: #333;
+}
+
+.btn-download {
+  background-color: #28a745;
+  color: white;
+  border: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 576px) {
+  .summary-flat-wrapper {
+    padding: 15px;
+  }
+  
+  .bill-header {
+    padding-bottom: 10px;
+  }
+  
+  .restaurant-name {
+    font-size: 20px;
+  }
+  
+  .bill-title {
+    font-size: 18px;
+  }
+}
+
+
+/* General Styles */
+.summary-flat-wrapper {
+  min-height: 100vh;
+  padding-bottom: 70px; /* Space for fixed footer */
+}
+
+.bg-light {
+  background-color: #f5f5f5;
+}
+
+/* Card Styles */
+.card {
+  border: none;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  margin-bottom: 20px;
+}
+
+.bill-card {
+  background-color: white;
+}
+
+.payment-card {
+  background-color: white;
+}
+
+.card-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #eee;
+}
+
+/* Bill Header */
+.bill-header {
+  padding-bottom: 15px;
+  border-bottom: 1px dashed #eee;
+}
+
+.restaurant-name {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 0.5rem;
+  margin-top: 19px;
+}
+
+.bill-title {
+  font-size: 1.2rem;
+  color: #444;
+  margin-bottom: 0.5rem;
+}
+
+.bill-details {
+  color: #666;
+  font-size: 0.9rem;
+  margin-bottom: 0;
+}
+
+/* Table Styles */
+.bill-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.bill-table th {
+  background-color: #f8f9fa;
+  padding: 12px 15px;
+  font-weight: 600;
+  color: #555;
+  border-bottom: 2px solid #eee;
+}
+
+.bill-table td {
+  padding: 12px 15px;
+  border-bottom: 1px solid #eee;
+  color: #444;
+}
+
+.bill-table tr:last-child td {
+  border-bottom: none;
+}
+
+.subtotal-row td {
+  border-top: 2px dashed #eee;
+  padding-top: 15px;
+}
+
+.total-row td {
+  border-top: 2px solid #333;
+  padding-top: 15px;
+  font-size: 1.1em;
+  color: #222;
+}
+
+/* Payment Section */
+.payment-options {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.btn-payment {
+  flex: 1;
+  padding: 12px;
+  border: 1px solid #ddd;
+  background: #f9f9f9;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #555;
+  transition: all 0.2s;
+}
+
+.btn-payment.active {
+  border-color: #0d6efd;
+  background-color: #e7f1ff;
+  color: #0d6efd;
+}
+
+.btn-pay-now {
+  padding: 12px;
+  background-color: #0d6efd;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.btn-pay-now:hover {
+  background-color: #0b5ed7;
+}
+
+.btn-pay-now:disabled {
+  background-color: #6c757d;
+  opacity: 0.65;
+}
+
+/* Thank You Message */
+.thank-you-message {
+  font-style: italic;
+  color: #888;
+  padding: 15px 0 5px;
+}
+
+/* Fixed Footer */
+.fixed-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 12px 20px;
+  display: flex;
+  justify-content: space-between;
+  box-shadow: 0 -2px 15px rgba(0,0,0,0.1);
+  z-index: 1000;
+}
+
+.btn-footer {
+  padding: 10px 20px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.btn-back {
+  background-color: white;
+  border: 1px solid #ddd;
+  color: #333;
+}
+
+.btn-back:hover {
+  background-color: #f8f9fa;
+}
+
+.btn-download {
+  background-color: #28a745;
+  color: white;
+  border: none;
+}
+
+.btn-download:hover {
+  background-color: #218838;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 576px) {
+  .bill-table th, 
+  .bill-table td {
+    padding: 10px 8px;
+  }
+  
+  .btn-footer {
+    padding: 8px 12px;
+    font-size: 0.9rem;
+  }
+}
+
+
+/* Bill Header Styles */
+.bill-header {
+  border-bottom: 1px dashed #eee;
+  padding-bottom: 15px;
+  padding-top: 20px;
+}
+
+.order-info {
+  text-align: left;
+}
+
+.table-info {
+  text-align: right;
+}
+
+.bill-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 0;
+}
+
+.bill-date {
+  font-size: 0.85rem;
+  color: #666;
+  margin-bottom: 0;
+}
+
+.bill-table {
+  font-size: 0.95rem;
+  color: #444;
+}
+
+/* Responsive adjustments */
+@media (max-width: 576px) {
+  .bill-title {
+    font-size: 1rem;
+  }
+  
+  .bill-date,
+  .bill-table {
+    font-size: 0.8rem;
+  }
+}
+
+
+/* Flat Wrapper Styles */
+.summary-flat-wrapper {
+  background-color: #f5f5f5;
+  min-height: 100vh;
+  padding: 20px 15px 80px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+/* Call Waiter Button */
+.call-waiter-container {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  z-index: 1000;
+}
+
+.btn-call-waiter {
+  background-color: #ff051e;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-weight: 500;
+}
+
+/* Bill Header Section */
+.bill-header-section {
+  background-color: white;
+  padding: 20px;
+  margin-top: 50px;
+  border-radius: 8px 8px 0 0;
+}
+
+.bill-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.order-info h3 {
+  font-size: 1.2rem;
+  margin-bottom: 5px;
+  color: #333;
+}
+
+.bill-date {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.table-info {
+  text-align: right;
+}
+
+.table-info strong {
+  font-weight: 600;
+}
+
+/* Order Items Section */
+.order-items-section {
+  background-color: white;
+  padding: 15px 20px;
+}
+
+.bill-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.bill-table th {
+  text-align: left;
+  padding: 10px 0;
+  border-bottom: 1px solid #eee;
+  font-weight: 600;
+  color: #555;
+}
+
+.bill-table td {
+  padding: 10px 0;
+  border-bottom: 1px solid #eee;
+  color: #444;
+}
+
+.bill-table .text-center {
+  text-align: center;
+}
+
+.bill-table .text-end {
+  text-align: right;
+}
+
+.subtotal-row td {
+  border-top: 1px solid #ddd;
+  padding-top: 15px;
+}
+
+.total-row td {
+  border-top: 2px solid #333;
+  padding-top: 15px;
+  font-weight: 600;
+}
+
+/* Thank You Message */
+.thank-you-message {
+  background-color: white;
+  padding: 15px 20px;
+  text-align: center;
+  font-style: italic;
+  color: #666;
+  border-radius: 0 0 8px 8px;
+}
+
+/* Payment Method Section */
+.payment-method-section {
+  background-color: #f0f0f0;
+  padding: 20px;
+  margin-top: 20px;
+  border-radius: 8px;
+}
+
+.payment-method-section h4 {
+  margin-bottom: 15px;
+  color: #3471d4;
+}
+
+.payment-options {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.btn-payment {
+  flex: 1;
+  padding: 12px;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-payment.active {
+  border-color: #0d6efd;
+  background-color: #e7f1ff;
+  color: #0d6efd;
+}
+
+.btn-pay-now {
+  width: 100%;
+  padding: 12px;
+  background-color: #0d6efd;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.btn-pay-now:disabled {
+  background-color: #6c757d;
+  opacity: 0.7;
+}
+
+/* Fixed Footer */
+.fixed-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  padding: 12px 20px;
+  display: flex;
+  justify-content: space-between;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+}
+
+.btn-footer {
+  padding: 10px 20px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+
+.btn-back {
+  background-color: #f8f9fa;
+  border: 1px solid #ddd;
+  color: #333;
+}
+
+.btn-download {
+  background-color: #28a745;
+  color: white;
+  border: none;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 576px) {
+  .summary-flat-wrapper {
+    padding: 15px 10px 70px;
+  }
+  
+  .bill-header-section,
+  .order-items-section,
+  .thank-you-message {
+    padding: 15px;
+  }
+  
+  .payment-method-section {
+    padding: 15px;
+  }
+  
+  .btn-footer {
+    padding: 8px 12px;
+    font-size: 0.9rem;
+  }
+}
+
+/* Section Headers */
+.section-header {
+  background-color: #eeeff7;
+  padding: 15px 20px;
+  margin-top: 20px;
+  border-radius: 8px 8px 0 0;
+}
+
+.section-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #333;
+}
+
+/* Bill Info Section */
+.bill-info-section {
+  background-color: white;
+  padding: 15px 20px;
+  border-radius: 0 0 8px 8px;
+  margin-bottom: 20px;
+}
+
+.bill-header {
+  display: flex;
+  justify-content: space-between;
+}
+
+.order-info p, .table-info p {
+  margin: 5px 0;
+}
+
+.bill-date {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+/* Bill Details Section */
+.bill-details-section {
+  background-color: white;
+  padding: 15px 20px;
+  border-radius: 0 0 8px 8px;
+  margin-bottom: 20px;
+}
+
+.bill-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.bill-table th {
+  text-align: left;
+  padding: 10px 0;
+  border-bottom: 1px solid #eee;
+  font-weight: 600;
+  color: #555;
+}
+
+.bill-table td {
+  padding: 10px 0;
+  border-bottom: 1px solid #eee;
+  color: #444;
+}
+
+.bill-table .text-center {
+  text-align: center;
+}
+
+.bill-table .text-end {
+  text-align: right;
+}
+
+.subtotal-row td {
+  border-top: 1px solid #ddd;
+  padding-top: 15px;
+}
+
+.total-row td {
+  border-top: 2px solid #333;
+  padding-top: 15px;
+  font-weight: 600;
+}
+
+/* Thank You Message */
+.thank-you-message {
+  background-color: white;
+  padding: 15px 20px;
+  text-align: center;
+  font-style: italic;
+  color: #666;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+/* Payment Method Section */
+.payment-method-section {
+  background-color: white;
+  padding: 15px 20px;
+  border-radius: 0 0 8px 8px;
+  margin-bottom: 20px;
+}
+
+.payment-options {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.btn-payment {
+  flex: 1;
+  padding: 12px;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-payment.active {
+  border-color: #0d6efd;
+  background-color: #e7f1ff;
+  color: #0d6efd;
+}
+
+.btn-pay-now {
+  width: 100%;
+  padding: 12px;
+  background-color: #0d6efd;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+
+.search-bar input:focus {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: #ccc !important; /* optional: sets a neutral border */
+}
+
+
+.restaurant-header .text-muted {
+  color: #000 !important;
+}
+
+.out-of-stock span {
+  font-size: 1.2rem; /* or try 18px, 20px etc. */
+  font-weight: bold; /* optional: make it bold */
+  color: red;         /* optional: emphasize with color */
+}
+
+
+/* Fixed Footer - Opaque Solution */
+.fixed-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white !important; /* Force solid white */
+  padding: 15px 20px;
+  display: flex;
+  justify-content: space-between;
+  box-shadow: 0 -4px 12px rgba(0,0,0,0.15);
+  z-index: 1100; /* Higher than everything else */
+  border-top: 1px solid #e0e0e0;
+  opacity: 1 !important; /* Ensure no transparency */
+  backdrop-filter: none !important; /* Remove any blur effects */
+}
+
+/* Button styling */
+.fixed-footer .btn {
+  min-width: 120px;
+  padding: 10px 15px;
+  font-weight: 500;
+  border-radius: 8px;
+}
+
+.fixed-footer .btn-order-more {
+  background: #3da3fd;
+  color: white;
+}
+
+.fixed-footer .btn-generate-bill {
+  background: #28a745;
+  color: white;
+}
+
+/* Ensure content doesn't hide behind footer */
+.order-flat-wrapper {
+  padding-bottom: 100px; /* Must be taller than footer */
+}
+
+/* Payment Section Styles */
+.payment-section {
+  padding: 20px;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.payment-methods {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.payment-method {
+  flex: 1;
+  padding: 15px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+}
+
+.payment-method.active {
+  border-color: #4CAF50;
+  background-color: #f0fff0;
+}
+
+.payment-method i {
+  font-size: 24px;
+  margin-bottom: 8px;
+}
+
+.upi-options {
+  margin-top: 20px;
+}
+
+.upi-apps {
+  display: flex;
+  gap: 10px;
+  margin: 15px 0;
+}
+
+.upi-app {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+}
+
+.upi-app img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  margin-bottom: 5px;
+}
+
+.manual-upi {
+  background: #f9f9f9;
+  padding: 15px;
+  border-radius: 8px;
+  margin-top: 20px;
+}
+
+.upi-details {
+  margin-top: 10px;
+}
+
+.upi-id {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.btn-proceed {
+  width: 100%;
+  padding: 12px;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  margin-top: 20px;
+  cursor: pointer;
+}
+
+.btn-proceed:disabled {
+  background: #cccccc;
+  cursor: not-allowed;
+}
+
+.upi-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.upi-modal-content {
+  background: #fff;
+  padding: 2rem;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 400px;
+  text-align: center;
+  position: relative;
+}
+
+.btn-close-modal {
+  background: transparent;
+  border: none;
+  font-size: 1.8rem;
+  line-height: 1;
+  cursor: pointer;
+  color: #000;
+}
+
+.btn-lg {
+  font-size: 1.25rem;
+  padding: 0.75rem 1rem;
+}
+/* Step 2 Order Summary - Button & Text Fix */
+.order-flat-wrapper .fixed-footer {
+  justify-content: center;
+  gap: 16px;
+}
+
+.order-flat-wrapper .fixed-footer .btn-order-more,
+.order-flat-wrapper .fixed-footer .btn-generate-bill {
+  flex: 0 0 auto;
+  width: 150px;
+  height: 45px;
+  text-align: center;
+  padding: 0;
+  line-height: 45px;
+  font-size: 1rem;
+  border-radius: 6px;
+}
+
+.order-flat-wrapper .fixed-footer .btn-order-more {
+  background-color: #3da3fd;
+  color: #fff;
+}
+
+.order-flat-wrapper .fixed-footer .btn-generate-bill {
+  background-color: #28a745;
+  color: #fff;
+}
+
+.order-flat-wrapper .fixed-footer .btn-order-more:hover {
+  background-color: #1c86e4;
+}
+
+.order-flat-wrapper .fixed-footer .btn-generate-bill:hover {
+  background-color: #218838;
+}
+
+.order-flat-wrapper .order-alert,
+.order-flat-wrapper .order-details {
+  text-align: center;
+}
+/* Step 3 Bill Page - Professional & Clean Design */
+
+/* Wrapper Spacing & Background */
+.summary-flat-wrapper {
+  background-color: #f8f9fa;
+  padding: 30px 20px 100px; /* More breathing space + footer space */
+  max-width: 800px;
+  margin: 0 auto;
+  border-radius: 12px;
+}
+
+/* Bill Header */
+.bill-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 15px;
+  margin-bottom: 25px;
+}
+
+.bill-header p {
+  margin: 0;
+  font-size: 1rem;
+  color: #444;
+}
+
+.bill-date {
+  font-size: 0.85rem;
+  color: #777;
+}
+
+/* Section Header */
+.section-header h3 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 15px;
+}
+
+/* Bill Details Table */
+.bill-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.bill-table th {
+  text-align: left;
+  padding: 12px 8px;
+  background-color: #eceff1;
+  border-bottom: 1px solid #ccc;
+  font-weight: 600;
+  color: #333;
+}
+
+.bill-table td {
+  padding: 10px 8px;
+  border-bottom: 1px solid #eee;
+  font-size: 0.95rem;
+  color: #555;
+}
+
+.bill-table .text-end {
+  text-align: right;
+}
+
+.bill-table .text-center {
+  text-align: center;
+}
+
+/* Total & Charges */
+.bill-table tfoot tr td {
+  font-weight: 600;
+  font-size: 1rem;
+  color: #222;
+}
+
+.bill-table tfoot tr:first-child td {
+  border-top: 2px solid #ccc;
+  padding-top: 15px;
+}
+
+/* Thank You Message */
+.thank-you-message {
+  font-style: italic;
+  color: #666;
+  text-align: center;
+  margin-top: 20px;
+}
+
+/* Payment Method Buttons */
+.payment-methods-section h5 {
+  font-weight: 600;
+  font-size: 1.1rem;
+  margin-bottom: 15px;
+}
+
+.btn-payment-method {
+  flex: 1;
+  padding: 12px 16px;
+  background: white;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  color: #444;
+  transition: all 0.2s ease;
+}
+
+.btn-payment-method:hover {
+  border-color: #0d6efd;
+  background-color: #f0f7ff;
+}
+
+.btn-payment-method.active {
+  border-color: #28a745;
+  background-color: #e8f5e9;
+}
+
+/* Footer Buttons */
+.fixed-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #fff;
+  padding: 15px 20px;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+  display: flex;
+  justify-content: space-between;
+  z-index: 1100;
+}
+
+.btn-footer {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.btn-back {
+  background: #f8f9fa;
+  border: 1px solid #ccc;
+  color: #333;
+}
+
+.btn-back:hover {
+  background: #e9ecef;
+}
+
+.btn-download {
+  background-color: #28a745;
+  color: white;
+  border: none;
+}
+
+.btn-download:hover {
+  background-color: #218838;
+}
+
+/* UPI Modal Tweak */
+.upi-modal-content h5 {
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.upi-modal-content p {
+  font-size: 0.95rem;
+  color: #555;
+}
+
+.btn-close-modal {
+  font-size: 1.8rem;
+  color: #333;
+}
+
+/* Responsive Tweak */
+@media (max-width: 576px) {
+  .fixed-footer {
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px;
+  }
+}
+@media (max-width: 576px) {
+  .fixed-footer {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: center;
+    padding: 12px 16px;
+    gap: 12px;
+  }
+
+  .fixed-footer .btn-order-more,
+  .fixed-footer .btn-generate-bill,
+  .fixed-footer .btn-download,
+  .fixed-footer .btn-back {
+    width: 100% !important;
+    height: 48px !important;
+    font-size: 1rem !important;
+    line-height: 1.2 !important;
+    padding: 12px !important;
+    text-align: center;
+    justify-content: center;
+    border-radius: 8px;
+  }
+}
+.fixed-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  padding: 15px 20px;
+  background: #fff;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+  z-index: 1100;
+}
+.fixed-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #fff;
+  padding: 12px 16px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+  z-index: 1100;
+}
+
+/* Shared Button Styling */
+.btn-footer {
+  flex: 1;
+  max-width: 180px;
+  height: 44px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 1rem;
+  text-align: center;
+  white-space: nowrap;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Specific Button Colors */
+.btn-back {
+  background-color: #f8f9fa;
+  color: #333;
+  border: 1px solid #ccc;
+}
+
+.btn-back:hover {
+  background-color: #e2e6ea;
+}
+
+.btn-download {
+  background-color: #28a745;
+  color: white;
+  border: none;
+}
+
+.btn-download:hover {
+  background-color: #218838;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 576px) {
+  .fixed-footer {
+    flex-direction: row;
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .btn-footer {
+    flex: 1;
+    max-width: 100%;
+    height: 42px;
+    font-size: 0.95rem;
+    padding: 10px;
+  }
+}
+
+
+.fixed-footer {
+  display: flex !important;
+  flex-direction: row !important;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #fff;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+  z-index: 1100;
+}
+
+.btn-footer {
+  flex: 1 1 48%;
+  max-width: 180px;
+  height: 44px;
+  padding: 10px 20px;
+  font-weight: 500;
+  font-size: 1rem;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+/* Ensure responsive layout stays side-by-side */
+@media (max-width: 576px) {
+  .fixed-footer {
+    flex-direction: row !important;
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .btn-footer {
+    flex: 1 1 48%;
+    max-width: 100%;
+    height: 42px;
+    font-size: 0.95rem;
+  }
+}
+.summary-modern-wrapper {
+  max-width: 700px;
+  margin: 0 auto;
+  background-color: #f8f9fa;
+  padding-bottom: 100px; /* footer space */
+}
+
+.bill-table th {
+  background-color: #eceff1;
+  font-weight: 600;
+}
+
+.bill-table td, .bill-table th {
+  vertical-align: middle;
+}
+
+.fixed-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+  padding: 12px 20px;
+  display: flex;
+  justify-content: space-between;
+  z-index: 1000;
+}
+
+.btn-footer {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-back {
+  background-color: #f8f9fa;
+  border: 1px solid #ccc;
+  color: #333;
+}
+
+.btn-download {
+  background-color: #28a745;
+  color: white;
+  border: none;
+}
+
+.fixed-footer {
+  z-index: 9999 !important;
+}
+@media (max-width: 576px) {
+  .fixed-footer {
+    flex-direction: row !important;
+    justify-content: space-between !important;
+    gap: 12px !important;
+    padding: 10px 16px !important;
+  }
+
+  .fixed-footer .btn-footer,
+  .fixed-footer .btn-back,
+  .fixed-footer .btn-download {
+    flex: 1 1 48% !important;
+    max-width: 48% !important;
+    height: 42px;
+    font-size: 0.95rem;
+  }
+}
+.btn {
+  box-shadow: none !important;
+  border-radius: 6px !important;
+  transition: none !important;
+}
+
+/* Makes taps feel instant */
+button:active {
+  transform: scale(0.96);
+  transition: transform 0.1s ease;
+}
+
+/* Improves mobile tap size */
+button.btn-quantity,
+button.btn-place-order {
+  min-height: 40px;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.btn-place-order.small-btn {
+  background-color: #28a745;
+  color: white;
+  font-size: 0.9rem;
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: none;
+  flex-shrink: 0;
+}
+
+.quantity-display.small-quantity {
+  background-color: #f1f1f1;
+  padding: 8px 14px;
+  font-size: 0.9rem;
+  border-radius: 6px;
+  font-weight: 500;
+  color: #333;
+}
+
+/* Make sure it works on small devices */
+@media (max-width: 576px) {
+
+  .btn-place-order.small-btn,
+  .quantity-display.small-quantity {
+    width: auto;
+    font-size: 0.85rem;
+    padding: 6px 12px;
+  }
+}
+.footer-step1 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background-color: #ffffff;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  gap: 12px; /* Equal spacing between elements */
+}
+
+.btn-place-order, 
+.quantity-display {
+  flex: 1; /* Both take equal space */
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: bold;
+}
+
+.btn-place-order {
+  background-color: #4dc546;
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.quantity-display {
+  background-color: #f5f5f5;
+  color: #333;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .footer-step1 {
+    padding: 10px 12px;
+    gap: 10px;
+  }
+  
+  .btn-place-order, 
+  .quantity-display {
+    min-height: 48px;
+    font-size: 0.95rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .footer-step1 {
+    padding: 8px 10px;
+    gap: 8px;
+  }
+  
+  .btn-place-order, 
+  .quantity-display {
+    min-height: 44px;
+    font-size: 0.9rem;
+  }
+}
+
+/* Add this to your global styles or component */
+body {
+  margin-bottom: 76px; /* Prevent content from hiding behind fixed footer */
+}
+
+.footer-step1 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background-color: #ffffff;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  gap: 12px;
+  /* Creates a solid background that hides scrolling content */
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  background-color: rgba(255, 255, 255, 0.95);
+}
+
+.btn-place-order, 
+.quantity-display {
+  flex: 1;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: bold;
+}
+
+.btn-place-order {
+  background-color: #0aa235;
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.quantity-display {
+  background-color: #f5f5f5;
+  color: #333;
+}
+
+/* Responsive adjustments with proper bottom spacing */
+@media (max-width: 600px) {
+  body {
+    margin-bottom: 72px;
+  }
+  
+  .footer-step1 {
+    padding: 10px 12px;
+    gap: 10px;
+  }
+  
+  .btn-place-order, 
+  .quantity-display {
+    min-height: 48px;
+    font-size: 0.95rem;
+  }
+}
+
+@media (max-width: 400px) {
+  body {
+    margin-bottom: 68px;
+  }
+  
+  .footer-step1 {
+    padding: 8px 10px;
+    gap: 8px;
+  }
+  
+  .btn-place-order, 
+  .quantity-display {
+    min-height: 44px;
+    font-size: 0.9rem;
+  }
+}
+
+.footer-step1 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background-color: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  gap: 10px;
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+}
+
+.btn-place-order,
+.quantity-display {
+  flex: 1;
+  min-height: 36px; /* 👈 Smaller height */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.btn-place-order {
+  background-color: #24c745;
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.quantity-display {
+  background-color: #f5f5f5;
+  color: #333;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  body {
+    margin-bottom: 60px;
+  }
+
+  .footer-step1 {
+    padding: 8px 10px;
+    gap: 8px;
+  }
+
+  .btn-place-order,
+  .quantity-display {
+    min-height: 34px;
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 400px) {
+  body {
+    margin-bottom: 56px;
+  }
+
+  .footer-step1 {
+    padding: 6px 8px;
+    gap: 6px;
+  }
+
+  .btn-place-order,
+  .quantity-display {
+    min-height: 32px;
+    font-size: 0.8rem;
+  }
+}
+.footer-step1 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 16px; /* ⬅️ Increase footer background height */
+  background-color: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.08);
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  gap: 10px;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.btn-place-order,
+.quantity-display {
+  flex: 1;
+  min-height: 36px; /* 👈 Reduced height */
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.btn-place-order {
+  background-color: #24c745;
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.quantity-display {
+  background-color: #f1f1f1;
+  color: #333;
+}
+.order-items-section .border-bottom {
+  border-color: #eee !important;
+}
+
+.footer-step2 {
+  box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.05);
+}
+/* Base styles */
+.veg-filter-btn,
+.nonveg-filter-btn {
+  padding: 6px 20px;
+  font-weight: bold;
+  border: 2px solid;
+  background-color: white;
+  border-radius: 5px;
+  transition: background-color 0.3s, color 0.3s;
+  text-transform: lowercase;
+}
+
+/* Veg Button - Default */
+.veg-filter-btn {
+  border-color: green;
+  color: green;
+}
+
+/* Non-Veg Button - Default */
+.nonveg-filter-btn {
+  border-color: red;
+  color: red;
+}
+
+/* Veg Button - Selected */
+.selected-veg {
+  background-color: green !important;
+  color: white !important;
+}
+
+/* Non-Veg Button - Selected */
+.selected-nonveg {
+  background-color: red !important;
+  color: white !important;
+}
+.confirmation-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.confirmation-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.confirmation-card {
+  position: relative;
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  width: 90%;
+  max-width: 400px;
+  z-index: 1060;
+  box-shadow: 0 6px 30px rgba(0, 0, 0, 0.2);
+}
+
+.btn-close {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+}.swiggy-search-container {
+  background-color: #f8f9fa;
+  height: 45px;
+}
+
+.swiggy-search-container i {
+  font-size: 1.1rem;
+}
+
+/* ✅ Prevent zoom-out and fix layout on mobile */
+body {
+  overflow-x: hidden;
+  margin: 0;
+}
+
+/* ✅ Ensure everything respects mobile width */
+* {
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+/* ✅ Container padding fix */
+.container-fluid {
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
+/* ✅ Move logo and name slightly up */
+.restaurant-logo-name-container {
+  margin-top: 8px !important; /* or decrease this if already there */
+  padding-top: 0;
+}
+
+/* ✅ Make logo and name responsive */
+.restaurant-logo-name-container img {
+  max-width: 50px;
+  height: auto;
+}
+
+.restaurant-name {
+  font-size: 20px;
+  margin-top: 4px;
+}
+
+/* ✅ Keep Call Waiter in top-right corner */
+.call-waiter-container {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  z-index: 999;
+}
+
+/* ✅ Adjust buttons for mobile */
+@media (max-width: 576px) {
+  html, body {
+    font-size: 14px;
+  }
+
+  .btn {
+    font-size: 14px;
+    padding: 6px 12px;
+  }
+
+  .menu-item {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  .menu-item img {
+    width: 100%;
+    height: auto;
+  }
+}
+.text-success {
+  color: #28a745 !important;
+}
+html {
+  font-size: 100%; /* = 16px */
+}
+
+
+body {
+  font-size: 1rem; /* responsive base */
+}
+
+img,
+.product-image {
+  max-width: 100%;
+  height: auto;
+  object-fit: cover;
+}
+
+.menu-item,
+.order-flat-wrapper,
+.summary-modern-wrapper {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+.call-waiter-container {
+  z-index: 1055; /* Make sure it’s above other elements */
+  position: fixed; /* Better than absolute for fixed placement */
+  top: 1rem;
+  right: 1rem;
+}
+
+.call-waiter-container .dropdown-menu {
+  min-width: 220px;
+  padding: 0.5rem 0;
+  font-size: 0.9rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.call-waiter-container .dropdown-item {
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.footer-step1 {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  z-index: 100;
+  background-color: #ffffff;
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
+}
+.confirmation-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1060;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.confirmation-backdrop {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.confirmation-card {
+  position: relative;
+  background: #fff;
+  padding: 1.5rem;
+  border-radius: 1rem;
+  width: 90%;
+  max-width: 400px;
+  z-index: 1070;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+.confirmation-modal {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.confirmation-backdrop {
+  position: absolute;
+  width: 100%; height: 100%;
+}
+
+.confirmation-card {
+  position: relative;
+  background: #fff;
+  max-width: 400px;
+  width: 90%;
+  z-index: 2100;
+}
+/* Make the container handle dropdown correctly */
+.call-waiter-container {
+  position: relative;
+  z-index: 1050;
+}
+
+/* Ensure dropdown stays within screen bounds */
+.call-waiter-container .dropdown-menu {
+  right: 0 !important;
+  left: auto !important;
+  max-width: 90vw;
+  word-wrap: break-word;
+  z-index: 1051;
+  overflow-wrap: break-word;
+  white-space: normal;
+}
+
+/* Optional: Improve tap friendliness */
+.call-waiter-container .dropdown-item {
+  font-size: 0.95rem;
+  padding: 0.5rem 1rem;
+  white-space: normal;
+}
+/* Add extra space when footer is visible */
+.items-panel.has-footer,
+.menu-container.has-footer {
+  padding-bottom: 80px; /* Matches footer height */
+}
+/* ✅ Add padding to prevent footer overlap */
+.menu-container.has-footer {
+  padding-bottom: 80px; /* adjust if your footer is taller */
+}
+
+/* Optional: smoother look for footer */
+.footer-step1 {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 999;
+  background: #fff;
+  border-top: 1px solid #ddd;
+  padding: 10px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 -1px 8px rgba(0, 0, 0, 0.05);
+}

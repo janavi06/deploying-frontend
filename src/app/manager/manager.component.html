@@ -1,0 +1,912 @@
+ <div class="manager-dashboard">
+  <aside class="sidebar" [class.open]="isSidebarOpen">
+    <div class="sidebar-header">
+      <h2>Manager</h2>
+    </div>
+<!-- In your sidebar menu -->
+<ul class="sidebar-menu">
+  <li (click)="selectSection('history')" [class.active]="selectedSection==='history'"><i class="icon ion-ios-time"></i> Order History</li>
+  <li (click)="selectSection('editMenu')" [class.active]="selectedSection==='editMenu'"><i class="icon ion-ios-paper"></i> Edit Menu</li>
+  <!-- Add this new line -->
+
+  <li (click)="selectSection('reports')" [class.active]="selectedSection === 'reports'">
+  <i class="icon ion-ios-pie"></i> Reports
+</li>
+
+</ul>
+  </aside>
+
+  <main class="main-content" [class.sidebar-open]="isSidebarOpen">
+    <header class="dashboard-header">
+      <button class="sidebar-toggle" (click)="toggleSidebar()">☰</button>
+      <h1>Manager Dashboard</h1>
+    </header>
+
+    <!-- ORDER HISTORY -->
+
+<section *ngIf="selectedSection==='history'" class="history-section">
+  <div class="dashboard-toolbar mb-4">
+    <div class="row g-3">
+      <!-- Date Range Filter -->
+      <div class="col-md-3">
+        <label class="form-label">Date Range</label>
+        <div class="input-group">
+          <select class="form-select" [(ngModel)]="filterDateOption" (change)="onDateOptionChange()">
+            <option value="today">Today</option>
+            <option value="yesterday">Yesterday</option>
+            <option value="last7">Last 7 Days</option>
+            <option value="last30">Last 30 Days</option>
+            <option value="thismonth">This Month</option>
+            <option value="lastmonth">Last Month</option>
+            <option value="custom">Custom Range</option>
+          </select>
+        </div>
+        <div *ngIf="filterDateOption==='custom'" class="mt-2">
+          <div class="row g-2">
+            <div class="col-6">
+              <input type="date" class="form-control" [(ngModel)]="customStartDate" placeholder="Start Date">
+            </div>
+            <div class="col-6">
+              <input type="date" class="form-control" [(ngModel)]="customEndDate" placeholder="End Date">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Status Filter -->
+      <div class="col-md-2">
+        <label class="form-label">Status</label>
+        <select class="form-select" [(ngModel)]="filterStatus" (change)="applyFilters()">
+          <option value="">All Status</option>
+          <option *ngFor="let status of orderStatuses" [value]="status">{{status}}</option>
+        </select>
+      </div>
+
+      <!-- Payment Method Filter -->
+      <div class="col-md-2">
+        <label class="form-label">Payment</label>
+        <select class="form-select" [(ngModel)]="filterPaymentMethod" (change)="applyFilters()">
+          <option value="">All Methods</option>
+          <option value="Cash">Cash</option>
+          <option value="Card">Card</option>
+          <option value="UPI">UPI</option>
+        </select>
+      </div>
+
+      <!-- Table Filter -->
+      <div class="col-md-2">
+        <label class="form-label">Table No.</label>
+        <input type="number" class="form-control" [(ngModel)]="filterTableNo" 
+               (change)="applyFilters()" placeholder="All Tables">
+      </div>
+
+      <!-- Search -->
+      <div class="col-md-3">
+        <label class="form-label">Search</label>
+        <div class="input-group">
+          <input type="text" class="form-control" [(ngModel)]="searchText" 
+                 (input)="applyFilters()" placeholder="Search orders...">
+          <button class="btn btn-outline-secondary" type="button">
+            <i class="bi bi-search"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="row mt-3">
+      <div class="col">
+        <button class="btn btn-primary me-2" (click)="applyFilters()">
+          <i class="bi bi-funnel me-1"></i> Apply Filters
+        </button>
+        <button class="btn btn-outline-secondary me-2" (click)="resetFilters()">
+          <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
+        </button>
+        <div class="btn-group">
+
+     <div class="btn-group">
+  <button class="btn btn-danger" (click)="exportToPDF()">
+    <i class="bi bi-file-earmark-pdf me-1"></i> PDF
+  </button>
+  <button class="btn btn-dark" (click)="exportToCSV()">
+    <i class="bi bi-file-earmark-text me-1"></i> CSV
+  </button>
+</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="row mb-4">
+    <div class="col-md-3">
+      <div class="card summary-card">
+        <div class="card-body">
+          <h6 class="card-subtitle mb-2 text-muted">Total Orders</h6>
+          <h3 class="card-title">{{filteredOrders.length}}</h3>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card summary-card">
+        <div class="card-body">
+          <h6 class="card-subtitle mb-2 text-muted">Total Revenue</h6>
+          <h3 class="card-title">{{calculateTotalRevenue() | currency:'INR'}}</h3>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card summary-card">
+        <div class="card-body">
+          <h6 class="card-subtitle mb-2 text-muted">Avg. Order Value</h6>
+          <h3 class="card-title">{{calculateAverageOrderValue() | currency:'INR'}}</h3>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card summary-card">
+        <div class="card-body">
+          <h6 class="card-subtitle mb-2 text-muted">Cancellation Rate</h6>
+          <h3 class="card-title">{{calculateCancellationRate() | percent}}</h3>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Orders Table -->
+  <div class="card">
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead class="table-light">
+            <tr>
+              <th (click)="sortOrders('orderID')">
+                Order ID <i class="bi" [ngClass]="{'bi-arrow-down': sortColumn === 'orderID' && sortDirection === 'asc', 
+                'bi-arrow-up': sortColumn === 'orderID' && sortDirection === 'desc'}"></i>
+              </th>
+              <th (click)="sortOrders('createdAt')">
+                Date/Time <i class="bi" [ngClass]="{'bi-arrow-down': sortColumn === 'createdAt' && sortDirection === 'asc', 
+                'bi-arrow-up': sortColumn === 'createdAt' && sortDirection === 'desc'}"></i>
+              </th>
+              <th>Table</th>
+              <!-- <th>Customer</th> -->
+              <th>Items</th>
+              <th (click)="sortOrders('totalAmount')">
+                Amount <i class="bi" [ngClass]="{'bi-arrow-down': sortColumn === 'totalAmount' && sortDirection === 'asc', 
+                'bi-arrow-up': sortColumn === 'totalAmount' && sortDirection === 'desc'}"></i>
+              </th>
+              <th>Status</th>
+              <th>Payment</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let order of paginatedOrders">
+              <td>
+                <a href="javascript:void(0)" (click)="viewOrderDetails(order.orderID)">#{{order.orderID}}</a>
+              </td>
+              <td>{{order.createdAt | date:'medium'}}</td>
+              <td>{{order.tableNo || 'Takeaway'}}</td>
+              <!-- <td>{{order.customerName || 'Guest'}}</td> -->
+              <td>
+                <span class="badge bg-primary">{{order.items.length}}</span>
+                <button class="btn btn-sm btn-link" (click)="toggleItems(order)">
+                  <i class="bi" [ngClass]="{'bi-chevron-down': !order.showItems, 'bi-chevron-up': order.showItems}"></i>
+                </button>
+              </td>
+              <td>{{calculateOrderTotal(order) | currency:'INR'}}</td>
+              <td>
+                <span class="badge" [ngClass]="getStatusBadgeClass(order.status)">
+                  {{order.status}}
+                </span>
+              </td>
+              <td>
+                <span class="badge bg-secondary">{{order.paymentMethod || 'Pending'}}</span>
+              </td>
+              <td>
+<div class="btn-group btn-group-sm">
+  <button class="btn btn-outline-primary" (click)="viewBill(order.orderID)" title="View Bill">
+    <i class="bi bi-eye"></i>
+  </button>
+  <button class="btn btn-outline-success" (click)="downloadBill(order.orderID)" title="Download Bill">
+    <i class="bi bi-download"></i>
+  </button>
+</div>
+
+              </td>
+            </tr>
+            <tr *ngIf="filteredOrders.length === 0">
+              <td colspan="9" class="text-center py-4 text-muted">
+                No orders found matching your criteria.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Item Details Expansion -->
+      <div *ngFor="let order of paginatedOrders" class="item-details" [class.show]="order.showItems">
+        <div class="card mb-3">
+          <div class="card-header">
+            <h6 class="mb-0">Order #{{order.orderID}} Items</h6>
+          </div>
+          <div class="card-body">
+            <table class="table table-sm">
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th class="text-end">Price</th>
+                  <th class="text-end">Qty</th>
+                  <th class="text-end">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of order.items">
+                  <td>
+                    <strong>{{item.productName}}</strong>
+                    <div *ngIf="item.customizations?.length" class="text-muted small">
+                      <div *ngFor="let cust of item.customizations">
+                        + {{cust.optionName}}
+                      </div>
+                    </div>
+                  </td>
+                  <td class="text-end">{{item.unitPrice | currency:'INR'}}</td>
+                  <td class="text-end">{{item.quantity}}</td>
+                  <td class="text-end">{{item.unitPrice * item.quantity | currency:'INR'}}</td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="3" class="text-end"><strong>Subtotal:</strong></td>
+                  <td class="text-end">{{calculateSubtotal(order) | currency:'INR'}}</td>
+                </tr>
+                <tr *ngIf="order.discountAmount > 0">
+                  <td colspan="3" class="text-end"><strong>Discount:</strong></td>
+                  <td class="text-end text-danger">-{{order.discountAmount | currency:'INR'}}</td>
+                </tr>
+                <tr>
+                  <td colspan="3" class="text-end"><strong>Taxes:</strong></td>
+                  <td class="text-end">{{(order.cgst + order.sgst) | currency:'INR'}}</td>
+                </tr>
+                <tr>
+                  <td colspan="3" class="text-end"><strong>Service Charge:</strong></td>
+                  <td class="text-end">{{order.serviceCharge | currency:'INR'}}</td>
+                </tr>
+                <tr class="table-active">
+                  <td colspan="3" class="text-end"><strong>Total:</strong></td>
+                  <td class="text-end"><strong>{{calculateOrderTotal(order) | currency:'INR'}}</strong></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pagination -->
+      <div class="d-flex justify-content-between align-items-center mt-3">
+        <div class="text-muted">
+          Showing {{(currentPage - 1) * itemsPerPage + 1}} to 
+          {{Math.min(currentPage * itemsPerPage, filteredOrders.length)}} of {{filteredOrders.length}} orders
+        </div>
+        <nav>
+          <ul class="pagination">
+            <li class="page-item" [class.disabled]="currentPage === 1">
+              <a class="page-link" href="javascript:void(0)" (click)="previousPage()">Previous</a>
+            </li>
+            <li class="page-item" *ngFor="let page of getPages()" [class.active]="page === currentPage">
+              <a class="page-link" href="javascript:void(0)" (click)="goToPage(page)">{{page}}</a>
+            </li>
+            <li class="page-item" [class.disabled]="currentPage === totalPages">
+              <a class="page-link" href="javascript:void(0)" (click)="nextPage()">Next</a>
+            </li>
+          </ul>
+        </nav>
+        <div class="form-group">
+          <select class="form-select form-select-sm" [(ngModel)]="itemsPerPage" (change)="updatePagination()">
+            <option value="10">10 per page</option>
+            <option value="25">25 per page</option>
+            <option value="50">50 per page</option>
+            <option value="100">100 per page</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+    <!-- REPORTS SECTION -->
+
+<!-- Enhanced Reports Section -->
+<section *ngIf="selectedSection === 'reports'" class="report-section">
+  <div class="card">
+    <div class="card-header">
+      <h5 class="mb-0">
+        <i class="bi bi-graph-up me-2"></i> Sales Analytics Dashboard
+      </h5>
+    </div>
+    <div class="card-body">
+      <!-- Report Type Selector -->
+      <div class="row mb-4">
+        <div class="col">
+          <div class="btn-group" role="group">
+            <button *ngFor="let report of reportTypes" 
+                    class="btn" 
+                    [class.btn-primary]="selectedReport === report.value"
+                    [class.btn-outline-primary]="selectedReport !== report.value"
+                    (click)="selectReport(report.value)">
+              <i [class]="report.icon"></i> {{report.label}}
+            </button>
+          </div>
+        </div>
+        <div class="col-auto">
+          <div class="input-group">
+            <select class="form-select" [(ngModel)]="reportTimeRange" (change)="loadReportData()">
+              <option value="today">Today</option>
+              <option value="yesterday">Yesterday</option>
+              <option value="last7">Last 7 Days</option>
+              <option value="last30">Last 30 Days</option>
+              <option value="thismonth">This Month</option>
+              <option value="lastmonth">Last Month</option>
+              <option value="thisquarter">This Quarter</option>
+              <option value="lastquarter">Last Quarter</option>
+              <option value="thisyear">This Year</option>
+              <option value="custom">Custom Range</option>
+            </select>
+            <button class="btn btn-outline-secondary" type="button" (click)="exportReport()">
+              <i class="bi bi-download"></i> Export
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Custom Date Range -->
+      <div *ngIf="reportTimeRange === 'custom'" class="row mb-4 g-2">
+        <div class="col-md-3">
+          <label class="form-label">From Date</label>
+          <input type="date" class="form-control" [(ngModel)]="customReportStartDate" 
+                 (change)="loadReportData()">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">To Date</label>
+          <input type="date" class="form-control" [(ngModel)]="customReportEndDate" 
+                 (change)="loadReportData()">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Compare With</label>
+          <select class="form-select" [(ngModel)]="comparePeriod" (change)="loadReportData()">
+            <option value="none">None</option>
+            <option value="previous">Previous Period</option>
+            <option value="lastyear">Last Year</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- KPI Cards -->
+      <div class="row mb-4">
+        <div class="col-md-3">
+          <div class="card kpi-card">
+            <div class="card-body">
+              <div class="d-flex justify-content-between">
+                <div>
+                  <h6 class="text-muted mb-2">Total Revenue</h6>
+                  <h3 class="mb-0">{{reportData.totalRevenue | currency:'INR'}}</h3>
+                </div>
+                <div class="avatar-sm">
+                  <span class="avatar-title bg-soft-primary rounded">
+                    <i class="bi bi-currency-rupee text-primary"></i>
+                  </span>
+                </div>
+              </div>
+              <p class="mb-0 mt-2" *ngIf="reportData.revenueChange">
+                <span [class.text-success]="reportData.revenueChange >= 0" 
+                      [class.text-danger]="reportData.revenueChange < 0">
+                  <i class="bi" [ngClass]="{'bi-arrow-up': reportData.revenueChange >= 0, 
+                  'bi-arrow-down': reportData.revenueChange < 0}"></i>
+                  {{Math.abs(reportData.revenueChange) | percent}} vs {{getComparisonPeriod()}}
+                </span>
+              </p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card kpi-card">
+            <div class="card-body">
+              <div class="d-flex justify-content-between">
+                <div>
+                  <h6 class="text-muted mb-2">Total Orders</h6>
+                  <h3 class="mb-0">{{reportData.totalOrders}}</h3>
+                </div>
+                <div class="avatar-sm">
+                  <span class="avatar-title bg-soft-success rounded">
+                    <i class="bi bi-cart-check text-success"></i>
+                  </span>
+                </div>
+              </div>
+              <p class="mb-0 mt-2" *ngIf="reportData.orderChange">
+                <span [class.text-success]="reportData.orderChange >= 0" 
+                      [class.text-danger]="reportData.orderChange < 0">
+                  <i class="bi" [ngClass]="{'bi-arrow-up': reportData.orderChange >= 0, 
+                  'bi-arrow-down': reportData.orderChange < 0}"></i>
+                  {{Math.abs(reportData.orderChange) | percent}} vs {{getComparisonPeriod()}}
+                </span>
+              </p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card kpi-card">
+            <div class="card-body">
+              <div class="d-flex justify-content-between">
+                <div>
+                  <h6 class="text-muted mb-2">Avg. Order Value</h6>
+                  <h3 class="mb-0">{{reportData.avgOrderValue | currency:'INR'}}</h3>
+                </div>
+                <div class="avatar-sm">
+                  <span class="avatar-title bg-soft-info rounded">
+                    <i class="bi bi-graph-up text-info"></i>
+                  </span>
+                </div>
+              </div>
+              <p class="mb-0 mt-2" *ngIf="reportData.aovChange">
+                <span [class.text-success]="reportData.aovChange >= 0" 
+                      [class.text-danger]="reportData.aovChange < 0">
+                  <i class="bi" [ngClass]="{'bi-arrow-up': reportData.aovChange >= 0, 
+                  'bi-arrow-down': reportData.aovChange < 0}"></i>
+                  {{Math.abs(reportData.aovChange) | percent}} vs {{getComparisonPeriod()}}
+                </span>
+              </p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card kpi-card">
+            <div class="card-body">
+              <div class="d-flex justify-content-between">
+                <div>
+                  <h6 class="text-muted mb-2">Cancellation Rate</h6>
+                  <h3 class="mb-0">{{reportData.cancellationRate | percent}}</h3>
+                </div>
+                <div class="avatar-sm">
+                  <span class="avatar-title bg-soft-warning rounded">
+                    <i class="bi bi-x-circle text-warning"></i>
+                  </span>
+                </div>
+              </div>
+              <p class="mb-0 mt-2" *ngIf="reportData.cancellationChange">
+                <span [class.text-success]="reportData.cancellationChange <= 0" 
+                      [class.text-danger]="reportData.cancellationChange > 0">
+                  <i class="bi" [ngClass]="{'bi-arrow-up': reportData.cancellationChange <= 0, 
+                  'bi-arrow-down': reportData.cancellationChange > 0}"></i>
+                  {{Math.abs(reportData.cancellationChange) | percent}} vs {{getComparisonPeriod()}}
+                </span>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Report Content -->
+      <div class="row">
+        <div class="col-md-8">
+          <!-- Sales Trend Chart -->
+          <div class="card mb-4">
+            <div class="card-header">
+              <h6 class="mb-0">Sales Trend</h6>
+            </div>
+            <div class="card-body">
+              <div class="chart-container" style="height: 300px;">
+                <canvas baseChart
+                  [data]="salesTrendChartData"
+                  [options]="salesTrendChartOptions"
+                  [type]="'line'">
+                </canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <!-- Payment Method Distribution -->
+          <div class="card mb-4">
+            <div class="card-header">
+              <h6 class="mb-0">Payment Methods</h6>
+            </div>
+            <div class="card-body">
+              <div class="chart-container" style="height: 300px;">
+                <canvas baseChart
+                  [data]="paymentMethodChartData"
+                  [options]="doughnutChartOptions"
+                  [type]="'doughnut'">
+                </canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Report-Specific Content -->
+      <div *ngIf="selectedReport === 'sales'">
+        <!-- Sales Report Content -->
+        <div class="row">
+          <div class="col-md-6">
+            <div class="card mb-4">
+              <div class="card-header">
+                <h6 class="mb-0">Hourly Sales Performance</h6>
+              </div>
+              <div class="card-body">
+                <div class="chart-container" style="height: 250px;">
+                  <canvas baseChart
+                    [data]="hourlySalesChartData"
+                    [options]="barChartOptions"
+                    [type]="'bar'">
+                  </canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="card mb-4">
+              <div class="card-header">
+                <h6 class="mb-0">Top Performing Tables</h6>
+              </div>
+              <div class="card-body">
+                <div class="table-responsive">
+                  <table class="table table-sm">
+                    <thead>
+                      <tr>
+                        <th>Table</th>
+                        <th class="text-end">Orders</th>
+                        <th class="text-end">Revenue</th>
+                        <th class="text-end">Avg. Value</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let table of reportData.topTables">
+                        <td>{{table.tableNo || 'Takeaway'}}</td>
+                        <td class="text-end">{{table.orderCount}}</td>
+                        <td class="text-end">{{table.revenue | currency:'INR'}}</td>
+                        <td class="text-end">{{table.avgValue | currency:'INR'}}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="selectedReport === 'items'">
+        <!-- Items Report Content -->
+        <div class="row">
+          <div class="col-md-6">
+            <div class="card mb-4">
+              <div class="card-header">
+                <h6 class="mb-0">Top Selling Items</h6>
+              </div>
+              <div class="card-body">
+                <div class="chart-container" style="height: 300px;">
+                  <canvas baseChart
+                    [data]="topItemsChartData"
+                    [options]="horizontalBarChartOptions"
+                    [type]="'bar'">
+                  </canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="card mb-4">
+              <div class="card-header">
+                <h6 class="mb-0">Least Selling Items</h6>
+              </div>
+              <div class="card-body">
+                <div class="table-responsive">
+                  <table class="table table-sm">
+                    <thead>
+                      <tr>
+                        <th>Item</th>
+                        <th class="text-end">Qty Sold</th>
+                        <th class="text-end">Revenue</th>
+                        <th class="text-end">% of Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let item of reportData.bottomItems">
+                        <td>{{item.productName}}</td>
+                        <td class="text-end">{{item.quantity}}</td>
+                        <td class="text-end">{{item.revenue | currency:'INR'}}</td>
+                        <td class="text-end">{{item.percentage | percent:'1.1-1'}}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="selectedReport === 'category'">
+        <!-- Category Report Content -->
+        <div class="row">
+          <div class="col-md-6">
+            <div class="card mb-4">
+              <div class="card-header">
+                <h6 class="mb-0">Revenue by Category</h6>
+              </div>
+              <div class="card-body">
+                <div class="chart-container" style="height: 350px;">
+                  <canvas baseChart
+                    [data]="categoryRevenueChartData"
+                    [options]="pieChartOptions"
+                    [type]="'pie'">
+                  </canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="card mb-4">
+              <div class="card-header">
+                <h6 class="mb-0">Category Performance</h6>
+              </div>
+              <div class="card-body">
+                <div class="table-responsive">
+                  <table class="table table-sm">
+                    <thead>
+                      <tr>
+                        <th>Category</th>
+                        <th class="text-end">Revenue</th>
+                        <th class="text-end">% of Total</th>
+                        <th class="text-end">Avg. Price</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let category of reportData.categoryPerformance">
+                        <td>{{category.categoryName}}</td>
+                        <td class="text-end">{{category.revenue | currency:'INR'}}</td>
+                        <td class="text-end">{{category.percentage | percent:'1.1-1'}}</td>
+                        <td class="text-end">{{category.avgPrice | currency:'INR'}}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Data Table -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <h6 class="mb-0">Detailed Data</h6>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-sm">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th class="text-end">Orders</th>
+                  <th class="text-end">Revenue</th>
+                  <th class="text-end">Avg. Order</th>
+                  <th class="text-end">Cancellations</th>
+                  <th class="text-end">Cancellation Rate</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let day of reportData.dailyData">
+                  <td>{{day.date | date}}</td>
+                  <td class="text-end">{{day.orderCount}}</td>
+                  <td class="text-end">{{day.revenue | currency:'INR'}}</td>
+                  <td class="text-end">{{day.avgOrderValue | currency:'INR'}}</td>
+                  <td class="text-end">{{day.cancellations}}</td>
+                  <td class="text-end">{{day.cancellationRate | percent:'1.1-1'}}</td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr class="table-active">
+                  <th>Total/Average</th>
+                  <th class="text-end">{{reportData.totalOrders}}</th>
+                  <th class="text-end">{{reportData.totalRevenue | currency:'INR'}}</th>
+                  <th class="text-end">{{reportData.avgOrderValue | currency:'INR'}}</th>
+                  <th class="text-end">{{reportData.totalCancellations}}</th>
+                  <th class="text-end">{{reportData.cancellationRate | percent:'1.1-1'}}</th>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+  <section *ngIf="selectedSection==='editMenu'" class="edit-menu-section">
+  <div class="container-fluid">
+    <div class="row align-items-center justify-content-between mb-3">
+      <!-- Add Button -->
+      <div class="col-12 col-md-auto mb-2">
+        <button class="btn btn-primary w-100 w-md-auto" (click)="openAddModal()">
+          <i class="bi bi-plus-lg me-2"></i>Add New Item
+        </button>
+      </div>
+
+      <!-- Search Bar -->
+      <div class="col-12 col-md flex-grow-1">
+        <div class="search-wrapper w-100">
+          <input type="text" 
+                 class="form-control"
+                 placeholder="Search items by name"
+                 [(ngModel)]="searchText"
+                 (ngModelChange)="onSearchChange()">
+        </div>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Description</th>
+            <th>Price</th>
+            <th>Available</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let p of filteredProducts">
+            <td>{{ p.productName }}</td>
+            <td class="truncate-cell text-truncate">{{ p.productDescription || '—' }}</td>
+            <td>₹{{ p.price }}</td>
+            <td>
+              <label class="toggle-switch">
+                <input type="checkbox" [checked]="p.isAvailable" (change)="toggleAvailability(p)" />
+                <span class="toggle-slider"></span>
+              </label>
+            </td>
+            <td class="text-end">
+              <button class="btn btn-sm edit-btn me-1" (click)="openEditModal(p)">
+                <i class="bi bi-pencil"></i>
+              </button>
+              <button class="btn btn-sm delete-btn" (click)="deleteProduct(p.productID)">
+                <i class="bi bi-trash"></i>
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="filteredProducts.length === 0">
+            <td colspan="5" class="text-center py-4">
+              No items match your search.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+
+    <!-- SETTINGS -->
+    <section *ngIf="selectedSection==='settings'">
+      <h1>Settings</h1>
+      <p>Manage system preferences and account settings here.</p>
+    </section> 
+  </main>
+</div>
+
+
+<!-- ADD / EDIT MODAL -->
+<div class="modal fade" [class.show]="isModalOpen" [style.display]="isModalOpen ? 'block' : 'none'">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">{{ isEditMode ? 'Edit Menu Item' : 'Add New Item' }}</h5>
+        <button type="button" class="btn-close" (click)="closeModal()"></button>
+      </div>
+      <!-- Added template reference variable and validation checks -->
+      <form (ngSubmit)="isEditMode ? updateProductModal() : addProductModal()" #productForm="ngForm">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Item Name <span class="text-danger">*</span></label>
+            <input type="text"
+                   class="form-control"
+                   [(ngModel)]="modalProduct.productName"
+                   name="productName"
+                   required>
+          </div>
+
+          <div class="row g-3">
+            <!-- Category Dropdown -->
+            <div class="mb-3">
+              <label class="form-label">Category <span class="text-danger">*</span></label>
+              <select class="form-select"
+                      [(ngModel)]="modalProduct.categoryID"
+                      name="categoryID"
+                      required
+                      (change)="modalProduct.subCategoryID = null">
+                <option [ngValue]="null" disabled>Select a Category</option>
+                <option *ngFor="let cat of categories" [ngValue]="cat.categoryID">
+                  {{ cat.categoryName }}
+                </option>
+              </select>
+            </div>
+
+            <!-- Subcategory Dropdown -->
+            <div class="mb-3">
+              <label class="form-label">Subcategory</label>
+              <select class="form-select"
+                      [(ngModel)]="modalProduct.subCategoryID"
+                      name="subCategoryID">
+                <option [ngValue]="null">None</option>
+                <option *ngFor="let sub of getSubcategoriesByCategory(modalProduct.categoryID)"
+                [ngValue]="sub.subCategoryID">
+          {{ sub.subCategoryName }}
+        </option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Price <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text">₹</span>
+                <input type="number"
+                       class="form-control"
+                       [(ngModel)]="modalProduct.price"
+                       name="price"
+                       required
+                       min="0.01"
+                       step="0.01">
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Description</label>
+            <textarea class="form-control"
+                      rows="3"
+                      [(ngModel)]="modalProduct.productDescription"
+                      name="productDescription"></textarea>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Item Image</label>
+            <input type="file" class="form-control" (change)="handleImageUpload($event)">
+            <small class="text-muted">Recommended size: 500×500px, JPG/PNG</small>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="closeModal()">Cancel</button>
+          <!-- Disabled state based on form validity -->
+          <button type="submit" 
+                  class="btn btn-primary"
+                  [disabled]="productForm.invalid">
+            {{ isEditMode ? 'Save Changes' : 'Add Item' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>    
+
+
+
+<!-- Bill Preview Modal -->
+<div class="modal fade show" tabindex="-1" [ngStyle]="{ display: showBillModal ? 'block' : 'none' }" *ngIf="showBillModal">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Bill Preview</h5>
+        <button type="button" class="btn-close" (click)="closeBillModal()"></button>
+      </div>
+      <div class="modal-body">
+        <div [innerHTML]="billHtmlContent"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Backdrop -->
+<div class="modal-backdrop fade show" *ngIf="showBillModal"></div>

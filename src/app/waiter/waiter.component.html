@@ -1,0 +1,283 @@
+<div class="waiter-dashboard">
+  <!-- Sidebar -->
+  <aside class="sidebar" [class.open]="isSidebarOpen">
+<ul class="sidebar-menu">
+
+  
+  <li (click)="selectedSection = 'orders'" [class.active]="selectedSection === 'orders'">
+    Orders ({{ orders.length }})
+  </li>
+
+  <li (click)="selectedSection = 'requests'" [class.active]="selectedSection === 'requests'">
+    Service Requests ({{ unreadRequests.length }})
+  </li>
+<li (click)="selectedSection = 'pendingPayments'" [class.active]="selectedSection === 'pendingPayments'">
+  Pending Payments <span *ngIf="pendingPayments.length" class="badge">({{ pendingPayments.length }})</span>
+</li>
+
+
+  <li (click)="selectedSection = 'history'" [class.active]="selectedSection === 'history'">
+    History
+  </li>
+
+</ul>
+
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content" [class.sidebar-open]="isSidebarOpen">
+    <header class="dashboard-header">
+      <button class="sidebar-toggle" (click)="toggleSidebar()">☰</button>
+      <h1>Waiter Dashboard</h1>
+    </header>
+
+<!-- Notification Panel (keep this exactly as you had it) -->
+<div class="notification-panel" *ngIf="unreadRequests.length > 0">
+  <div class="notification-header">
+    <h3>New Service Requests</h3>
+    <button class="clear-btn" (click)="clearAllNotifications()">Clear All</button>
+  </div>
+  <div class="notification-list">
+    <div *ngFor="let request of unreadRequests" class="notification-item">
+      <div class="notification-content">
+        <strong>Table {{ request.tableNumber }}</strong>
+        <p>{{ request.message }}</p>
+        <small>{{ request.requestTime | date:'shortTime' }}</small>
+      </div>
+      <button class="notification-action" (click)="acceptRequest(request.waiterRequestID)">
+        Accept
+      </button>
+    </div>
+  </div>
+</div>
+
+    <!-- Pending Payments -->
+    <section *ngIf="selectedSection === 'pendingPayments'" class="pending-payments">
+<app-pending-payments
+  [payments]="pendingPayments"
+  (paymentCleared)="onPaymentCleared($event)">
+</app-pending-payments>
+    </section>
+
+
+  
+         
+<section *ngIf="selectedSection === 'orders'" class="waiter-table-layout">
+
+
+  <!-- Table cards -->
+  <div class="table-row">
+    <div
+      *ngFor="let group of groupedUpcomingOrders"
+      class="table-card"
+      [class.active]="selectedTableNo === group.tableNo"
+      (click)="selectTableForOrders(group.tableNo)"
+    >
+      Table {{ group.tableNo }}
+      <span class="badge">{{ group.orders.length }}</span>
+    </div>
+  </div>
+
+    <!-- ✅ Move this heading here -->
+  <h4 *ngIf="selectedTableNo !== null" class="orders-heading">
+    🧾 Orders for Table {{ selectedTableNo }}
+  </h4>
+
+  <!-- Orders for selected table -->
+<div class="order-card-grid mt-3" *ngIf="selectedTableNo !== null">
+  <ng-container *ngFor="let group of groupedUpcomingOrders">
+    <ng-container *ngIf="group.tableNo === selectedTableNo">
+      <div class="order-mini-card" *ngFor="let order of group.orders">
+
+        <!-- ✅ Order No + Time in same row -->
+        <div class="order-header" style="display: flex; justify-content: space-between; align-items: center;">
+          <div class="order-id">Order No: {{ order.orderID }}</div>
+          <div class="order-time">{{ getElapsedTime(order.createdAt) }}</div>
+        </div>
+
+        <!-- Order Items -->
+        <ul class="order-items">
+          <li *ngFor="let item of order.items">
+            {{ item.productName || ('Item ' + item.productID) }} × {{ item.quantity }}
+          </li>
+        </ul>
+
+        <!-- Serve Button -->
+
+<div class="order-actions mt-2"
+     *ngIf="order.orderStatus === OrderStatus.Confirmed && order.kitchenStatus === KitchenStatus.Ready">
+  <button class="btn btn-success btn-sm" (click)="serveOrder(order.orderID)">Serve</button>
+</div>
+
+      </div>
+    </ng-container>
+  </ng-container>
+</div>
+
+
+
+</section>
+
+
+
+
+<!-- <section *ngIf="selectedSection === 'readyOrders'" class="ready-serve-section">
+  <h2>Orders Ready to Serve ({{ getOrderCount(OrderStatus.Confirmed) }})</h2>
+
+
+  <div class="table-grid">
+    <div
+      class="table-card"
+      [class.active]="selectedReadyTable === null"
+      (click)="selectTable(null)"
+    >
+      All Tables
+    </div>
+    <div
+      class="table-card"
+      *ngFor="let table of readyTables"
+      [class.active]="selectedReadyTable === table.tableNo"
+      (click)="selectTable(table.tableNo)"
+    >
+      Table {{ table.tableNo }}
+    </div>
+  </div>
+
+
+  <div class="order-card-container flex-grow-2">
+    <h3 *ngIf="selectedReadyTable !== null">
+      Orders for Table {{ selectedReadyTable }}
+    </h3>
+    <h3 *ngIf="selectedReadyTable === null">
+      Orders for All Tables
+    </h3>
+
+    <div class="order-grid">
+      <div
+        *ngFor="let order of selectedReadyOrders"
+        class="ready-order-card"
+      >
+        <div class="ready-order-id">Order #{{ order.orderID }}</div>
+
+        <div *ngFor="let item of order.items" class="ready-order-item">
+          <span class="item-name">{{ item.productName || 'Item ' + item.productID }}</span>
+          <span class="item-qty">Qty: {{ item.quantity }}</span>
+        </div>
+
+        <div class="ready-order-actions mt-2">
+          <button class="action-btn serve" (click)="serveOrder(order.orderID)">
+            Serve
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <ng-template #noReady>
+    <p>No orders ready to serve.</p>
+  </ng-template>
+</section>
+ -->
+
+
+
+
+    <!-- Service Requests -->
+    <section *ngIf="selectedSection === 'requests'" class="service-requests">
+      <h2 class="sr-heading">Service Requests</h2>
+      <p *ngIf="waiterRequests.length === 0" class="sr-empty">
+        No service requests at this time.
+      </p>
+      <ul *ngIf="waiterRequests.length > 0" class="sr-list">
+        <li *ngFor="let request of waiterRequests" class="sr-item">
+          <div class="sr-info">
+            <strong>Table No {{ request.tableNumber }}:</strong>
+            <span class="sr-message">{{ request.message }}</span>
+          </div>
+          <div class="sr-meta">
+            <small class="sr-time">
+              ({{ request.requestTime | date:'shortTime' }})
+            </small>
+            <!-- <button class="sr-accept-btn"
+                    (click)="acceptRequest(request.waiterRequestID)">
+              Accept
+            </button> -->
+          </div>
+        </li>
+      </ul>
+    </section>
+
+<!-- History -->
+<section *ngIf="selectedSection === 'history'" class="order-history">
+
+  <!-- 🔽 Filter Dropdown -->
+<div class="d-flex justify-content-end mb-2">
+  <label class="me-2 fw-bold">Show:</label>
+  <select class="form-select form-select-sm w-auto"
+          [(ngModel)]="historyFilter"
+          (change)="applyHistoryFilter()">
+    <option value="today">Today</option>
+    <option value="2days">Last 2 Days</option>
+    <option value="all">All</option>
+  </select>
+</div>
+
+  <div class="table-responsive">
+    <table class="table align-middle table-borderless">
+      <thead>
+        <tr>
+          <th>Table No</th>
+          <th>Order ID</th>
+          <th>Items</th>
+          <th>Payment Method</th>
+          <th>Amount</th>
+          <th>Status</th>
+          <th>Paid At</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let order of historyOrders">
+          <td>{{ order.tableNo }}</td>
+          <td>{{ order.orderID }}</td>
+          <td>
+            <ul class="list-unstyled mb-0">
+              <li *ngFor="let item of order.items">
+                {{ item.productName || ('Product ' + item.productID) }} × {{ item.quantity }}
+              </li>
+            </ul>
+          </td>
+          <td>{{ order.latestPayment?.method || 'N/A' }}</td>
+          <td>
+            ₹{{ order.latestPayment ? (order.latestPayment.amount | number:'1.2-2') : '0.00' }}
+          </td>
+          <td>{{ order.latestPayment?.status || 'N/A' }}</td>
+          <td>
+            {{ order.latestPayment?.paidAt ? (order.latestPayment?.paidAt | date:'short') : 'N/A' }}
+          </td>
+        </tr>
+
+        <tr *ngIf="historyOrders.length === 0">
+          <td colspan="7" class="text-center py-4">
+            No historical orders available.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+
+
+<!-- 🔔 Floating Notifications -->
+<div class="floating-alerts-container">
+  <div
+    *ngFor="let alert of activeAlerts"
+    class="floating-alert floating-{{ alert.type }}"
+  >
+    {{ alert.message }}
+  </div>
+</div>
+
+
+  </main>
+</div>

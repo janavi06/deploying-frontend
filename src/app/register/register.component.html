@@ -1,0 +1,22 @@
+<form (ngSubmit)="register()" #f="ngForm">
+    <h2>Register</h2>
+    <label>
+      Full Name
+      <input name="userName" [(ngModel)]="userName" required />
+    </label>
+    <label>
+      Email
+      <input type="email" name="email" [(ngModel)]="email" required />
+    </label>
+    <label>
+      Password
+      <input type="password" name="password" [(ngModel)]="password" required />
+    </label>
+    <label>
+      Phone
+      <input name="phoneNumber" [(ngModel)]="phoneNumber" />
+    </label>
+    <button type="submit" [disabled]="!f.valid">Sign Up</button>
+    <p><a routerLink="/login">Already have one? Login</a></p>
+  </form>
+  

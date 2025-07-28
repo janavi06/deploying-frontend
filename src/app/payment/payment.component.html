@@ -1,0 +1,22 @@
+<div class="container text-center payment-container">
+  <h2 class="payment-title">Scan & Pay</h2>
+  <p class="payment-text">Scan the QR code below to complete your payment.</p>
+
+  <div class="qr-container">
+    <img src="assets/qr-code.png" alt="UPI QR Code" class="qr-code shadow-lg" />
+
+
+  </div>
+
+  <p class="upi-text">
+    <strong>UPI ID:</strong> <span class="upi-id">nishaprint2209-4&#64;okaxis</span>
+  </p>
+
+  <p *ngIf="orderSummary">
+    <strong>Total Amount:</strong> ₹{{ orderSummary.totalAmount | number:'1.2-2' }}
+  </p>
+
+  <button class="btn btn-success mt-3 pay-button" (click)="orderCompleted()">
+    I Have Paid
+  </button>
+</div>

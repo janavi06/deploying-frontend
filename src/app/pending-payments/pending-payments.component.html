@@ -1,0 +1,41 @@
+<!-- src/app/pending-payments/pending-payments.component.html -->
+<div *ngIf="error" class="alert alert-danger">
+  {{ error }}
+</div>
+
+<table *ngIf="payments.length" class="table">
+  <thead>
+    <tr>
+      <th>Table No</th>
+      <th>Order No</th>
+      <th>Amount</th>
+      <th>Method</th>
+      <th>Items</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr *ngFor="let p of payments">
+      <td>{{ p.tableNo }}</td>
+      <td>{{ p.orderId }}</td>
+      <td>{{ p.amount | number:'1.2-2' }}</td>
+      <td>{{ p.method }}</td>
+      <td>
+        <ul>
+          <li *ngFor="let item of p.items">
+            {{ item.productName }} × {{ item.quantity }}
+          </li>
+        </ul>
+      </td>
+      <td>
+        <button class="btn btn-success btn-sm" (click)="markAsPaid(p.paymentId)">
+          Mark Paid
+        </button>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<div *ngIf="!payments.length" class="text-muted py-3 text-center">
+  No pending payments found.
+</div>
