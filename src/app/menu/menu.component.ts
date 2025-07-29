@@ -84,6 +84,9 @@ interface OrderSummary {
     quantity: number;
     unitPrice: number;
     lineTotal: number;
+
+        customizations?: { customizationOptionID: number }[];
+
   }>;
   subtotal: number;
   cgst: number;
