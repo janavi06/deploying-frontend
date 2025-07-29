@@ -283,8 +283,7 @@ async ngOnInit(): Promise<void> {
   // 3. Fetch restaurant info using the table number
   try {
     const restaurantResponse = await firstValueFrom(
-      this.http.get<any>(`${this.API_BASE}/restauranttable/info?tableIdentifier=${this.restaurantTableID}`)
-    );
+this.http.get<any>(`${this.API_BASE}/RestaurantTable/info?tableIdentifier=${this.restaurantTableID}`)    );
 
     if (!restaurantResponse || !restaurantResponse.restaurantID) {
       throw new Error('Invalid restaurant information.');
