@@ -1,12 +1,10 @@
 export const environment = {
   production: true,
 
-  // ✅ Base API endpoint for all HTTP requests
-  apiUrl: 'https://hosting-backend-nk56.onrender.com/api',
+  // ⬇️ NEW back‑end base
+  apiUrl:  'https://hosting-backend-9ro6.onrender.com/api',
+  baseUrl: 'https://hosting-backend-9ro6.onrender.com',
 
-  // ✅ Base domain (useful for WebSocket, ping, or general backend link)
-  baseUrl: 'https://hosting-backend-nk56.onrender.com',
-
-  // ✅ Public URL where image/file uploads are accessible
-  assetsUrl: 'https://hosting-backend-nk56.onrender.com/uploads'
+  // uploads live behind the same host
+  assetsUrl: 'https://hosting-backend-9ro6.onrender.com/uploads'
 };
