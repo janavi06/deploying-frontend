@@ -196,23 +196,24 @@ updateQuantity(item: Product, delta: number) {
 private fetchMenuItems() {
   return this.http.get<Product[]>(`${this.API}/product?restaurantId=${this.restId}`)
     .toPromise()
-    .then(p => {
-      this.products = p.map(m => ({
-        ...m,
-        basePrice: m.price,
-        quantity: 0,
-        // Handle both possible property names
-CustomizationOptions: (m.CustomizationOptions || []).map(opt => ({
-  customizationOptionID: opt.CustomizationOptionID,
-  name: opt.Name,
-  priceDelta: opt.FixedPrice || 0,
-  selected: false
-}))
+ .then(p => {
+  if (!p) return;
 
-      }));
-      this.assignProductsToCategories();
-      this.assignProductsToSubCategories();
-    });
+  this.products = p.map(m => ({
+    ...m,
+    basePrice: m.price,
+    quantity: 0,
+    CustomizationOptions: (m.CustomizationOptions || []).map(opt => ({
+      customizationOptionID: opt.customizationOptionID,
+      name: opt.name,
+      priceDelta: opt.priceDelta || 0,
+      selected: false
+    }))
+  }));
+
+  this.assignProductsToCategories();
+  this.assignProductsToSubCategories();
+});
 }
 
 
