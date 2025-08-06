@@ -12,6 +12,7 @@ import { RegisterComponent } from './register/register.component';
 
 // ← import your guard here:
 import { AuthGuard        } from './services/auth.guard';
+import { NewOrderComponent } from './new-order/new-order.component';
 
 
 
@@ -23,7 +24,8 @@ export const routes: Routes = [
   { path: 'manager',  component: ManagerComponent},
     { path: 'pending-payments',  component: PendingPaymentsComponent},
   { path: 'payment/:id', component: PaymentComponent },
-  
+  { path: 'new-order', component: NewOrderComponent },
+
 
 
   // auth-free

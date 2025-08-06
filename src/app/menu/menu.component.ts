@@ -38,6 +38,14 @@ interface Product {
   isVeg: boolean;
   isAvailable?: boolean;
   customizationOptions?: CustomizationOption[];
+    customizationOptionIds?: number[]; // ✅ Fix: add this line
+
+   
+}
+interface CartItem extends Product {
+  quantity: number;
+  customNote?: string;
+  customizationOptionIds?: number[];
 }
 
 
@@ -73,6 +81,7 @@ interface OrderItem {
   quantity: number;
   customizationOptionIds?: number[]; 
     unitPrice: number;
+
 }
 
 interface OrderSummary {
@@ -85,6 +94,9 @@ interface OrderSummary {
     unitPrice: number;
     lineTotal: number;
 
+        customNote?: string;
+
+
         customizations?: { customizationOptionID: number }[];
 
   }>;
@@ -94,6 +106,7 @@ interface OrderSummary {
   serviceCharge: number;
   totalAmount: number;
   orderStatus: string; // mapped to string
+
 }
 interface PaymentVerificationResponse {
   paid: boolean;
@@ -1453,18 +1466,16 @@ private updateNewCart(
   selectedOption?: CustomizationOption,
   unitPriceForOrder?: number
 ): void {
-  // ✅ CRITICAL: update quantityMap
+  // Update quantityMap
   this.quantityMap[item.productID] = item.quantity;
 
   const existingItem = this.newCart.find(ci => ci.productID === item.productID);
-
-  const finalUnitPrice = unitPriceForOrder != null
-    ? unitPriceForOrder
-    : (item.basePrice ?? item.price);
+  const finalUnitPrice = unitPriceForOrder ?? (item.basePrice ?? item.price);
 
   if (existingItem) {
     existingItem.quantity = item.quantity;
-
+  
+    
     if (selectedOption) {
       existingItem.customizationOptionIds = [selectedOption.customizationOptionID];
       existingItem.unitPrice = finalUnitPrice;
@@ -1480,6 +1491,7 @@ private updateNewCart(
       productID: item.productID,
       quantity: item.quantity,
       unitPrice: finalUnitPrice,
+     
       customizationOptionIds: selectedOption
         ? [selectedOption.customizationOptionID]
         : []
@@ -1548,7 +1560,9 @@ async submitCartAndProceed(): Promise<any> {
       productID: item.productID,
       quantity: item.quantity,
       unitPrice: item.unitPrice,
-      customizationOptionIds: item.customizationOptionIds || []
+      customizationOptionIds: item.customizationOptionIds || [],
+  
+
     }));
 
     if (itemsToSend.length === 0) {
@@ -1594,13 +1608,16 @@ rebuildNewCart() {
       this.newCart.push({
         productID: item.productID,
         quantity: quantity,
-        unitPrice: item.price
+        unitPrice: item.price,
+      
+        customizationOptionIds: item.customizationOptionIds || []
       });
     }
   });
 
   console.log('🧾 Rebuilt newCart:', this.newCart);
 }
+
 
 
 

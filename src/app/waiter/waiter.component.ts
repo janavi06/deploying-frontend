@@ -76,7 +76,7 @@ readyOrderMessages: { notificationId: number; message: string; orderId: number; 
   KitchenStatus = KitchenStatus;   // ✅ ADD THIS LINE
 
   isSidebarOpen = false;
- selectedSection: 'orders' | 'requests' | 'history' | 'pendingPayments'|'readyOrders' = 'orders';
+selectedSection: 'orders' | 'requests' | 'history' | 'pendingPayments' | 'readyOrders' | 'newOrder' = 'orders';
  pendingPayments: any[] = [];
    private restaurantId: string = ''; // ✅ ADD THIS
 
@@ -171,6 +171,9 @@ private setupPendingPaymentPolling(): void {
   
   // Set up interval (every 15 seconds)
   setInterval(() => this.fetchPendingPayments(), 10000);
+}
+navigateToNewOrder(): void {
+  this.router.navigate(['/new-order']);
 }
 
 

@@ -1,0 +1,224 @@
+
+<div class="no-container">
+
+
+
+  <!-- TABLE PICKER -->
+  <label>Table</label>
+  <select [(ngModel)]="selectedTable" (change)="clearCart()">
+    <option value="">— select table —</option>
+    <option *ngFor="let t of tables" [value]="t.restaurantTableID">
+      {{ t.tableName || ('Table ' + t.restaurantTableID) }}
+    </option>
+  </select>
+
+  <!-- SEARCH + VEG FILTER BAR -->
+  <div class="swiggy-search-container d-flex align-items-center justify-content-between mx-2 mb-3 rounded-pill shadow-sm px-3">
+    <i class="bi bi-search text-muted me-2"></i>
+    <input type="text" class="form-control border-0 shadow-none bg-transparent"
+           [(ngModel)]="searchTerm"
+           placeholder="Search for dishes">
+  </div>
+
+  <div class="veg-filter-container d-flex gap-2 px-2 mb-3">
+    <button class="btn veg-filter-btn"
+            [class.selected-veg]="selectedFilter==='veg'"
+            (click)="toggleFilter('veg')">veg</button>
+    <button class="btn nonveg-filter-btn"
+            [class.selected-nonveg]="selectedFilter==='nonveg'"
+            (click)="toggleFilter('nonveg')">non‑veg</button>
+  </div>
+
+  <hr>
+
+  <!-- CATEGORY SELECTOR -->
+  <div *ngIf="showCategorySelector">
+    <h4 class="text-center my-3">Choose a Category</h4>
+    <div *ngFor="let cat of categories"
+         (click)="selectedCategoryID = cat.categoryID; showCategorySelector=false"
+         class="category-line">
+      {{ cat.categoryName }}
+    </div>
+  </div>
+
+  <!-- MENU ACCORDION -->
+  <div *ngIf="!showCategorySelector">
+    <div class="mb-3">
+      <button class="btn btn-secondary" (click)="showCategorySelector=true">
+        ← Select Category
+      </button>
+    </div>
+
+    <ng-container *ngFor="let cat of categories">
+      <ng-container *ngIf="cat.categoryID === selectedCategoryID">
+
+        <h3 class="category-header">{{ cat.categoryName }}</h3>
+
+        <!-- sub‑categories -->
+        <ng-container *ngIf="cat.subCategories?.length; else flatItems">
+          <div *ngFor="let sub of cat.subCategories">
+<h5 class="subcategory-header"
+    (click)="toggleSub(sub)">
+  {{ sub.subCategoryName }}
+  <i class="bi bi-chevron-down"></i>
+</h5>
+
+
+            <div *ngIf="sub.open" class="subcategory-items">
+           <ng-container *ngFor="let p of filteredProducts(undefined, sub.subCategoryID)">
+
+  <div class="menu-item d-flex justify-content-between align-items-center mb-2"
+       [class.text-muted]="!p.isAvailable">
+
+    <span style="flex:1">
+      {{ p.productName }} <br>
+      ₹{{ p.price }}
+    </span>
+
+    <div class="qty-box">
+      <button class="btn-qty"
+              (click)="updateQuantity(p,-1)"
+              [disabled]="p.quantity===0 || !p.isAvailable">−</button>
+
+      <span class="mx-1">{{ p.quantity || 0 }}</span>
+
+<button class="btn-qty"
+        (click)="p.CustomizationOptions?.length ? openCustomisation(p) : updateQuantity(p, 1)"
+        [disabled]="!p.isAvailable">＋</button>
+
+
+    </div>
+
+  </div>
+
+</ng-container>
+
+            </div>
+          </div>
+        </ng-container>
+
+        <!-- flat (no sub‑categories) -->
+        <ng-template #flatItems>
+<ng-container *ngFor="let p of filteredProducts(cat.categoryID)">
+
+  <div class="menu-item d-flex justify-content-between align-items-center mb-2"
+       [class.text-muted]="!p.isAvailable">
+
+    <span style="flex:1">
+      {{ p.productName }} <br>
+      ₹{{ p.price }}
+    </span>
+
+    <div class="qty-box">
+      <button class="btn-qty"
+              (click)="updateQuantity(p,-1)"
+              [disabled]="p.quantity===0 || !p.isAvailable">−</button>
+
+      <span class="mx-1">{{ p.quantity || 0 }}</span>
+
+<button class="btn-qty"
+        (click)="p.CustomizationOptions?.length ? openCustomisation(p) : updateQuantity(p, 1)"
+        [disabled]="!p.isAvailable">＋</button>
+
+
+    </div>
+
+  </div>
+
+</ng-container>
+
+        </ng-template>
+
+      </ng-container>
+    </ng-container>
+  </div>
+
+  <!-- CART -->
+  <h3 *ngIf="cart.length" class="mt">Cart</h3>
+  <table *ngIf="cart.length">
+    <tr *ngFor="let c of cart; let i = index">
+      <td>
+        {{ c.productName }}
+        <div class="chips" *ngIf="c.customisations.length">
+          <span class="chip" *ngFor="let chip of c.customisations">{{ chip }}</span>
+        </div>
+      </td>
+      <td class="qty">
+        <button (click)="dec(c)">−</button>
+        {{ c.quantity }}
+        <button (click)="inc(c)">＋</button>
+      </td>
+      <td>₹{{ c.unitPrice * c.quantity | number:'1.2-2' }}</td>
+      <td><button class="del" (click)="remove(i)">✕</button></td>
+    </tr>
+    <tr>
+      <th colspan="2">Total</th>
+      <th colspan="2">₹{{ total | number:'1.2-2' }}</th>
+    </tr>
+  </table>
+
+  <!-- ACTION BUTTONS -->
+  <div class="actions">
+<button (click)="goBack()">Back</button>
+    <button [disabled]="!selectedTable || !cart.length || busy"
+            (click)="submit()">
+      {{ busy ? 'Placing…' : 'Submit' }}
+    </button>
+  </div>
+</div>
+
+<!-- ───────── CUSTOMISATION MODAL ───────── -->
+<div class="overlay" *ngIf="showModal">
+  <div class="modal">
+    <h3>{{ modalProduct?.productName }}</h3>
+
+    <!-- quantity -->
+    <label>Qty:</label>
+    <button (click)="modalQty = Math.max(1, modalQty - 1)">−</button>
+    {{ modalQty }}
+    <button (click)="modalQty = modalQty + 1">＋</button>
+
+    <!-- options -->
+    <div class="options" *ngFor="let opt of modalOptions">
+      <label>
+        <input type="checkbox"
+               [(ngModel)]="opt.selected"
+               (change)="recalcModalPrice()"> {{ opt.name }}
+        <span *ngIf="opt.priceDelta">(+₹{{ opt.priceDelta }})</span>
+      </label>
+    </div>
+
+    <p><strong>Line total: ₹{{ modalLineTotal | number:'1.2-2' }}</strong></p>
+
+    <button (click)="addToCart()">Add</button>
+    <button (click)="closeModal()">Cancel</button>
+  </div>
+</div>
+
+<!-- ───────── PAYMENT MODAL ───────── -->
+<div class="payment-overlay" *ngIf="paymentStage">
+  <div class="payment-modal">
+
+    <!-- STEP 1 -->
+    <ng-container *ngIf="paymentStage === 1">
+      <h3>When will the customer pay?</h3>
+      <button (click)="paymentStage = 2">💳 Pay NOW</button>
+      <button (click)="payLater()">🕒 Pay LATER</button>
+    </ng-container>
+
+    <!-- STEP 2 -->
+    <ng-container *ngIf="paymentStage === 2">
+      <h3>Total: ₹{{ orderTotal | number:'1.2-2' }}</h3>
+
+      <label><input type="radio" name="m" (change)="method='Cash'"> Cash</label>&nbsp;
+      <label><input type="radio" name="m" (change)="method='UPI'"> UPI QR</label>
+
+      <br><br>
+      <button [disabled]="busyPay || !method"
+              (click)="collectPayment()">
+        {{ busyPay ? 'Processing…' : 'Mark PAID & Download Bill' }}
+      </button>
+    </ng-container>
+
+  </div>
+</div>

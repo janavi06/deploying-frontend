@@ -14,6 +14,11 @@
 <li (click)="selectedSection = 'pendingPayments'" [class.active]="selectedSection === 'pendingPayments'">
   Pending Payments <span *ngIf="pendingPayments.length" class="badge">({{ pendingPayments.length }})</span>
 </li>
+<li (click)="navigateToNewOrder()" [class.active]="selectedSection === 'newOrder'">
+  New Order
+</li>
+
+
 
 
   <li (click)="selectedSection = 'history'" [class.active]="selectedSection === 'history'">
