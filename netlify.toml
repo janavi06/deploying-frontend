@@ -1,4 +1,9 @@
 [[redirects]]
+  from = "/ngsw-worker.js"
+  to = "/ngsw-worker.js"
+  status = 200
+
+[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
