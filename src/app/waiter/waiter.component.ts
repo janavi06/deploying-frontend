@@ -5,6 +5,9 @@ import { HttpClient, HttpHeaders, HttpClientModule } from '@angular/common/http'
 import { Router } from '@angular/router';
 import { environment } from '../../environments/environment';
 import { PendingPaymentsComponent } from '../pending-payments/pending-payments.component';  // ← import it!
+import { NewOrderComponent } from '../new-order/new-order.component';
+import { QRCodeComponent } from 'angularx-qrcode';
+
 
 export enum OrderStatus {
   Pending   = "Pending",
@@ -63,7 +66,7 @@ export interface WaiterRequest {
   templateUrl: './waiter.component.html',
   styleUrls: ['./waiter.component.css'],
 
-  imports: [CommonModule, FormsModule, HttpClientModule, PendingPaymentsComponent],
+  imports: [CommonModule, FormsModule, HttpClientModule, PendingPaymentsComponent,NewOrderComponent,QRCodeComponent],
 })
 export class WaiterComponent implements OnInit {
   orders: Order[] = [];
@@ -76,9 +79,9 @@ readyOrderMessages: { notificationId: number; message: string; orderId: number; 
   KitchenStatus = KitchenStatus;   // ✅ ADD THIS LINE
 
   isSidebarOpen = false;
-selectedSection: 'orders' | 'requests' | 'history' | 'pendingPayments' | 'readyOrders' | 'newOrder' = 'orders';
+  selectedSection: 'orders' | 'requests' | 'history' | 'pendingPayments' | 'readyOrders' | 'newOrder' = 'orders';
  pendingPayments: any[] = [];
-   private restaurantId: string = ''; // ✅ ADD THIS
+restaurantId: number = 0; // ✅ public + numeric
 
 private newOrderSound = new Audio('assets/sounds/new-order.mp3');
 private readyOrderSound = new Audio('assets/sounds/ready-order.mp3');
@@ -99,6 +102,24 @@ selectedTableNo: number | null = null;
 historyFilter: 'today' | '2days' | 'all' = 'today';
 allHistoryOrders: Order[] = [];  // full copy to preserve
 
+
+selectedPayTab: 'verify' | 'collect' = 'verify';
+
+verifyPayments: any[] = [];
+collectPayments: any[] = [];
+
+collectModal = {
+  open: false,
+  orderId: 0,
+  paymentId: 0,
+  amount: 0,
+  upiUri: '',
+  tab: 'UPI' as 'UPI' | 'CASH'
+};
+
+busyCollect = false;
+
+
 unreadRequests: any[] = [];
 private requestPollingInterval: any;
 private notificationSound = new Audio('assets/sounds/notification.mp3');
@@ -113,7 +134,9 @@ private readonly API_BASE = `${environment.apiUrl}`;
   constructor(private http: HttpClient, private router: Router) {}
 ngOnInit(): void {
   const token = localStorage.getItem('jwt');
-    this.restaurantId = localStorage.getItem('restaurantId') || ''; // ✅ INIT restaurantId
+  const raw = localStorage.getItem('restaurantId') || '';
+    this.restaurantId = Number(raw) || 0;       // ✅
+
  if (!this.restaurantId) {
       alert('Restaurant ID not found. Please log in again.');
       return;
@@ -161,20 +184,54 @@ ngOnDestroy(): void {
   
 }
 
+switchPayTab(tab: 'verify' | 'collect') {
+  if (this.selectedPayTab === tab) return;
+  this.selectedPayTab = tab;
+  this.loadPendingByTab();
+}
+
+private loadPendingByTab(): void {
+  // If your backend supports ?channel=Customer|Waiter, use the two fetch* methods below.
+  // Otherwise, we’ll split on the client (fallback) using common fields.
+  this.fetchPendingPayments();
+}
+
+private splitPending(payments: any[]) {
+  // Try common fields first:
+  // channel: 'Customer' | 'Waiter'  OR  source: 'customer' | 'waiter'  OR  createdBy: 'Customer' | 'Waiter'
+  const isCustomer = (p: any) =>
+    (p.channel && p.channel.toLowerCase() === 'customer') ||
+    (p.source && p.source.toLowerCase() === 'customer') ||
+    (p.createdBy && p.createdBy.toLowerCase() === 'customer') ||
+    p.paymentChannel === 0; // if you used enum on backend
+
+  this.verifyPayments  = payments.filter(isCustomer);
+  this.collectPayments = payments.filter(p => !isCustomer(p));
+}
+
 selectTableForOrders(tableNo: number): void {
   this.selectedTableNo = tableNo;
 }
 
 private setupPendingPaymentPolling(): void {
-  // Initial fetch
-  this.fetchPendingPayments();
-  
-  // Set up interval (every 15 seconds)
+  this.fetchPendingPayments(); // initial
   setInterval(() => this.fetchPendingPayments(), 10000);
 }
+
 navigateToNewOrder(): void {
-  this.router.navigate(['/new-order']);
+  this.selectedSection = 'newOrder'; // ✅ no router nav
 }
+
+onNewOrderPlaced(e: { orderID: number }) {
+  this.pushAlert('order', `🆕 New order #${e.orderID} created.`);
+  // optional: this.getOrders();
+}
+
+onNewOrderClosed() {
+  this.selectedSection = 'orders';
+  this.getOrders(); // refresh list after closing
+}
+
 
 
  private refreshHistoryOnly(): void {
@@ -451,22 +508,105 @@ acknowledgeNotification(notificationId: number): void {
         error: err => console.error('Error checking pending payments:', err)
       });
   }
+openCollectModal(p: any) {
+  this.collectModal.open = true;
+  this.collectModal.orderId = p.orderID;
+  this.collectModal.amount = p.amount;
+  this.collectModal.paymentId = p.paymentID || 0;
+  this.collectModal.upiUri = '';
+  this.collectModal.tab = 'UPI';
+}
+
+closeCollectModal() {
+  this.collectModal.open = false;
+  this.collectModal.upiUri = '';
+  this.collectModal.paymentId = 0;
+}
+
+async initiateUpi() {
+  this.busyCollect = true;
+  try {
+    const resp: any = await this.http.post(
+      `${this.API_BASE}/order/payments/initiate?orderId=${this.collectModal.orderId}&restaurantId=${this.restaurantId}&channel=Waiter`,
+      {},
+      this.httpOptions
+    ).toPromise();
+    this.collectModal.paymentId = resp?.paymentId || 0;
+    this.collectModal.amount = +resp?.amount || this.collectModal.amount || 0;
+    this.collectModal.upiUri = resp?.upiUri || '';
+  } finally {
+    this.busyCollect = false;
+  }
+}
+
+async finalizeIfPaid() {
+  if (!this.collectModal.paymentId) return;
+  this.busyCollect = true;
+  try {
+    const s: any = await this.http.get(
+      `${this.API_BASE}/order/payments/${this.collectModal.paymentId}/status?restaurantId=${this.restaurantId}`,
+      this.httpOptions
+    ).toPromise();
+
+    if (s?.status === 'Paid') {
+      this.onPaymentCleared(this.collectModal.paymentId);
+      this.closeCollectModal();
+      window.open(`${this.API_BASE}/order/${this.collectModal.orderId}/bill`, '_blank');
+    } else {
+      alert('Still pending. Ask customer to complete payment.');
+    }
+  } finally {
+    this.busyCollect = false;
+  }
+}
+
+async markCashReceived() {
+  this.busyCollect = true;
+  try {
+    if (!this.collectModal.paymentId) {
+      const started: any = await this.http.post(
+        `${this.API_BASE}/order/payments/initiate?orderId=${this.collectModal.orderId}&restaurantId=${this.restaurantId}&channel=Waiter&method=Cash`,
+        {},
+        this.httpOptions
+      ).toPromise();
+      this.collectModal.paymentId = started?.paymentId || 0;
+    }
+
+    await this.http.post(
+      `${this.API_BASE}/order/payments/${this.collectModal.paymentId}/cash-complete?restaurantId=${this.restaurantId}`,
+      {},
+      this.httpOptions
+    ).toPromise();
+
+    this.onPaymentCleared(this.collectModal.paymentId);
+    this.closeCollectModal();
+    window.open(`${this.API_BASE}/order/${this.collectModal.orderId}/bill`, '_blank');
+  } finally {
+    this.busyCollect = false;
+  }
+}
+
+
 
 
 onPaymentCleared(paymentId: number): void {
   this.pendingPayments = this.pendingPayments.filter(p => p.paymentID !== paymentId);
-  this.fetchPendingPayments(); // Refresh the list
+  this.verifyPayments  = this.verifyPayments.filter(p => p.paymentID !== paymentId);
+  this.collectPayments = this.collectPayments.filter(p => p.paymentID !== paymentId);
+  this.fetchPendingPayments();
 }
 
-  fetchPendingPayments(): void {
-    this.http.get<any[]>(`${this.API_BASE}/order/pending-payments?restaurantId=${this.restaurantId}`, this.httpOptions)
-      .subscribe({
-        next: (payments) => {
-          this.pendingPayments = payments;
-        },
-        error: err => console.error('Error fetching pending payments:', err)
-      });
-  }
+
+fetchPendingPayments(): void {
+  this.http.get<any[]>(`${this.API_BASE}/order/pending-payments?restaurantId=${this.restaurantId}`, this.httpOptions)
+    .subscribe({
+      next: (payments) => {
+        this.pendingPayments = payments || [];
+        this.splitPending(this.pendingPayments);
+      },
+      error: err => console.error('Error fetching pending payments:', err)
+    });
+}
 
 
   mapOrderStatus(status: any): OrderStatus {

@@ -57,15 +57,111 @@
 </div>
 
     <!-- Pending Payments -->
-    <section *ngIf="selectedSection === 'pendingPayments'" class="pending-payments">
-<app-pending-payments
-  [payments]="pendingPayments"
-  (paymentCleared)="onPaymentCleared($event)">
-</app-pending-payments>
-    </section>
+<section *ngIf="selectedSection === 'pendingPayments'" class="pending-payments">
+  <!-- Tabs -->
+  <div class="d-flex gap-2 mb-2">
+    <button class="btn btn-sm"
+            [class.btn-dark]="selectedPayTab==='verify'"
+            [class.btn-outline-dark]="selectedPayTab!=='verify'"
+            (click)="switchPayTab('verify')">
+      Verify (Customer)
+      <span *ngIf="verifyPayments.length" class="badge">({{ verifyPayments.length }})</span>
+    </button>
+
+    <button class="btn btn-sm"
+            [class.btn-dark]="selectedPayTab==='collect'"
+            [class.btn-outline-dark]="selectedPayTab!=='collect'"
+            (click)="switchPayTab('collect')">
+      Collect (Waiter)
+      <span *ngIf="collectPayments.length" class="badge">({{ collectPayments.length }})</span>
+    </button>
+  </div>
+
+  <!-- VERIFY (Customer-paid) -->
+  <div *ngIf="selectedPayTab==='verify'">
+    <app-pending-payments
+      [payments]="verifyPayments"
+      (paymentCleared)="onPaymentCleared($event)">
+    </app-pending-payments>
+  </div>
+
+  <!-- COLLECT (Waiter) -->
+  <div *ngIf="selectedPayTab==='collect'">
+    <div class="card mb-2 p-2" *ngFor="let p of collectPayments">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <div><strong>Table {{ p.tableNo }}</strong> • Order #{{ p.orderID }}</div>
+          <div>Amount: ₹{{ p.amount | number:'1.2-2' }}</div>
+          <div>Status: {{ p.status }}</div>
+        </div>
+        <div>
+          <button class="btn btn-dark btn-sm" (click)="openCollectModal(p)">Collect Payment</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Collect Payment Modal -->
+  <div class="payment-overlay" *ngIf="collectModal.open">
+    <div class="payment-modal" (click)="$event.stopPropagation()">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h4 class="m-0">Collect Payment</h4>
+        <button class="btn btn-sm btn-light" (click)="closeCollectModal()">✕</button>
+      </div>
+
+      <div class="mb-2"><strong>Order #{{ collectModal.orderId }}</strong> • ₹{{ collectModal.amount | number:'1.2-2' }}</div>
+
+      <div class="btn-group mb-3">
+        <button class="btn btn-sm"
+                [class.btn-dark]="collectModal.tab==='UPI'"
+                [class.btn-outline-dark]="collectModal.tab!=='UPI'"
+                (click)="collectModal.tab='UPI'">UPI</button>
+        <button class="btn btn-sm"
+                [class.btn-dark]="collectModal.tab==='CASH'"
+                [class.btn-outline-dark]="collectModal.tab!=='CASH'"
+                (click)="collectModal.tab='CASH'">Cash</button>
+      </div>
+
+      <!-- UPI tab -->
+      <div *ngIf="collectModal.tab==='UPI'">
+        <div class="mb-2" *ngIf="!collectModal.upiUri">
+          <button class="btn btn-primary w-100" [disabled]="busyCollect" (click)="initiateUpi()">Get UPI QR</button>
+        </div>
+
+        <div *ngIf="collectModal.upiUri">
+          <div class="text-center mb-2">
+            <!-- you already use angularx-qrcode in NewOrder; we’ll reuse it -->
+            <qrcode [qrdata]="collectModal.upiUri" [width]="220" [errorCorrectionLevel]="'M'"></qrcode>
+          </div>
+          <div class="small text-muted text-center mb-2">Scan to pay. Auto-completes when paid.</div>
+          <div class="d-grid gap-2">
+            <a class="btn btn-outline-secondary" [href]="collectModal.upiUri">Open in UPI app</a>
+            <button class="btn btn-dark" [disabled]="busyCollect" (click)="finalizeIfPaid()">Refresh Status</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- CASH tab -->
+      <div *ngIf="collectModal.tab==='CASH'">
+        <button class="btn btn-success w-100" [disabled]="busyCollect" (click)="markCashReceived()">Confirm Cash Received</button>
+      </div>
+    </div>
+    <div class="payment-backdrop" (click)="closeCollectModal()"></div>
+  </div>
+</section>
 
 
-  
+
+<!-- New Order (embedded) -->
+<section *ngIf="selectedSection === 'newOrder'" class="new-order-embedded">
+  <app-new-order
+    [restaurantId]="restaurantId"
+    (orderPlaced)="onNewOrderPlaced($event)"
+    (closed)="onNewOrderClosed()">
+  </app-new-order>
+</section>
+
+
          
 <section *ngIf="selectedSection === 'orders'" class="waiter-table-layout">
 

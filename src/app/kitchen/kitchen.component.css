@@ -1186,3 +1186,132 @@
 .kitchen-dashboard {
   padding-top: 100px; /* 60 (toggle) + 40 (header) */
 }
+
+@media (max-width: 768px) {
+  .orders-table,
+  .orders-table thead,
+  .orders-table tbody,
+  .orders-table th,
+  .orders-table td,
+  .orders-table tr {
+    display: block;
+    width: 100%;
+  }
+
+  .orders-table thead {
+    display: none; /* hide header on mobile */
+  }
+
+  .orders-table tr {
+    margin-bottom: 1rem;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 10px;
+    background: white;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  }
+
+  .orders-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px;
+    font-size: 14px;
+    border: none;
+    border-bottom: 1px solid #eee;
+  }
+
+  .orders-table td::before {
+    content: attr(data-label);
+    font-weight: bold;
+    color: #666;
+    flex: 1;
+    padding-right: 10px;
+    text-align: left;
+  }
+
+  .orders-table td:last-child {
+    border-bottom: none;
+  }
+}
+
+/* Sidebar adjustments */
+.sidebar {
+  width: 200px;
+  transition: all 0.3s ease-in-out;
+}
+.sidebar.closed {
+  width: 0;
+  overflow: hidden;
+}
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.sidebar ul li {
+  padding: 12px 15px;
+  cursor: pointer;
+}
+.sidebar ul li.active {
+  background-color: #007bff;
+  color: #fff;
+}
+
+/* Main content padding when sidebar open */
+.main-content {
+  transition: margin-left 0.3s ease-in-out;
+}
+.main-content.sidebar-open {
+  margin-left: 200px;
+}
+
+/* Table responsiveness */
+.table-responsive {
+  overflow-x: auto;
+}
+
+/* Mobile tweaks */
+@media (max-width: 768px) {
+  .kitchen-toggle-bar {
+    flex-direction: row;
+    justify-content: space-between;
+    font-size: 14px;
+  }
+
+  .kitchen-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 60px;
+    bottom: 0;
+    z-index: 1050;
+    background: #fff;
+    border-right: 1px solid #ccc;
+  }
+
+  .main-content {
+    margin-left: 0 !important;
+    width: 100%;
+  }
+
+  table th, table td {
+    font-size: 12px;
+    padding: 6px;
+    white-space: nowrap;
+  }
+}
+
+/* Extra small devices */
+@media (max-width: 576px) {
+  .kitchen-toggle-bar .fs-6 {
+    font-size: 14px;
+  }
+  .btn-sm {
+    font-size: 12px;
+    padding: 4px 8px;
+  }
+}

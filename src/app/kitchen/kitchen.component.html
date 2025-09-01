@@ -1,22 +1,16 @@
 <!-- Toggle (Full width strip) -->
-<div class="kitchen-toggle-bar d-flex justify-content-between align-items-center bg-primary text-white px-4" style="height: 60px;">
-  <div class="d-flex align-items-center gap-3">
-    <button class="btn btn-light btn-lg fw-bold" (click)="toggleSidebar()">☰</button>
-  </div>
-  <div class="fs-5 fw-bold">
-    Kitchen Dashboard
-  </div>
+<div class="kitchen-toggle-bar d-flex justify-content-between align-items-center bg-primary text-white px-3 py-2">
+  <button class="btn btn-light btn-sm fw-bold" (click)="toggleSidebar()">☰</button>
+  <div class="fs-6 fw-bold text-center">Kitchen Dashboard</div>
 </div>
 
-
-<!-- Header with Language Switcher only -->
-<header class="kitchen-header bg-white shadow-sm px-3 py-2 d-flex justify-content-between align-items-center">
+<!-- Header with Language Switcher -->
+<header class="kitchen-header bg-white shadow-sm px-3 py-2 d-flex justify-content-between align-items-center flex-wrap">
   <div class="d-flex align-items-center gap-2">
-    <label for="lang-select" class="fw-bold mb-0">Language:</label>
-    <select id="lang-select" class="form-select form-select-sm"
+    <label for="lang-select" class="fw-bold mb-0 small">Language:</label>
+    <select id="lang-select" class="form-select form-select-sm w-auto"
             [(ngModel)]="settings.language"
-            (change)="onLanguageChange()"
-            style="width: 120px;">
+            (change)="onLanguageChange()">
       <option value="en">English</option>
       <option value="hi">हिन्दी</option>
     </select>
@@ -26,7 +20,7 @@
 <audio #buzzer src="assets/buzzer.mp3" preload="auto"></audio>
 
 <!-- Main Layout -->
-<div class="kitchen-dashboard" [ngClass]="{ 'dark-mode': settings.darkMode }">
+<div class="kitchen-dashboard d-flex" [ngClass]="{ 'dark-mode': settings.darkMode }">
   <!-- Sidebar -->
   <aside class="sidebar" [class.open]="isSidebarOpen" [class.closed]="!isSidebarOpen">
     <ul>
@@ -36,100 +30,95 @@
   </aside>
 
   <!-- Content Area -->
-  <main class="main-content" [class.sidebar-open]="isSidebarOpen">
+  <main class="main-content flex-grow-1 p-2">
     <!-- Overview Section -->
     <section *ngIf="selectedSection === 'overview'">
-      <div class="no-orders" *ngIf="pendingOrders.length === 0">
+      <div class="text-center py-4" *ngIf="pendingOrders.length === 0">
         <p>No pending orders.</p>
       </div>
 
-      <table class="orders-table" *ngIf="pendingOrders.length > 0">
-        <thead>
-          <tr>
-            <th>Table No</th>
-            <th>Order No</th>
-            <th>Batch</th>
-            <th>Items</th>
-            <th>Updated</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let batch of pendingOrders" class="order-row">
-            <td>{{ tableMap[batch.restaurantTableID] || ('Table ' + batch.restaurantTableID) }}</td>
-            <td>#{{ batch.orderID }}</td>
-            <td>Batch {{ batch.batchID }}</td>
-            <td>
-              <ul>
-                <li *ngFor="let item of batch.items">
-                  {{ item.name }} - Qty: {{ item.quantity }}
-                  <span *ngIf="item.customizations?.length > 0">
-                    ({{ getCustomizationText(item.customizations) }})
-                  </span>
-                </li>
-              </ul>
-            </td>
-            <td>
-              <small class="timestamp">{{ batch.createdAt | date: 'shortTime' }}</small>
-            </td>
-            <td class="actions">
-              <ng-container *ngIf="batchStatusMap[batch.orderID] && batchStatusMap[batch.orderID][batch.batchID] !== undefined">
-                <button *ngIf="batchStatusMap[batch.orderID][batch.batchID] === 0"
-                        class="action-btn btn-start"
-                        (click)="updateBatchStatus(batch.orderID, batch.batchID, 1)">
-                  Start
-                </button>
-
-                <button *ngIf="batchStatusMap[batch.orderID][batch.batchID] === 1"
-                        class="action-btn btn-ready"
-                        (click)="updateBatchStatus(batch.orderID, batch.batchID, 2)">
-                  Ready
-                </button>
-
-                <span *ngIf="batchStatusMap[batch.orderID][batch.batchID] === 2"
-                      class="ready-indicator">
-                  ✔️ Ready
-                </span>
-              </ng-container>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <!-- Responsive Table Wrapper -->
+      <div class="table-responsive" *ngIf="pendingOrders.length > 0">
+        <table class="table table-bordered table-striped align-middle text-center">
+          <thead class="table-light">
+            <tr>
+              <th>Table</th>
+              <th>Order No</th>
+              <th>Batch</th>
+              <th>Items</th>
+              <th>Prep Timer</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let batch of pendingOrders" class="order-row">
+              <td>{{ tableMap[batch.restaurantTableID] || ('Table ' + batch.restaurantTableID) }}</td>
+              <td>#{{ batch.orderID }}</td>
+              <td>Batch {{ batch.batchID }}</td>
+              <td class="text-start">
+                <ul class="p-0 m-0" style="list-style:none;">
+                  <li *ngFor="let item of batch.items" class="small">
+                    {{ item.name }} - Qty: {{ item.quantity }}
+                    <span *ngIf="item.customizations?.length > 0">
+                      ({{ getCustomizationText(item.customizations) }})
+                    </span>
+                  </li>
+                </ul>
+              </td>
+              <td>{{ getFormattedElapsed(batch.orderID, batch.batchID) }}</td>
+              <td>
+                <ng-container *ngIf="batchStatusMap[batch.orderID] && batchStatusMap[batch.orderID][batch.batchID] !== undefined">
+                  <div *ngIf="batchStatusMap[batch.orderID][batch.batchID] !== 2" class="d-flex justify-content-center">
+                    <button class="btn btn-success btn-sm px-3" (click)="updateBatchStatus(batch.orderID, batch.batchID, 2)">
+                      Ready
+                    </button>
+                  </div>
+                  <span *ngIf="batchStatusMap[batch.orderID][batch.batchID] === 2" class="text-success fw-bold">✔️ Ready</span>
+                </ng-container>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </section>
 
     <!-- History Section -->
-    <section *ngIf="selectedSection === 'history'">
-      <h2>Order History</h2>
-      <div *ngIf="filteredHistoryOrders.length === 0">
-        <p>No historical orders in the last week.</p>
+    <section *ngIf="selectedSection === 'history'" class="mt-3">
+      <h5 class="fw-bold mb-3">Order History</h5>
+      <div class="text-center py-4" *ngIf="filteredHistoryOrders.length === 0">
+        <p>No historical orders in the last day.</p>
       </div>
-      <table class="orders-table" *ngIf="filteredHistoryOrders.length > 0">
-        <thead>
-          <tr>
-            <th>Table No</th>
-            <th>Order No</th>
-            <th>Items</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let order of filteredHistoryOrders" class="order-row">
-            <td>{{ order.restaurantTableID }}</td>
-            <td>#{{ order.orderID }}</td>
-            <td>
-              <ul>
-                <li *ngFor="let item of order.items">
-                  {{ item.name }} - Qty: {{ item.quantity }}
-                  <span *ngIf="item.customizations?.length > 0">
-                    ({{ getCustomizationText(item.customizations) }})
-                  </span>
-                </li>
-              </ul>
-            </td>
-            <td>{{ getKitchenStatusText(order.kitchenStatus) }}</td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="table-responsive" *ngIf="filteredHistoryOrders.length > 0">
+        <table class="table table-bordered table-striped align-middle text-center">
+          <thead class="table-light">
+            <tr>
+              <th>Table</th>
+              <th>Order No</th>
+              <th>Items</th>
+              <th>Status</th>
+              <th>Prep Time</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let order of filteredHistoryOrders">
+              <td>{{ tableMap[order.restaurantTableID] || ('Table ' + order.restaurantTableID) }}</td>
+              <td>#{{ order.orderID }}</td>
+              <td class="text-start">
+                <ul class="p-0 m-0" style="list-style:none;">
+                  <li *ngFor="let item of order.items" class="small">
+                    {{ item.name }} - Qty: {{ item.quantity }}
+                    <span *ngIf="item.customizations?.length > 0">
+                      ({{ getCustomizationText(item.customizations) }})
+                    </span>
+                  </li>
+                </ul>
+              </td>
+              <td>{{ getKitchenStatusText(order.kitchenStatus) }}</td>
+              <td>{{ formatSecondsToPresent(order.preparedDurationSeconds) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </section>
   </main>
 </div>

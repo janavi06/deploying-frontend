@@ -1,6 +1,5 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-
 <!-- Global Loader -->
 <div *ngIf="isLoading" class="text-center mt-5">
   <div class="spinner-border text-primary" role="status"></div>
@@ -35,34 +34,31 @@
   </div>
 
   <!-- Search -->
-<div class="swiggy-search-container d-flex align-items-center justify-content-between mx-2 mb-3 rounded-pill shadow-sm px-3">
-  <i class="bi bi-search text-muted me-2"></i>
-  <input type="text"
-         class="form-control border-0 shadow-none bg-transparent"
-         [(ngModel)]="searchQuery"
-         placeholder="Search for dishes"
-         style="flex: 1; font-size: 0.95rem;" />
-</div>
+  <div class="swiggy-search-container d-flex align-items-center justify-content-between mx-2 mb-3 rounded-pill shadow-sm px-3">
+    <i class="bi bi-search text-muted me-2"></i>
+    <input type="text"
+           class="form-control border-0 shadow-none bg-transparent"
+           [(ngModel)]="searchQuery"
+           placeholder="Search for dishes"
+           style="flex: 1; font-size: 0.95rem;" />
+  </div>
 
+  <!-- Filter -->
+  <div class="veg-filter-container d-flex justify-content-start mb-3 px-2 gap-2">
+    <button 
+      class="btn veg-filter-btn" 
+      [ngClass]="{ 'selected-veg': selectedFilter === 'veg' }" 
+      (click)="toggleFilter('veg')">
+      veg
+    </button>
 
-<!-- Filter -->
-<div class="veg-filter-container d-flex justify-content-start mb-3 px-2 gap-2">
-  <button 
-    class="btn veg-filter-btn" 
-    [ngClass]="{ 'selected-veg': selectedFilter === 'veg' }" 
-    (click)="toggleFilter('veg')">
-    veg
-  </button>
-
-  <button 
-    class="btn nonveg-filter-btn" 
-    [ngClass]="{ 'selected-nonveg': selectedFilter === 'nonveg' }" 
-    (click)="toggleFilter('nonveg')">
-    non-veg
-  </button>
-</div>
-
-
+    <button 
+      class="btn nonveg-filter-btn" 
+      [ngClass]="{ 'selected-nonveg': selectedFilter === 'nonveg' }" 
+      (click)="toggleFilter('nonveg')">
+      non-veg
+    </button>
+  </div>
 
   <div class="menu-divider"></div>
 
@@ -79,11 +75,13 @@
       <div class="mb-3 px-2">
         <button class="btn select-category-btn" (click)="changeCategory()">Select Category</button>
       </div>
-<div class="menu-container" [ngClass]="{ 'has-footer': (newCart.length > 0 || (orderID && newCart.length === 0)) && currentStep === OrderStep.MENU }">
+
+      <div class="menu-container" [ngClass]="{ 'has-footer': (newCart.length > 0 || (orderID && newCart.length === 0)) && currentStep === OrderStep.MENU }">
         <ng-container *ngFor="let category of categories">
           <ng-container *ngIf="category.categoryID === selectedCategoryID">
             <h3 class="category-header">{{ category.categoryName }}</h3>
 
+            <!-- subcategories present -->
             <ng-container *ngIf="category.subCategories?.length; else noSubCategories">
               <ng-container *ngFor="let subCategory of category.subCategories">
                 <ng-container *ngIf="shouldDisplaySubCategory(subCategory)">
@@ -94,57 +92,70 @@
                     <i class="bi bi-chevron-down"></i>
                   </h4>
                   <div class="subcategory-items" *ngIf="isSubCategoryOpen(subCategory.subCategoryID)">
-                    <ng-container *ngFor="let item of getFilteredMenuItems(undefined, subCategory.subCategoryID)">
-                      <div class="menu-item" [class.available]="item.isAvailable">
-                        <div class="menu-info">
-                          <h6 class="item-name">{{ item.productName }}</h6>
-                          <p class="item-description">{{ item.productDescription }}</p>
-                          <p class="item-price">₹{{ item.basePrice || 0 }}</p>
-                          <div *ngIf="!item.isAvailable" class="out-of-stock"><span>Out of Stock</span></div>
-                        </div>
-                        <div class="image-control-container">
-                          <img *ngIf="getImageUrl(item.imagePath)" 
-                               [src]="getImageUrl(item.imagePath)" 
-                               alt="{{ item.productName }}"
-                               class="product-image"
-                               loading="lazy"
-                               (error)="hideImage($event)" />
-                          <div class="quantity-control">
-                            <button [disabled]="!item.isAvailable" (click)="updateQuantityForNewItems(item, -1)" class="btn-quantity">−</button>
-                            <span class="quantity-display">{{ item.quantity || 0 }}</span>
-                            <button [disabled]="!item.isAvailable" (click)="updateQuantityForNewItems(item, 1)" class="btn-quantity">+</button>
+
+                    <!-- capture items once, so index (i) and items are consistent -->
+                    <ng-container *ngIf="getFilteredMenuItems(undefined, subCategory.subCategoryID) as items">
+                      <ng-container *ngFor="let item of items; let i = index">
+                        <div class="menu-item" [class.available]="item.isAvailable">
+                          <div class="menu-info">
+                            <h6 class="item-name">{{ item.productName }}</h6>
+                            <p class="item-description">{{ item.productDescription }}</p>
+                            <p class="item-price">₹{{ item.basePrice || 0 }}</p>
+                            <div *ngIf="!item.isAvailable" class="out-of-stock"><span>Out of Stock</span></div>
+                          </div>
+                          <div class="image-control-container">
+                            <!-- click opens single-image modal for the clicked item -->
+                            <img *ngIf="getImageUrl(item.imagePath)" 
+                                 [src]="getImageUrl(item.imagePath)" 
+                                 alt="{{ item.productName }}"
+                                 class="product-image"
+                                 loading="lazy"
+                                 (error)="hideImage($event)"
+                                 (click)="openImageModal(item)" />
+
+                            <div class="quantity-control">
+                              <button [disabled]="!item.isAvailable" (click)="updateQuantityForNewItems(item, -1)" class="btn-quantity">−</button>
+                              <span class="quantity-display">{{ item.quantity || 0 }}</span>
+                              <button [disabled]="!item.isAvailable" (click)="updateQuantityForNewItems(item, 1)" class="btn-quantity">+</button>
+                            </div>
                           </div>
                         </div>
-                      </div>
+                      </ng-container>
                     </ng-container>
+
                   </div>
                 </ng-container>
               </ng-container>
             </ng-container>
 
+            <!-- no subcategories -->
             <ng-template #noSubCategories>
-              <ng-container *ngFor="let item of getFilteredMenuItems(category.categoryID)">
-                <div class="menu-item" [class.available]="item.isAvailable">
-                  <div class="menu-info">
-                    <h6 class="item-name">{{ item.productName }}</h6>
-                    <p class="item-description">{{ item.productDescription }}</p>
-                    <p class="item-price">₹{{ item.basePrice || 0 }}</p>
-                    <div *ngIf="!item.isAvailable" class="out-of-stock"><span>Out of Stock</span></div>
-                  </div>
-                  <div class="image-control-container">
-                    <img *ngIf="getImageUrl(item.imagePath)" 
-                         [src]="getImageUrl(item.imagePath)" 
-                         alt="{{ item.productName }}"
-                         class="product-image"
-                         loading="lazy"
-                         (error)="hideImage($event)" />
-                    <div class="quantity-control">
-                      <button [disabled]="!item.isAvailable" (click)="updateQuantityForNewItems(item, -1)" class="btn-quantity">−</button>
-                      <span class="quantity-display">{{ item.quantity || 0 }}</span>
-                      <button [disabled]="!item.isAvailable" (click)="updateQuantityForNewItems(item, 1)" class="btn-quantity">+</button>
+              <ng-container *ngIf="getFilteredMenuItems(category.categoryID) as items">
+                <ng-container *ngFor="let item of items; let i = index">
+                  <div class="menu-item" [class.available]="item.isAvailable">
+                    <div class="menu-info">
+                      <h6 class="item-name">{{ item.productName }}</h6>
+                      <p class="item-description">{{ item.productDescription }}</p>
+                      <p class="item-price">₹{{ item.basePrice || 0 }}</p>
+                      <div *ngIf="!item.isAvailable" class="out-of-stock"><span>Out of Stock</span></div>
+                    </div>
+                    <div class="image-control-container">
+                      <img *ngIf="getImageUrl(item.imagePath)" 
+                           [src]="getImageUrl(item.imagePath)" 
+                           alt="{{ item.productName }}"
+                           class="product-image"
+                           loading="lazy"
+                           (error)="hideImage($event)"
+                           (click)="openImageModal(item)" />
+
+                      <div class="quantity-control">
+                        <button [disabled]="!item.isAvailable" (click)="updateQuantityForNewItems(item, -1)" class="btn-quantity">−</button>
+                        <span class="quantity-display">{{ item.quantity || 0 }}</span>
+                        <button [disabled]="!item.isAvailable" (click)="updateQuantityForNewItems(item, 1)" class="btn-quantity">+</button>
+                      </div>
                     </div>
                   </div>
-                </div>
+                </ng-container>
               </ng-container>
             </ng-template>
 
@@ -169,6 +180,7 @@
     <i class="bi bi-arrow-left"></i> Back to Summary
   </button>
 </div>
+
 
 
 
@@ -384,7 +396,37 @@
     </div>
   </div>
 </div>
+<!-- Single Image Zoom Modal (no prev/next) -->
+<div class="image-modal" *ngIf="showImageModal">
+  <div class="image-modal-backdrop" (click)="closeImageModal()"></div>
 
+  <div class="image-modal-content" (wheel)="onWheelZoom($event)" tabindex="0">
+    <!-- Top-right cross close -->
+    <button class="modal-close btn-close" (click)="closeImageModal()" aria-label="Close"></button>
+
+    <div class="modal-body d-flex align-items-center justify-content-center">
+      <div class="image-zoom-wrapper" (dblclick)="toggleZoom()">
+        <!-- spinner while image loads -->
+        <div *ngIf="!modalImageLoaded" class="modal-image-spinner">
+          <div class="spinner-border" role="status"></div>
+        </div>
+
+        <img
+          [src]="modalImageUrl"
+          [alt]="modalImageAlt"
+          class="image-zoom"
+          [style.transform]="'scale(' + zoom + ')'"
+          (load)="onModalImageLoad()"
+          draggable="false"
+        />
+      </div>
+    </div>
+
+    <div class="modal-footer text-center mt-2">
+      <div class="fw-semibold">{{ modalImageAlt }}</div>
+    </div>
+  </div>
+</div>
 
     <!-- All your component HTML above -->
 

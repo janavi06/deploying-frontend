@@ -4426,3 +4426,35 @@ img,
   align-items: center;
   box-shadow: 0 -1px 8px rgba(0, 0, 0, 0.05);
 }
+/* image zoom modal styles - single image */
+.image-modal { position: fixed; inset: 0; z-index: 2000; display: flex; align-items: center; justify-content: center; }
+.image-modal-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.6); }
+.image-modal-content { position: relative; z-index: 10; max-width: 95vw; max-height: 90vh; outline: none; border-radius: 10px; }
+
+.modal-close {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  z-index: 20;
+  background: rgba(255,255,255,0.95);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+  border: none;
+}
+
+.modal-body { display:flex; gap: 12px; align-items:center; justify-content:center; padding: 18px 12px 8px 12px; }
+.image-zoom-wrapper { overflow: hidden; max-width: calc(90vw); max-height: calc(80vh); display:flex; align-items:center; justify-content:center; background: #fff; border-radius: 8px; padding: 8px; position: relative; }
+.image-zoom { max-width: 100%; max-height: 100%; transition: transform 160ms ease; user-select: none; pointer-events: none; }
+
+.modal-image-spinner { position: absolute; z-index: 15; display:flex; align-items:center; justify-content:center; inset: 0; background: rgba(255,255,255,0.55); }
+
+.modal-footer { text-align:center; color: #222; padding: 8px 12px 18px; }
+
+@media (max-width: 576px) {
+  .image-zoom-wrapper { max-width: 94vw; max-height: 64vh; padding: 6px; }
+}

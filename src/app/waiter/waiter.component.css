@@ -2396,3 +2396,128 @@ body {
   font-size: 14px;     /* was 13px */
   padding: 6px 12px;
 }
+/* ───────────── Mobile Responsive Layout (No Scroll) ───────────── */
+
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed;
+    width: 100vw !important;
+    height: 100vh;
+    left: -100vw;
+    top: 0;
+    background: #2c3e50;
+    z-index: 9999;
+    transition: left 0.3s ease-in-out;
+  }
+
+  .sidebar.open {
+    left: 0;
+    padding: 20px;
+  }
+
+  .main-content {
+    margin-left: 0 !important;
+    padding: 16px;
+  }
+
+  .sidebar-toggle {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    z-index: 10000;
+    font-size: 16px;
+    padding: 8px 12px;
+  }
+
+  .table-row,
+  .order-card-grid,
+  .order-grid,
+  .ready-order-grid {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .table-card,
+  .order-mini-card,
+  .ready-order-card {
+    width: 100% !important;
+    max-width: 100%;
+    min-width: auto;
+  }
+
+  .orders-heading {
+    font-size: 16px;
+    text-align: left;
+    margin-top: 16px;
+  }
+
+  .order-id,
+  .order-items li,
+  .order-time {
+    font-size: 14px;
+  }
+
+  .order-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .order-actions .btn {
+    width: 100%;
+    margin-top: 6px;
+  }
+
+  .notification-panel {
+    width: 95vw;
+    right: 2.5vw;
+  }
+
+  .notification-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .notification-action {
+    width: 100%;
+    margin-top: 8px;
+  }
+
+  .dashboard-header h1 {
+    font-size: 1.4rem;
+  }
+
+  .sidebar-menu li {
+    font-size: 14px;
+    padding: 10px 0;
+  }
+
+  .service-requests .sr-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .service-requests .sr-meta {
+    margin-top: 8px;
+  }
+
+  .table-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .table-card {
+    font-size: 16px;
+    padding: 12px;
+    width: 100%;
+    text-align: center;
+  }
+
+  .table-heading {
+    font-size: 1.2rem;
+  }
+}
+.payment-overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:9999}
+.payment-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.4)}
+.payment-modal{position:relative;background:#fff;width:380px;max-width:95vw;border-radius:14px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.2);z-index:10000}
+.badge{background:#111;color:#fff;padding:2px 6px;border-radius:10px;margin-left:6px;font-size:11px}

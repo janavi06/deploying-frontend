@@ -210,6 +210,23 @@ orderStatus: string = '';
 showPaymentConfirmModal: boolean = false;
 
 
+// SINGLE-IMAGE MODAL STATE & BEHAVIOR
+showImageModal = false;
+modalImageUrl = '';
+modalImageAlt = '';
+modalImageLoaded = false;
+
+zoom = 1;
+private readonly MIN_ZOOM = 1;
+private readonly MAX_ZOOM = 4;
+
+// keyboard handler: only Escape is needed
+private keydownHandler = (e: KeyboardEvent) => {
+  if (this.showImageModal && e.key === 'Escape') this.closeImageModal();
+};
+
+
+
 offers: Offer[] = [];
 appliedOffer: Offer | null = null;
 discountAmount: number = 0;
@@ -482,7 +499,47 @@ async placeFinalOrder(): Promise<void> {
     console.error('Order submission failed:', error);
   }
 }
+openImageModal(item: any) {
+  const imageUrl = this.getImageUrl(item?.imagePath);
+  if (!imageUrl) return;
 
+  this.modalImageLoaded = false;
+  this.modalImageUrl = imageUrl;
+  this.modalImageAlt = item?.productName || '';
+  this.zoom = 1;
+  this.showImageModal = true;
+
+  // lock background scroll and listen for Escape
+  document.body.style.overflow = 'hidden';
+  window.addEventListener('keydown', this.keydownHandler);
+}
+
+closeImageModal() {
+  this.showImageModal = false;
+  this.modalImageUrl = '';
+  this.modalImageAlt = '';
+  this.modalImageLoaded = false;
+  this.zoom = 1;
+  document.body.style.overflow = '';
+  window.removeEventListener('keydown', this.keydownHandler);
+}
+
+/** Zoom via mouse wheel (desktop) */
+onWheelZoom(event: WheelEvent) {
+  event.preventDefault();
+  const delta = -event.deltaY / 500;
+  this.zoom = Math.min(this.MAX_ZOOM, Math.max(this.MIN_ZOOM, this.zoom + delta));
+}
+
+/** Double-click toggles quick zoom */
+toggleZoom() {
+  this.zoom = (this.zoom === 1) ? 2 : 1;
+}
+
+/** Called when modal image finishes loading */
+onModalImageLoad(): void {
+  this.modalImageLoaded = true;
+}
 
 // Add this helper method to validate steps
 private isValidOrderStep(step: number): step is OrderStep {
@@ -823,7 +880,8 @@ this.paymentService.startPaymentPolling(this.orderID!, (paid) => {
       window.removeEventListener('beforeunload', this.beforeUnloadListener);
   window.removeEventListener('popstate', this.onPopState);
   
-
+ try { window.removeEventListener('keydown', this.keydownHandler); } catch {}
+  document.body.style.overflow = '';
     if (this.paymentPollTimer) clearInterval(this.paymentPollTimer);
     if (this.statusPollingTimer) clearInterval(this.statusPollingTimer);
   }

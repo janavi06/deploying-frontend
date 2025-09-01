@@ -36,6 +36,8 @@ spokenBatches = new Set<string>();  // ✅ Tracks orderID + batchID
 restaurantId: number = 0; // ✅ Set from localStorage
 
 lastPendingOrderIds: number[] = [];
+batchStartTimes: { [orderId: number]: { [batchId: number]: number } } = {};
+batchTimerIntervals: { [key: string]: any } = {}; // interval ids by "order-batch" key
 
     // For play-once logic
   lastPendingOrders: { orderID: number; playSound: boolean }[] = [];
@@ -153,9 +155,10 @@ this.http.get<{ orders: any[] }>(`${this.apiUrl}/kitchen/history-orders?restaura
 }
 
 getOrders(): void {
-this.http.get<{ message: string; orders: any[] }>(`${this.apiUrl}/kitchen/pending-orders?restaurantId=${this.restaurantId}`)
+  this.http.get<{ message: string; orders: any[] }>(`${this.apiUrl}/kitchen/pending-orders?restaurantId=${this.restaurantId}`)
     .subscribe({
       next: (response) => {
+        // reset current pending list (we will re-build)
         this.pendingOrders = [];
 
         if (!response?.orders) {
@@ -170,9 +173,11 @@ this.http.get<{ message: string; orders: any[] }>(`${this.apiUrl}/kitchen/pendin
         };
 
         response.orders.forEach(batch => {
-          const unpreparedItems = batch.items.filter((item: any) => !item.isPrepared);
+          // only include items that are not prepared
+          const unpreparedItems = (batch.items || []).filter((item: any) => !item.isPrepared);
           if (unpreparedItems.length === 0) return;
 
+          // push normalized batch item to pendingOrders
           this.pendingOrders.push({
             orderID: batch.orderID,
             batchID: batch.batchID,
@@ -184,16 +189,30 @@ this.http.get<{ message: string; orders: any[] }>(`${this.apiUrl}/kitchen/pendin
             createdAt: new Date(batch.createdAt),
           });
 
+          // ensure batchStatusMap exists for this order
           if (!this.batchStatusMap[batch.orderID]) {
             this.batchStatusMap[batch.orderID] = {};
           }
 
+          // initialize status mapping if undefined
           if (this.batchStatusMap[batch.orderID][batch.batchID] === undefined) {
             this.batchStatusMap[batch.orderID][batch.batchID] =
               statusMap[batch.kitchenStatus as KitchenStatus] ?? 0;
           }
 
-          // ✅ NEW: SPEAK PER BATCH NOT ORDER
+          // --- TIMER: start per-batch timer if not already started ---
+          if (!this.batchStartTimes[batch.orderID]) {
+            this.batchStartTimes[batch.orderID] = {};
+          }
+
+          if (this.batchStartTimes[batch.orderID][batch.batchID] === undefined) {
+            // prefer server-provided start timestamp if available
+            const startTs = batch.kitchenStartedAt ? new Date(batch.kitchenStartedAt).getTime() : Date.now();
+            this.batchStartTimes[batch.orderID][batch.batchID] = startTs;
+            this.startBatchInterval(batch.orderID, batch.batchID);
+          }
+
+          // --- SPEECH: speak per-batch once (and mark as played server-side) ---
           const batchKey = `${batch.orderID}-${batch.batchID}`;
           if (batch.playSound && this.settings.enableSpeech && !this.spokenBatches.has(batchKey)) {
             this.readOrderAloud({
@@ -202,11 +221,28 @@ this.http.get<{ message: string; orders: any[] }>(`${this.apiUrl}/kitchen/pendin
               items: unpreparedItems
             });
 
-            this.markSoundPlayed(batch.orderID).then(() => {
-              this.spokenBatches.add(batchKey);
-            });
+            // Mark played and avoid double-speaking across polls
+            this.markSoundPlayed(batch.orderID)
+              .then(() => {
+                this.spokenBatches.add(batchKey);
+              })
+              .catch(err => {
+                console.error('Failed to mark sound played for order', batch.orderID, err);
+              });
           }
         });
+
+        // play initial sounds for the first load (if you keep that flow)
+        if (!this.hasLoadedOnce) {
+          // playNewOrderSounds may be async; call it and log errors if any
+          try {
+            // If playNewOrderSounds returns a Promise:
+            const p = (this as any).playNewOrderSounds?.();
+            if (p && typeof p.then === 'function') p.catch((e: any) => console.error('playNewOrderSounds error', e));
+          } catch (e) {
+            console.warn('playNewOrderSounds invocation failed or is not present', e);
+          }
+        }
 
         console.log('Updated pendingOrders:', this.pendingOrders);
         console.log('Updated batchStatusMap:', this.batchStatusMap);
@@ -360,6 +396,87 @@ this.http.post(`${this.apiUrl}/waiter/notifications?restaurantId=${this.restaura
   });
 }
 
+// Helper: generate key
+private getBatchKey(orderID: number, batchID: number) {
+  return `${orderID}-${batchID}`;
+}
+
+// Start interval to update UI (no need to update a value; Angular will evaluate getter)
+private startBatchInterval(orderID: number, batchID: number) {
+  const key = this.getBatchKey(orderID, batchID);
+  if (this.batchTimerIntervals[key]) return;
+  // keep interval only to trigger Angular change detection periodically
+  this.batchTimerIntervals[key] = setInterval(() => {
+    // noop — timer displayed by getter; interval keeps UI ticking every second
+    // If you want to trigger change detection manually, inject ChangeDetectorRef and call markForCheck()
+  }, 1000);
+}
+
+// Stop interval and return elapsed seconds
+private stopBatchIntervalAndGetElapsed(orderID: number, batchID: number): number {
+  const key = this.getBatchKey(orderID, batchID);
+  const start = this.batchStartTimes?.[orderID]?.[batchID];
+  const elapsedSec = start ? Math.floor((Date.now() - start) / 1000) : 0;
+
+  // clear interval
+  if (this.batchTimerIntervals[key]) {
+    clearInterval(this.batchTimerIntervals[key]);
+    delete this.batchTimerIntervals[key];
+  }
+
+  // remove start time
+  if (this.batchStartTimes?.[orderID]) {
+    delete this.batchStartTimes[orderID][batchID];
+    if (Object.keys(this.batchStartTimes[orderID]).length === 0) {
+      delete this.batchStartTimes[orderID];
+    }
+  }
+
+  return elapsedSec;
+}
+
+// Returns elapsed seconds (used by UI getter)
+getElapsedSeconds(orderID: number, batchID: number): number {
+  const start = this.batchStartTimes?.[orderID]?.[batchID];
+  if (!start) return 0;
+  return Math.floor((Date.now() - start) / 1000);
+}
+
+// Nice formatting: Hh Mm Ss or Mm Ss
+/**
+ * Shows elapsed time dynamically for a running batch.
+ */
+getFormattedElapsed(orderID: number, batchID: number): string {
+  if (!this.batchStartTimes[orderID] || this.batchStartTimes[orderID][batchID] === undefined) {
+    return '0 sec';
+  }
+  const elapsedMs = Date.now() - this.batchStartTimes[orderID][batchID];
+  const sec = Math.floor(elapsedMs / 1000);
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+
+  if (h > 0) {
+    return `${h} hr ${m} min ${s} sec`;
+  } else if (m > 0) {
+    return `${m} min ${s} sec`;
+  }
+  return `${s} sec`;
+}
+
+/**
+ * Format seconds for history table (same pattern).
+ */
+formatSecondsToPresent(sec?: number | null): string {
+  if (sec === undefined || sec === null) return '-';
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+
+  if (h > 0) return `${h} hr ${m} min ${s} sec`;
+  if (m > 0) return `${m} min ${s} sec`;
+  return `${s} sec`;
+}
 
 updateBatchStatus(orderID: number, batchID: number, newStatus: number): void {
   console.log('Updating status:', { orderID, batchID, newStatus });
