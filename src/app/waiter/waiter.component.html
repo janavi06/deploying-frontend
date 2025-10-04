@@ -3,22 +3,22 @@
   <aside class="sidebar" [class.open]="isSidebarOpen">
 <ul class="sidebar-menu">
 
-  
+  <li (click)="navigateToNewOrder()" [class.active]="selectedSection === 'newOrder'">
+  New Order
+</li>
   <li (click)="selectedSection = 'orders'" [class.active]="selectedSection === 'orders'">
     Orders ({{ orders.length }})
   </li>
 
-  <li (click)="selectedSection = 'requests'" [class.active]="selectedSection === 'requests'">
-    Service Requests ({{ unreadRequests.length }})
-  </li>
+
 <li (click)="selectedSection = 'pendingPayments'" [class.active]="selectedSection === 'pendingPayments'">
   Pending Payments <span *ngIf="pendingPayments.length" class="badge">({{ pendingPayments.length }})</span>
 </li>
-<li (click)="navigateToNewOrder()" [class.active]="selectedSection === 'newOrder'">
-  New Order
-</li>
 
 
+  <li (click)="selectedSection = 'requests'" [class.active]="selectedSection === 'requests'">
+    Service Requests ({{ unreadRequests.length }})
+  </li>
 
 
   <li (click)="selectedSection = 'history'" [class.active]="selectedSection === 'history'">

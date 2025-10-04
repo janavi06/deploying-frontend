@@ -4458,3 +4458,12 @@ img,
 @media (max-width: 576px) {
   .image-zoom-wrapper { max-width: 94vw; max-height: 64vh; padding: 6px; }
 }
+.waiter-chat-widget button {
+  font-size: 1.5rem;
+}
+
+.waiter-chat-modal {
+  border: 1px solid #ddd;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}

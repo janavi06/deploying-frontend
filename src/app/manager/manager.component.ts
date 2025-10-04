@@ -9,6 +9,7 @@ import { environment } from '../../environments/environment';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
+import { ChartConfiguration, ChartData, ChartType } from 'chart.js';
 Chart.register(...registerables);
 
 @Component({
@@ -24,12 +25,76 @@ export class ManagerComponent implements OnInit {
   readonly ORDER_API = `${environment.apiUrl}/order`;
   readonly PRODUCT_URL = `${environment.apiUrl}/product`;
   readonly REPORT_API = `${environment.apiUrl}/order/report`;
+  
+  // Fixed: Remove duplicate declarations and use proper names
+  readonly RESTAURANT_TABLE_API = `${environment.apiUrl}/restauranttables`; // Renamed
+  readonly USER_API = `${environment.apiUrl}/user`; // Renamed
+
+  // New API URLs for advanced features
+  readonly STAFF_MANAGEMENT_API = `${environment.apiUrl}/staffmanagement`; // Renamed
+  readonly TABLE_MANAGEMENT_API = `${environment.apiUrl}/tablemanagement`; // Renamed
+  readonly EXPENSE_API = `${environment.apiUrl}/expense`;
+  readonly CUSTOMER_API = `${environment.apiUrl}/customer`;
+  readonly ADVANCED_ANALYTICS_API = `${environment.apiUrl}/advancedanalytics`;
+ // NEW: Staff Management
+  staffMembers: any[] = [];
+  staffShifts: any[] = [];
+  staffPerformance: any[] = [];
+  staffLeaderboard: any[] = [];
+  
+  // NEW: Table Management
+  tableStatus: any[] = [];
+  reservations: any[] = [];
+  floorPlan: any[] = [];
+  
+  // NEW: Expense Tracking
+  expenses: any[] = [];
+  expenseSummary: any[] = [];
+  budgets: any[] = [];
+  expenseCategories = ['Food', 'Beverage', 'Labor', 'Utilities', 'Rent', 'Supplies', 'Marketing', 'Maintenance', 'Insurance', 'Other'];
+  
+  // NEW: Customer Management
+  customers: any[] = [];
+  customerFeedback: any[] = [];
+  loyaltyProgram: any = {};
+  customerAnalytics: any = {};
+  
+  // NEW: Advanced Analytics
+  advancedDashboard: any = {};
+  predictiveData: any = {};
+  competitiveAnalysis: any = {};
+  kpis: any = {};
+
+  // NEW: Chart data for analytics
+  staffPerformanceChartData: any = {};
+  expenseBreakdownChartData: any = {};
+  customerSegmentationChartData: any = {};
+  kpiTrendChartData: any = {};
+
+  // NEW: Form models
+  newStaff: any = {};
+  newShift: any = {};
+  newExpense: any = {};
+  newReservation: any = {};
+  newBudget: any = {};
+
+  activeOrders: any[] = [];
+  inProgressOrders: any[] = [];
+  awaitingServiceOrders: any[] = [];
+  pendingPaymentOrders: any[] = [];
+
+  // ✨ START: NEW DASHBOARD DATA
+  oldestPendingOrder: any = null;
+  kitchenBacklogItems: number = 0;
+  unacknowledgedNotifications: any[] = [];
+  waiterRequests: any[] = [];
+  todayStats: { revenue: number, aov: number, cancelled: number } = { revenue: 0, aov: 0, cancelled: 0 };
+// ✨ END: NEW DASHBOARD DATA
 
 restaurantId: number = 0; 
 
   // Section management
-selectedSection: 'dashboard' | 'history' | 'editMenu' | 'settings' | 'reports' = 'history';
-  isSidebarOpen = false;
+selectedSection: 'dashboard' | 'history' | 'editMenu' | 'settings' | 'reports' | 'staff' | 'tables' | 'expenses' | 'customers' | 'advanced' = 'dashboard';  isSidebarOpen = false;
 
   // Product management
   products: any[] = [];
@@ -77,6 +142,21 @@ selectedSection: 'dashboard' | 'history' | 'editMenu' | 'settings' | 'reports' =
   comparePeriod: 'none' | 'previous' | 'lastyear' = 'none';
 billHtmlContent: string = '';
 showBillModal: boolean = false;
+currentYear = new Date().getFullYear();
+
+// Initialize newCustomer object
+newCustomer: any = {
+  name: '',
+  phone: '',
+  email: '',
+  dateOfBirth: '',
+  preferences: '',
+  allergies: '',
+  isVIP: false
+};
+
+
+
   // Report data
   reportData: any = {
     totalRevenue: 0,
@@ -100,6 +180,10 @@ showBillModal: boolean = false;
   hourlySalesChartData: any = { labels: [], datasets: [] };
   topItemsChartData: any = { labels: [], datasets: [] };
   categoryRevenueChartData: any = { labels: [], datasets: [] };
+
+  // ✨ START: NEW CHART DATA
+  waiterLoadChartData: any = { labels: [], datasets: [] };
+// ✨ END: NEW CHART DATA
 
   // Chart options
   salesTrendChartOptions = {
@@ -175,6 +259,28 @@ ngOnInit(): void {
   this.loadAllOrders();
   this.loadReportData();
 
+   // NEW: Load additional features
+    this.loadStaffData();
+    this.loadTableData();
+    this.loadExpenseData();
+    this.loadCustomerData();
+    this.loadAdvancedAnalytics();
+
+  // Auto-refresh intervals
+    setInterval(() => {
+      this.loadDashboardData();
+      this.loadTableData(); // Refresh table status
+    }, 15000);
+ 
+
+
+   // 👇 START THE DASHBOARD REFRESHER 👇
+    this.loadDashboardData();
+    setInterval(() => {
+      this.loadDashboardData();
+    }, 15000); // refresh every 15 seconds
+  
+
   // Auto-refresh every 60 seconds
   setInterval(() => {
     if (this.selectedSection === 'history') {
@@ -189,6 +295,135 @@ viewOrderDetails(orderID: number) {
   // Implement order details viewing logic
   console.log('Viewing details for order:', orderID);
 }
+
+// ✨ MODIFIED: loadDashboardData to include new data points
+loadDashboardData(): void {
+    this.http.get<any>(`${this.ORDER_API}/dashboard/active-orders?restaurantId=${this.restaurantId}`).subscribe({
+      next: (res) => {
+        this.activeOrders = res.data.orders.map((o: any) => ({
+          ...o,
+          lastUpdated: new Date(o.lastUpdated),
+          timeInStatus: this.getTimeInStatus(new Date(o.createdAt)) // Simplified initial timer logic
+        })).sort((a: any, b: any) => {
+          return b.lastUpdated.getTime() - a.lastUpdated.getTime();
+        });
+
+        // Categorize orders for summary cards
+        this.inProgressOrders = this.activeOrders.filter(o => o.status === 'In Progress' || o.status === 'Confirmed');
+        this.awaitingServiceOrders = this.activeOrders.filter(o => o.status === 'Awaiting Service');
+        this.pendingPaymentOrders = this.activeOrders.filter(o => o.status === 'Pending Payment' || o.status === 'Served');
+
+        // New KPI logic
+        const oldestPending = this.activeOrders
+          .filter(o => o.status === 'Pending')
+          .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())[0];
+
+        this.oldestPendingOrder = oldestPending;
+
+        this.prepareWaiterLoadChart();
+      },
+      error: (err) => {
+        console.error('Error loading dashboard data:', err);
+      },
+    });
+
+    // Fetch real-time operational data
+    this.loadOperationalKpis();
+    this.loadWaiterRequests();
+    this.loadTodayStats();
+  }
+
+// ✨ NEW: Load Operational KPIs (Kitchen Backlog & Notifications)
+  loadOperationalKpis(): void {
+    // Kitchen Backlog
+    this.http.get<any>(`${this.ORDER_API}/dashboard/kitchen-backlog?restaurantId=${this.restaurantId}`).subscribe({
+      next: (res) => this.kitchenBacklogItems = res.totalPendingItems,
+      error: (err) => console.error('Error loading kitchen backlog:', err)
+    });
+
+    // Waiter Notifications (Awaiting Service)
+    this.http.get<any[]>(`${this.ORDER_API}/waiter/notifications?restaurantId=${this.restaurantId}`).subscribe({
+      next: (res) => this.unacknowledgedNotifications = res.map(n => ({
+        ...n,
+        timeElapsed: this.getTimeInStatus(new Date(n.createdAt))
+      })),
+      error: (err) => console.error('Error loading notifications:', err)
+    });
+  }
+
+// ✨ NEW: Load Waiter Call Requests
+  loadWaiterRequests(): void {
+    this.http.get<any>(`${this.ORDER_API}/waiter-requests?restaurantId=${this.restaurantId}`).subscribe({
+      next: (res) => this.waiterRequests = res.data.map((r: any) => ({
+        ...r,
+        timeElapsed: this.getTimeInStatus(new Date(r.requestTime))
+      })).sort((a: any, b: any) => new Date(a.requestTime).getTime() - new Date(b.requestTime).getTime()),
+      error: (err) => console.error('Error loading waiter requests:', err)
+    });
+  }
+ isOverdue(timestamp: string | Date, minutes: number): boolean {
+    const dateObj = (timestamp instanceof Date) ? timestamp : new Date(timestamp);
+    const now = new Date();
+    const diffMs = now.getTime() - dateObj.getTime();
+    const diffMin = diffMs / (1000 * 60);
+    return diffMin > minutes;
+  }
+// ✨ NEW: Load Today's Key Financial Stats
+  loadTodayStats(): void {
+    const today = this.formatDate(new Date());
+    const params = {
+      restaurantId: this.restaurantId,
+      startDate: today,
+      endDate: today,
+      status: 'Completed', // Only completed orders count for revenue/AOV
+    };
+
+    this.http.get<any>(`${this.REPORT_API}/today-summary`, { params }).subscribe({
+      next: (res) => {
+        this.todayStats = {
+          revenue: res.totalRevenue || 0,
+          aov: res.avgOrderValue || 0,
+          cancelled: res.totalCancelled || 0
+        };
+      },
+      error: (err) => console.error('Error loading today stats:', err)
+    });
+  }
+
+// ✨ NEW: Prepare Waiter Load Chart Data
+  prepareWaiterLoadChart(): void {
+    const waiterLoad = this.activeOrders.reduce((acc, order) => {
+      const waiterName = order.waiterName || `Waiter ${order.waiterUserID || 'Unassigned'}`;
+      acc[waiterName] = (acc[waiterName] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    this.waiterLoadChartData = {
+      labels: Object.keys(waiterLoad),
+      datasets: [
+        {
+          label: 'Active Orders Assigned',
+          data: Object.values(waiterLoad),
+          backgroundColor: '#6366f1',
+          hoverBackgroundColor: '#4f46e5'
+        }
+      ]
+    };
+  }
+
+  // Override selectSection to also load dashboard data
+  selectSection(section: any) {
+    this.selectedSection = section;
+    this.isSidebarOpen = false;
+    if (section === 'history') {
+      this.applyFilters();
+    } else if (section === 'reports') {
+      this.loadReportData();
+    } else if (section === 'dashboard') {
+      this.loadDashboardData();
+    }
+  }
+
 
 viewBill(orderId: number): void {
   this.http.get(`${this.ORDER_API}/${orderId}/bill-html`, { responseType: 'text' }).subscribe({
@@ -237,12 +472,6 @@ Math = Math;
     this.isSidebarOpen = !this.isSidebarOpen;
   }
 
-  selectSection(section: any) {
-    this.selectedSection = section;
-    this.isSidebarOpen = false;
-    if (section === 'history') this.applyFilters();
-    if (section === 'reports') this.loadReportData();
-  }
 
   // Product Management Methods
   onSearchChange() {
@@ -319,7 +548,9 @@ Math = Math;
         this.customEndDate = '';
     }
   }
-
+getTableCountByStatus(status: string): number {
+  return this.tableStatus.filter(t => t.status === status).length;
+}
   applyFilters(): void {
     // Convert dates to Date objects for comparison
     const startDate = this.customStartDate ? new Date(this.customStartDate) : null;
@@ -681,16 +912,20 @@ private getFormattedDateRange(): string {
     return total > 0 ? cancelled / total : 0;
   }
 
-  getStatusBadgeClass(status: string): string {
+ getStatusBadgeClass(status: string): string {
     switch (status) {
       case 'Completed':
       case 'Served':
         return 'bg-success';
+      case 'Awaiting Service':
+        return 'bg-info'; // New status
+      case 'Pending Payment':
+        return 'bg-success'; // New status
       case 'Confirmed':
       case 'Ready':
         return 'bg-primary';
       case 'In Progress':
-        return 'bg-info';
+        return 'bg-warning'; // New status
       case 'Pending':
         return 'bg-warning';
       case 'Cancelled':
@@ -718,6 +953,516 @@ private getFormattedDateRange(): string {
       next: data => this.subcategories = data,
       error: err => console.error('Error loading subcategories:', err)
     });
+  }
+
+// NEW: Staff Management Methods
+  loadStaffData(): void {
+    this.http.get<any>(`${this.STAFF_MANAGEMENT_API}/staff?restaurantId=${this.restaurantId}`).subscribe({
+      next: (res) => this.staffMembers = res.data,
+      error: (err) => console.error('Error loading staff:', err)
+    });
+
+    this.http.get<any>(`${this.STAFF_MANAGEMENT_API}/shifts?restaurantId=${this.restaurantId}`).subscribe({
+      next: (res) => this.staffShifts = res.data,
+      error: (err) => console.error('Error loading shifts:', err)
+    });
+
+    this.http.get<any>(`${this.STAFF_MANAGEMENT_API}/performance?restaurantId=${this.restaurantId}`).subscribe({
+      next: (res) => {
+        this.staffPerformance = res.performance;
+        this.staffLeaderboard = res.leaderboard;
+        this.prepareStaffPerformanceChart();
+      },
+      error: (err) => console.error('Error loading staff performance:', err)
+    });
+  }
+
+  addStaff(): void {
+    this.http.post(`${this.STAFF_MANAGEMENT_API}/staff`, {
+      ...this.newStaff,
+      restaurantId: this.restaurantId
+    }).subscribe({
+      next: () => {
+        this.loadStaffData();
+        this.newStaff = {};
+        // Close modal or reset form
+      },
+      error: (err) => console.error('Error adding staff:', err)
+    });
+  }
+
+  createShift(): void {
+    this.http.post(`${this.STAFF_MANAGEMENT_API}/shifts`, {
+      ...this.newShift,
+      restaurantId: this.restaurantId
+    }).subscribe({
+      next: () => {
+        this.loadStaffData();
+        this.newShift = {};
+      },
+      error: (err) => console.error('Error creating shift:', err)
+    });
+  }
+
+  // NEW: Table Management Methods
+  loadTableData(): void {
+    this.http.get<any>(`${this.TABLE_MANAGEMENT_API}/status?restaurantId=${this.restaurantId}`).subscribe({
+      next: (res) => {
+        this.tableStatus = res.data;
+        this.prepareFloorPlan();
+      },
+      error: (err) => console.error('Error loading table status:', err)
+    });
+
+    this.http.get<any>(`${this.TABLE_MANAGEMENT_API}/reservations?restaurantId=${this.restaurantId}`).subscribe({
+      next: (res) => this.reservations = res.data,
+      error: (err) => console.error('Error loading reservations:', err)
+    });
+  }
+
+  updateTableStatus(tableId: number, status: string): void {
+    this.http.put(`${this.TABLE_MANAGEMENT_API}/status/${tableId}?restaurantId=${this.restaurantId}`, status).subscribe({
+      next: () => this.loadTableData(),
+      error: (err) => console.error('Error updating table status:', err)
+    });
+  }
+
+  createReservation(): void {
+    this.http.post(`${this.TABLE_MANAGEMENT_API}/reservations`, {
+      ...this.newReservation,
+      restaurantId: this.restaurantId
+    }).subscribe({
+      next: () => {
+        this.loadTableData();
+        this.newReservation = {};
+      },
+      error: (err) => console.error('Error creating reservation:', err)
+    });
+  }
+
+  // NEW: Expense Tracking Methods
+  loadExpenseData(): void {
+    this.http.get<any>(`${this.EXPENSE_API}?restaurantId=${this.restaurantId}`).subscribe({
+      next: (res) => {
+        this.expenses = res.expenses;
+        this.expenseSummary = res.summary;
+        this.prepareExpenseBreakdownChart();
+      },
+      error: (err) => console.error('Error loading expenses:', err)
+    });
+
+    const today = new Date();
+    this.http.get<any>(`${this.EXPENSE_API}/budgets?restaurantId=${this.restaurantId}&year=${today.getFullYear()}&month=${today.getMonth() + 1}`).subscribe({
+      next: (res) => this.budgets = res.data,
+      error: (err) => console.error('Error loading budgets:', err)
+    });
+  }
+
+  addExpense(): void {
+    this.http.post(`${this.EXPENSE_API}`, {
+      ...this.newExpense,
+      restaurantId: this.restaurantId
+    }).subscribe({
+      next: () => {
+        this.loadExpenseData();
+        this.newExpense = {};
+      },
+      error: (err) => console.error('Error adding expense:', err)
+    });
+  }
+
+  saveBudget(): void {
+    this.http.post(`${this.EXPENSE_API}/budgets`, {
+      ...this.newBudget,
+      restaurantId: this.restaurantId
+    }).subscribe({
+      next: () => {
+        this.loadExpenseData();
+        this.newBudget = {};
+      },
+      error: (err) => console.error('Error saving budget:', err)
+    });
+  }
+
+  // NEW: Customer Management Methods
+  loadCustomerData(): void {
+    this.http.get<any>(`${this.CUSTOMER_API}?restaurantId=${this.restaurantId}`).subscribe({
+      next: (res) => this.customers = res.data,
+      error: (err) => console.error('Error loading customers:', err)
+    });
+
+    this.http.get<any>(`${this.CUSTOMER_API}/analytics?restaurantId=${this.restaurantId}`).subscribe({
+      next: (res) => {
+        this.customerAnalytics = res.data;
+        this.prepareCustomerSegmentationChart();
+      },
+      error: (err) => console.error('Error loading customer analytics:', err)
+    });
+
+    this.http.get<any>(`${this.CUSTOMER_API}/loyalty?restaurantId=${this.restaurantId}`).subscribe({
+      next: (res) => this.loyaltyProgram = res.program,
+      error: (err) => console.error('Error loading loyalty program:', err)
+    });
+  }
+
+  // NEW: Advanced Analytics Methods
+  loadAdvancedAnalytics(): void {
+    this.http.get<any>(`${this.ADVANCED_ANALYTICS_API}/dashboard?restaurantId=${this.restaurantId}`).subscribe({
+      next: (res) => {
+        this.advancedDashboard = res;
+        this.prepareKPITrendChart();
+      },
+      error: (err) => console.error('Error loading advanced analytics:', err)
+    });
+
+    this.http.get<any>(`${this.ADVANCED_ANALYTICS_API}/predictive?restaurantId=${this.restaurantId}`).subscribe({
+      next: (res) => this.predictiveData = res.data,
+      error: (err) => console.error('Error loading predictive data:', err)
+    });
+
+    this.http.get<any>(`${this.ADVANCED_ANALYTICS_API}/competitive?restaurantId=${this.restaurantId}`).subscribe({
+      next: (res) => this.competitiveAnalysis = res.data,
+      error: (err) => console.error('Error loading competitive analysis:', err)
+    });
+
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 30);
+    this.http.get<any>(`${this.ADVANCED_ANALYTICS_API}/kpis?restaurantId=${this.restaurantId}&startDate=${startDate.toISOString()}&endDate=${new Date().toISOString()}`).subscribe({
+      next: (res) => this.kpis = res.data,
+      error: (err) => console.error('Error loading KPIs:', err)
+    });
+  }
+
+  // NEW: Chart Preparation Methods
+  prepareStaffPerformanceChart(): void {
+    this.staffPerformanceChartData = {
+      labels: this.staffLeaderboard.map(s => s.staffName),
+      datasets: [
+        {
+          label: 'Total Sales',
+          data: this.staffLeaderboard.map(s => s.totalSales),
+          backgroundColor: '#3b82f6'
+        },
+        {
+          label: 'Efficiency Score',
+          data: this.staffLeaderboard.map(s => s.avgEfficiency),
+          backgroundColor: '#10b981',
+          type: 'line',
+          yAxisID: 'y1'
+        }
+      ]
+    };
+  }
+
+  prepareExpenseBreakdownChart(): void {
+    this.expenseBreakdownChartData = {
+      labels: this.expenseSummary.map(e => e.category),
+      datasets: [{
+        data: this.expenseSummary.map(e => e.totalAmount),
+        backgroundColor: [
+          '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6',
+          '#06b6d4', '#84cc16', '#f97316', '#ec4899', '#64748b'
+        ]
+      }]
+    };
+  }
+
+  prepareCustomerSegmentationChart(): void {
+    if (this.customerAnalytics.customerSegmentation) {
+      this.customerSegmentationChartData = {
+        labels: Object.keys(this.customerAnalytics.customerSegmentation),
+        datasets: [{
+          data: Object.values(this.customerAnalytics.customerSegmentation),
+          backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444']
+        }]
+      };
+    }
+  }
+
+  prepareKPITrendChart(): void {
+    // This would use historical KPI data
+    this.kpiTrendChartData = {
+      labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+      datasets: [
+        {
+          label: 'Revenue',
+          data: [12000, 15000, 14000, 16000],
+          borderColor: '#3b82f6',
+          tension: 0.3
+        },
+        {
+          label: 'Customer Satisfaction',
+          data: [4.2, 4.5, 4.3, 4.6],
+          borderColor: '#10b981',
+          tension: 0.3,
+          yAxisID: 'y1'
+        }
+      ]
+    };
+  }
+// Staff Management Methods
+editStaff(staff: any): void {
+  // Populate the form with staff data for editing
+  this.newStaff = { ...staff };
+  // You might want to open a modal or switch to edit mode
+  console.log('Editing staff:', staff);
+  // Example: Open edit modal
+  // this.openEditStaffModal(staff);
+}
+
+deleteStaff(staffID: number): void {
+  if (confirm('Are you sure you want to delete this staff member?')) {
+    this.http.delete(`${this.STAFF_MANAGEMENT_API}/staff/${staffID}?restaurantId=${this.restaurantId}`)
+      .subscribe({
+        next: (res: any) => {
+          this.loadStaffData();
+          console.log('Staff deleted successfully:', res);
+          // Show success message
+        },
+        error: (err) => {
+          console.error('Error deleting staff:', err);
+          alert('Failed to delete staff member');
+        }
+      });
+  }
+}
+
+markShiftComplete(shiftID: number): void {
+  this.http.put(`${this.STAFF_MANAGEMENT_API}/shifts/${shiftID}/complete?restaurantId=${this.restaurantId}`, {})
+    .subscribe({
+      next: (res: any) => {
+        this.loadStaffData();
+        console.log('Shift marked as complete:', res);
+      },
+      error: (err) => {
+        console.error('Error completing shift:', err);
+        alert('Failed to mark shift as complete');
+      }
+    });
+}
+
+deleteShift(shiftID: number): void {
+  if (confirm('Are you sure you want to delete this shift?')) {
+    this.http.delete(`${this.STAFF_MANAGEMENT_API}/shifts/${shiftID}?restaurantId=${this.restaurantId}`)
+      .subscribe({
+        next: (res: any) => {
+          this.loadStaffData();
+          console.log('Shift deleted successfully:', res);
+        },
+        error: (err) => {
+          console.error('Error deleting shift:', err);
+          alert('Failed to delete shift');
+        }
+      });
+  }
+}
+
+// Table Management Methods
+updateReservationStatus(reservationID: number, status: string): void {
+  this.http.put(`${this.TABLE_MANAGEMENT_API}/reservations/${reservationID}/status?restaurantId=${this.restaurantId}`, { status })
+    .subscribe({
+      next: (res: any) => {
+        this.loadTableData();
+        console.log('Reservation status updated:', res);
+      },
+      error: (err) => {
+        console.error('Error updating reservation status:', err);
+        alert('Failed to update reservation status');
+      }
+    });
+}
+
+cancelReservation(reservationID: number): void {
+  if (confirm('Are you sure you want to cancel this reservation?')) {
+    this.http.put(`${this.TABLE_MANAGEMENT_API}/reservations/${reservationID}/cancel?restaurantId=${this.restaurantId}`, {})
+      .subscribe({
+        next: (res: any) => {
+          this.loadTableData();
+          console.log('Reservation cancelled:', res);
+        },
+        error: (err) => {
+          console.error('Error cancelling reservation:', err);
+          alert('Failed to cancel reservation');
+        }
+      });
+  }
+}
+
+// Expense Management Methods
+deleteExpense(expenseID: number): void {
+  if (confirm('Are you sure you want to delete this expense?')) {
+    this.http.delete(`${this.EXPENSE_API}/${expenseID}?restaurantId=${this.restaurantId}`)
+      .subscribe({
+        next: (res: any) => {
+          this.loadExpenseData();
+          console.log('Expense deleted successfully:', res);
+        },
+        error: (err) => {
+          console.error('Error deleting expense:', err);
+          alert('Failed to delete expense');
+        }
+      });
+  }
+}
+
+// Customer Management Methods
+viewCustomerDetails(customerID: number): void {
+  // Navigate to customer details page or open details modal
+  console.log('Viewing customer details for ID:', customerID);
+  // Example implementation:
+  this.http.get(`${this.CUSTOMER_API}/${customerID}?restaurantId=${this.restaurantId}`)
+    .subscribe({
+      next: (customer: any) => {
+        // Open modal with customer details
+        console.log('Customer details:', customer);
+        // this.openCustomerDetailsModal(customer);
+      },
+      error: (err) => {
+        console.error('Error loading customer details:', err);
+        alert('Failed to load customer details');
+      }
+    });
+}
+
+toggleVIP(customerID: number, isVIP: boolean): void {
+  const action = isVIP ? 'add to VIP' : 'remove from VIP';
+  if (confirm(`Are you sure you want to ${action} this customer?`)) {
+    this.http.put(`${this.CUSTOMER_API}/${customerID}/vip?restaurantId=${this.restaurantId}`, { isVIP })
+      .subscribe({
+        next: (res: any) => {
+          this.loadCustomerData();
+          console.log('VIP status updated:', res);
+        },
+        error: (err) => {
+          console.error('Error updating VIP status:', err);
+          alert('Failed to update VIP status');
+        }
+      });
+  }
+}
+
+resolveFeedback(feedbackID: number): void {
+  this.http.put(`${this.CUSTOMER_API}/feedback/${feedbackID}/resolve?restaurantId=${this.restaurantId}`, {})
+    .subscribe({
+      next: (res: any) => {
+        this.loadCustomerData();
+        console.log('Feedback resolved:', res);
+      },
+      error: (err) => {
+        console.error('Error resolving feedback:', err);
+        alert('Failed to resolve feedback');
+      }
+    });
+}
+
+// Advanced Analytics Methods
+refreshAnalytics(): void {
+  this.loadAdvancedAnalytics();
+  console.log('Analytics data refreshed');
+}
+
+addCustomer(): void {
+  // Validate required fields
+  if (!this.newCustomer.name || !this.newCustomer.phone) {
+    alert('Please fill in all required fields');
+    return;
+  }
+
+  this.http.post(`${this.CUSTOMER_API}`, {
+    ...this.newCustomer,
+    restaurantId: this.restaurantId
+  }).subscribe({
+    next: (res: any) => {
+      this.loadCustomerData();
+      this.newCustomer = {
+        name: '',
+        phone: '',
+        email: '',
+        dateOfBirth: '',
+        preferences: '',
+        allergies: '',
+        isVIP: false
+      };
+      console.log('Customer added successfully:', res);
+      
+      // Simple modal close without bootstrap dependency
+      const modal = document.getElementById('addCustomerModal');
+      if (modal) {
+        modal.style.display = 'none';
+        modal.classList.remove('show');
+        document.body.classList.remove('modal-open');
+        const backdrop = document.querySelector('.modal-backdrop');
+        if (backdrop) {
+          backdrop.remove();
+        }
+      }
+      
+      alert('Customer added successfully!');
+    },
+    error: (err) => {
+      console.error('Error adding customer:', err);
+      alert('Failed to add customer');
+    }
+  });
+}
+
+
+  prepareFloorPlan(): void {
+    this.floorPlan = this.tableStatus.map(table => ({
+      ...table,
+      statusColor: this.getTableStatusColor(table.status)
+    }));
+  }
+
+  getTableStatusColor(status: string): string {
+    switch (status) {
+      case 'Available': return '#10b981';
+      case 'Occupied': return '#ef4444';
+      case 'Reserved': return '#f59e0b';
+      case 'Cleaning': return '#6b7280';
+      case 'Maintenance': return '#64748b';
+      default: return '#9ca3af';
+    }
+  }
+
+  // NEW: Export Methods
+  exportExpenseReport(): void {
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 30);
+    this.http.get(`${this.EXPENSE_API}/reports?restaurantId=${this.restaurantId}&startDate=${startDate.toISOString()}&endDate=${new Date().toISOString()}`, { responseType: 'blob' }).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `expense-report-${new Date().toISOString().slice(0,10)}.pdf`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+      },
+      error: (err) => console.error('Error exporting expense report:', err)
+    });
+  }
+
+  exportStaffSchedule(): void {
+    // Implement PDF export for staff schedule
+    const doc = new jsPDF();
+    // Add staff schedule content
+    doc.save(`staff-schedule-${new Date().toISOString().slice(0,10)}.pdf`);
+  }
+
+  // NEW: Mobile Optimization - Responsive methods
+  isMobileScreen(): boolean {
+    return window.innerWidth < 768;
+  }
+
+  // NEW: Integration methods
+  integrateWithQuickBooks(): void {
+    // Implement QuickBooks integration
+    console.log('Integrating with QuickBooks...');
+  }
+
+  integrateWithDeliveryPlatforms(): void {
+    // Implement delivery platform integration
+    console.log('Integrating with delivery platforms...');
   }
 
   loadProducts() {
@@ -821,7 +1566,31 @@ this.http.put(`${environment.apiUrl}/product/${product.productID}/availability?r
       error: err => console.error('Availability update failed:', err)
     });
   }
+// ✨ NEW: Utility method for time display
+getTimeInStatus(timestamp: string | Date): string { // <- Change input type
+    const dateObj = (timestamp instanceof Date) ? timestamp : new Date(timestamp); // <- Handle string/Date
+    
+    const now = new Date();
+    const diffMs = now.getTime() - dateObj.getTime();
+    const diffMin = Math.round(diffMs / (1000 * 60));
 
+    if (diffMin < 60) {
+      return `${diffMin} min ago`;
+    }
+
+    const diffHr = (diffMs / (1000 * 60 * 60));
+    return `${diffHr.toFixed(1)} hrs ago`;
+  }
+
+// ✨ NEW: Acknowledge Waiter Request
+  acknowledgeWaiterRequest(id: number): void {
+    this.http.put(`${this.ORDER_API}/waiter-requests/${id}/accept`, {}).subscribe({
+      next: () => {
+        this.loadWaiterRequests();
+      },
+      error: (err) => console.error('Failed to acknowledge request:', err)
+    });
+  }
   handleImageUpload(event: any) {
     const file = event.target.files[0];
     if (file) {

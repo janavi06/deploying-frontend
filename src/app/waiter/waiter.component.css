@@ -2521,3 +2521,231 @@ body {
 .payment-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.4)}
 .payment-modal{position:relative;background:#fff;width:380px;max-width:95vw;border-radius:14px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.2);z-index:10000}
 .badge{background:#111;color:#fff;padding:2px 6px;border-radius:10px;margin-left:6px;font-size:11px}
+
+.payment-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.payment-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(99, 179, 237, 0.25); /* soft pastel blue overlay */
+  backdrop-filter: blur(2px);
+}
+
+.payment-modal {
+  position: relative;
+  background: #f9fcff; /* light pastel background */
+  width: 380px;
+  max-width: 95vw;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 8px 24px rgba(99, 179, 237, 0.25); /* blue shadow tint */
+  z-index: 10000;
+  font-family: 'Inter', sans-serif;
+  color: #2a3f54;
+}
+
+/* Badge with pastel styling */
+.badge {
+  background: #63b3ed; /* pastel blue */
+  color: #fff;
+  padding: 3px 8px;
+  border-radius: 12px;
+  margin-left: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  box-shadow: 0 2px 6px rgba(99, 179, 237, 0.25);
+}
+
+/* Optional subtle hover effect for modal */
+.payment-modal:hover {
+  box-shadow: 0 10px 28px rgba(99, 179, 237, 0.35);
+  transition: 0.2s ease-in-out;
+}
+/* --- GENERAL STYLING --- */
+.pending-payments {
+  font-family: "Inter", system-ui, sans-serif;
+  font-size: 14px;
+  color: #1e293b; /* slate-800 */
+}
+
+.pending-payments .btn {
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+/* --- TABS --- */
+.pending-payments .btn-sm {
+  font-size: 13px;
+}
+
+.pending-payments .btn-dark {
+  background: #2563eb; /* blue-600 */
+  border-color: #2563eb;
+  color: #fff;
+}
+
+.pending-payments .btn-outline-dark {
+  border: 1px solid #cbd5e1; /* slate-300 */
+  background: #fff;
+  color: #2563eb;
+}
+
+.pending-payments .btn-outline-dark:hover {
+  border-color: #2563eb;
+  color: #1e40af; /* blue-800 */
+}
+
+/* --- BADGE COUNTS --- */
+.pending-payments .badge {
+  background: #e0f2fe; /* blue-100 */
+  color: #0369a1;     /* blue-700 */
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 12px;
+  margin-left: 4px;
+}
+
+/* --- PAYMENT CARDS --- */
+.pending-payments .card {
+  border: 1px solid #e2e8f0; /* slate-200 */
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  transition: transform 0.2s ease;
+}
+
+.pending-payments .card:hover {
+  transform: translateY(-2px);
+}
+
+.pending-payments .card strong {
+  color: #0f172a; /* slate-900 */
+}
+
+.pending-payments .card .btn-dark {
+  font-size: 13px;
+  padding: 4px 12px;
+}
+
+/* --- MODAL OVERLAY --- */
+.payment-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1050;
+}
+
+.payment-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.4); /* slate-900/40 */
+  backdrop-filter: blur(2px);
+}
+
+/* --- MODAL WINDOW --- */
+.payment-modal {
+  position: relative;
+  background: #ffffff;
+  width: 380px;
+  max-width: 92vw;
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+  animation: fadeInUp 0.25s ease;
+}
+
+.payment-modal h4 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.payment-modal .btn-light {
+  border: none;
+  background: #f1f5f9; /* slate-100 */
+  color: #475569; /* slate-600 */
+  border-radius: 6px;
+}
+
+.payment-modal .btn-light:hover {
+  background: #e2e8f0; /* slate-200 */
+}
+
+/* --- MODAL BUTTONS --- */
+.payment-modal .btn-group .btn {
+  flex: 1;
+}
+
+.payment-modal .btn-group .btn-dark {
+  background: #2563eb;
+  border-color: #2563eb;
+}
+
+.payment-modal .btn-group .btn-outline-dark {
+  border-color: #cbd5e1;
+  color: #2563eb;
+}
+
+.payment-modal .btn-group .btn-outline-dark:hover {
+  border-color: #2563eb;
+  color: #1e40af;
+}
+
+/* --- QR CODE --- */
+.payment-modal qrcode {
+  display: inline-block;
+  border: 4px solid #e2e8f0; /* slate-200 */
+  border-radius: 10px;
+  padding: 6px;
+  background: #f8fafc; /* slate-50 */
+}
+
+/* --- TEXT + LINKS --- */
+.payment-modal .small {
+  font-size: 12px;
+  color: #64748b; /* slate-500 */
+}
+
+.payment-modal a.btn-outline-secondary {
+  border-color: #cbd5e1;
+  color: #2563eb;
+  background: #fff;
+}
+
+.payment-modal a.btn-outline-secondary:hover {
+  border-color: #2563eb;
+  background: #eff6ff; /* blue-50 */
+}
+
+/* --- SUCCESS BUTTON (CASH) --- */
+.payment-modal .btn-success {
+  background: #16a34a; /* green-600 */
+  border: none;
+}
+
+.payment-modal .btn-success:hover {
+  background: #15803d; /* green-700 */
+}
+
+/* --- ANIMATIONS --- */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}

@@ -22,6 +22,7 @@ export const routes: Routes = [
   { path: 'menu',     component: MenuComponent   },
   { path: 'kitchen',  component: KitchenComponent},
   { path: 'manager',  component: ManagerComponent},
+
     { path: 'pending-payments',  component: PendingPaymentsComponent},
   { path: 'payment/:id', component: PaymentComponent },
   { path: 'new-order', component: NewOrderComponent },

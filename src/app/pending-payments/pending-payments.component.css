@@ -1,79 +1,121 @@
-/* Container for horizontal scrolling on small screens */
-:host {
-  display: block;
-  overflow-x: auto;
-  padding: 1rem;
-  background: #fff;
-  border-radius: 0.5rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
+/* Pending Payments Minimalist Pastel Style */
 
-/* Base table styles */
-table {
+.table {
   width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  border-collapse: collapse;
+  font-size: 14px;
+  background: #f9fcff; /* light pastel blue background */
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
 }
 
-/* Table header */
-thead th {
-  position: sticky;
-  top: 0;
-  background: #f7f9fc;
-  color: #333;
-  font-weight: 600;
-  padding: 0.75rem 1rem;
+.table thead {
+  background: #e6f2fb; /* soft blue header */
+}
+
+.table th {
   text-align: left;
-  border-bottom: 2px solid #e1e5eb;
+  padding: 10px 14px;
+  font-weight: 600;
+  color: #2a3f54; /* subtle blue-gray text */
+  font-size: 13px;
 }
 
-/* Table body rows */
-tbody tr {
-  transition: background-color 0.2s ease;
-}
-tbody tr:nth-child(even) {
-  background: #fafbfc;
-}
-tbody tr:hover {
-  background: #eef2f7;
+.table td {
+  padding: 10px 14px;
+  border-top: 1px solid #eef5fa; /* very soft border */
+  color: #3a4d60;
 }
 
-/* Cells */
-td {
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid #e1e5eb;
-  color: #444;
-  vertical-align: middle;
+.table tbody tr:hover {
+  background: #f0f7fc; /* gentle hover */
+  transition: 0.2s ease-in-out;
 }
 
-/* “Mark Paid” button */
-button {
-  padding: 0.5rem 1rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #fff;
-  background: #4f46e5;
+ul {
+  padding-left: 16px;
+  margin: 0;
+  font-size: 13px;
+  color: #4a6276;
+}
+
+.alert {
+  background: #ffe6e6;
+  color: #b52d2d;
   border: none;
-  border-radius: 0.375rem;
-  cursor: pointer;
-  transition: background-color 0.2s ease, transform 0.1s ease;
-}
-button:hover {
-  background: #4338ca;
-}
-button:active {
-  transform: scale(0.97);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  font-size: 14px;
 }
 
-/* Responsive tweaks */
-@media (max-width: 600px) {
-  thead th, td {
-    padding: 0.5rem;
-    font-size: 0.875rem;
-  }
-  button {
-    padding: 0.4rem 0.8rem;
-    font-size: 0.8rem;
-  }
+/* Buttons */
+.btn {
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background 0.2s ease;
+}
+
+.btn-success {
+  background: #63b3ed; /* pastel blue */
+  border: none;
+  color: #fff;
+}
+
+.btn-success:hover {
+  background: #4299e1; /* deeper pastel blue on hover */
+}
+
+.text-muted {
+  font-size: 14px;
+  color: #7a8fa6 !important;
+}
+.payment-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.payment-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(99, 179, 237, 0.25); /* soft pastel blue overlay */
+  backdrop-filter: blur(2px);
+}
+
+.payment-modal {
+  position: relative;
+  background: #f9fcff; /* light pastel background */
+  width: 380px;
+  max-width: 95vw;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 8px 24px rgba(99, 179, 237, 0.25); /* blue shadow tint */
+  z-index: 10000;
+  font-family: 'Inter', sans-serif;
+  color: #2a3f54;
+}
+
+/* Badge with pastel styling */
+.badge {
+  background: #63b3ed; /* pastel blue */
+  color: #fff;
+  padding: 3px 8px;
+  border-radius: 12px;
+  margin-left: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  box-shadow: 0 2px 6px rgba(99, 179, 237, 0.25);
+}
+
+/* Optional subtle hover effect for modal */
+.payment-modal:hover {
+  box-shadow: 0 10px 28px rgba(99, 179, 237, 0.35);
+  transition: 0.2s ease-in-out;
 }
