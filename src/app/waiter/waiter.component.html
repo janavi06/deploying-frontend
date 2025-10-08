@@ -228,11 +228,11 @@
 
 <div class="order-actions mt-2 d-flex justify-content-end gap-1 flex-wrap">
   <!-- Edit Button - Blue -->
-  <button *ngIf="order.orderStatus === 'Pending' || order.orderStatus === 'Confirmed'"
+  <!-- <button *ngIf="order.orderStatus === 'Pending' || order.orderStatus === 'Confirmed'"
           class="btn btn-sm btn-outline-primary" 
           (click)="openEditOrderModal(order)">
     <i class="bi bi-pencil"></i> Edit
-  </button>
+  </button> -->
 
   <!-- Serve Button - Green - UPDATED: Show for all Confirmed orders regardless of kitchen status -->
   <button *ngIf="order.orderStatus === OrderStatus.Confirmed"
@@ -242,11 +242,11 @@
   </button>
 
   <!-- Cancel Button - Red -->
-  <button *ngIf="order.orderStatus === 'Pending' || order.orderStatus === 'Confirmed'"
+  <!-- <button *ngIf="order.orderStatus === 'Pending' || order.orderStatus === 'Confirmed'"
           class="btn btn-sm btn-outline-danger" 
           (click)="cancelOrder(order)">
     <i class="bi bi-x-circle"></i> Cancel
-  </button>
+  </button> -->
 </div>
             </div>
           </ng-container>

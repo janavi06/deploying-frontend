@@ -12,10 +12,6 @@
       <button class="close-btn" (click)="cancel()">×</button>
     </div>
 
-    <!-- TITLE -->
-    <!-- <div class="modal-title-text">
-      Customize as per your taste
-    </div> -->
     <hr class="divider" />
 
     <!-- BODY: Quantity / Customization Options -->
@@ -23,9 +19,24 @@
       <div class="section-label">Quantity</div>
 
       <div class="customization-options">
-       <div *ngFor="let option of product.customizationOptions" class="option-item">
+        <!-- None Option -->
+        <div class="option-item">
           <label>
-            <!-- Hide the native radio; we’ll draw a custom circle next to it -->
+            <input
+              type="radio"
+              [value]="null"
+              name="customOption"
+              [(ngModel)]="selectedOption"
+            />
+            <span class="checkmark"></span>
+            <span class="option-name">None</span>
+            <span class="option-price">₹0</span>
+          </label>
+        </div>
+
+        <!-- Existing customization options -->
+        <div *ngFor="let option of product.customizationOptions" class="option-item">
+          <label>
             <input
               type="radio"
               [value]="option.customizationOptionID"
@@ -34,32 +45,25 @@
             />
             <span class="checkmark"></span>
             <span class="option-name">{{ option.name }}</span>
-           <span class="option-price">
-             ₹{{ option.fixedPrice | number:'1.0-0' }}
-           </span>
+            <span class="option-price">
+              ₹{{ option.fixedPrice | number:'1.0-0' }}
+            </span>
           </label>
         </div>
       </div>
     </div>
 
-    <!-- FOOTER: Total + “View Customized Item” + Add to Cart -->
+    <!-- FOOTER: Total + Add to Cart -->
     <div class="modal-footer">
       <div class="footer-left">
-      <span class="total-price">₹{{ getSelectedPrice() }}</span>
-        <!-- <a
-          href="#"
-          class="view-customized"
-          (click)="$event.preventDefault()"
-          >View Customized Item</a
-        > -->
+        <span class="total-price">₹{{ getSelectedPrice() }}</span>
       </div>
       <button
         class="add-to-cart-btn"
-        [disabled]="selectedOption === null"
         (click)="confirm()"
       >
         Add Item to cart
       </button>
     </div>
   </div>
-</ng-container>
+</ng-container>   

@@ -36,6 +36,8 @@ export class CustomizationModalComponent {
     @Inject(MAT_DIALOG_DATA) public data: { product: Product }
   ) {
     this.product = data.product;
+      this.selectedOption = null; // select None by default
+
 
     // Auto-select the first option if it exists
     if (
@@ -59,15 +61,19 @@ export class CustomizationModalComponent {
    * Returns the computed price based on which option is selected. 
    * If no option is selected, fall back to the base price.
    */
- getSelectedPrice(): number {
-    if (!this.product.customizationOptions) {
-      return this.product.price;
-    }
-    const chosen = this.product.customizationOptions.find(
-      o => o.customizationOptionID === this.selectedOption
-    );
-    return chosen
-      ? chosen.fixedPrice
-      : this.product.price;
+getSelectedPrice(): number {
+  if (this.selectedOption === null) {
+    return this.product.price; // base price without customization
   }
+
+  if (!this.product.customizationOptions) {
+    return this.product.price;
+  }
+
+  const chosen = this.product.customizationOptions.find(
+    o => o.customizationOptionID === this.selectedOption
+  );
+  return chosen ? chosen.fixedPrice : this.product.price;
 }
+
+}   
