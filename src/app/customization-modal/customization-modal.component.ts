@@ -52,10 +52,13 @@ export class CustomizationModalComponent {
   cancel(): void {
     this.dialogRef.close(null);
   }
+confirm(): void {
+  this.dialogRef.close({
+    customizationOptionID: this.selectedOption, // null for None
+    price: this.getSelectedPrice()
+  });
+}
 
-  confirm(): void {
-    this.dialogRef.close(this.selectedOption);
-  }
 
   /** 
    * Returns the computed price based on which option is selected. 
