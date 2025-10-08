@@ -1,4 +1,4 @@
-   import { Injectable } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { CanActivate, Router } from '@angular/router';
 import { AuthService } from './auth.service';
 
@@ -7,10 +7,10 @@ export class AuthGuard implements CanActivate {
   constructor(private auth: AuthService, private router: Router) {}
 
   canActivate(): boolean {
-    if (!this.auth.isLoggedIn) {
-      this.router.navigate(['/login']);
-      return false;
-    }
+    // MODIFICATION:
+    // The original logic that checked for login is removed.
+    // By always returning 'true', this guard will now allow
+    // anyone to access the route it protects.
     return true;
   }
-}   
+}

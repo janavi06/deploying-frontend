@@ -27,6 +27,8 @@ export interface OrderItem {
   productName?: string;
   quantity:    number;
  customizations?: any[]; // ✅ FIX: Add this property
+  unitPrice: number; // ✅ ADD THIS
+  orderItemID?: number; // ✅ ADD THIS - crucial for updates
 
 }
 
@@ -294,41 +296,43 @@ onNewOrderClosed() {
 
 
 
- private refreshHistoryOnly(): void {
-    this.http.get<any>(`${this.API_BASE}/order/with-waiter?restaurantId=${this.restaurantId}`, this.httpOptions)
-      .subscribe({
-        next: res => {
-          const all = this.unwrapArray<any>(res.orders).map(o => ({
-            orderID: o.orderID,
-            tableNo: o.tableNo,
-            orderStatus: this.mapOrderStatus(o.orderStatus),
-            kitchenStatus: o.kitchenStatus ? this.mapKitchenStatus(o.kitchenStatus) : KitchenStatus.Pending,
-            items: this.unwrapArray<any>(o.items).map(i => ({
-              productID: i.productID,
-              productName: i.productName,
-              quantity: i.quantity
-            })),
-            createdAt: o.createdAt ? new Date(o.createdAt) : undefined,
-            closedAt: o.closedAt ? new Date(o.closedAt) : undefined,
-            latestPayment: o.latestPayment ? {
-              method: o.latestPayment.method,
-              status: o.latestPayment.status,
-              amount: o.latestPayment.amount,
-              paidAt: o.latestPayment.paidAt ? new Date(o.latestPayment.paidAt) : null
-            } : undefined
-          }));
+private refreshHistoryOnly(): void {
+  this.http.get<any>(`${this.API_BASE}/order/with-waiter?restaurantId=${this.restaurantId}`, this.httpOptions)
+    .subscribe({
+      next: res => {
+        const all = this.unwrapArray<any>(res.orders).map(o => ({
+          orderID: o.orderID,
+          tableNo: o.tableNo,
+          orderStatus: this.mapOrderStatus(o.orderStatus),
+          kitchenStatus: o.kitchenStatus ? this.mapKitchenStatus(o.kitchenStatus) : KitchenStatus.Pending,
+          items: this.unwrapArray<any>(o.items).map(i => ({
+            productID: i.productID,
+            productName: i.productName,
+            quantity: i.quantity,
+            unitPrice: i.unitPrice ?? 0 // required field
+          })),
+          createdAt: o.createdAt ? new Date(o.createdAt) : undefined,
+          closedAt: o.closedAt ? new Date(o.closedAt) : undefined,
+          latestPayment: o.latestPayment ? {
+            method: o.latestPayment.method,
+            status: o.latestPayment.status,
+            amount: o.latestPayment.amount,
+            paidAt: o.latestPayment.paidAt ? new Date(o.latestPayment.paidAt) : null
+          } : undefined
+        }));
 
-          this.allHistoryOrders = all.filter(o =>
-            o.orderStatus === OrderStatus.Served ||
-            o.orderStatus === OrderStatus.Completed ||
-            o.orderStatus === OrderStatus.Cancelled
-          );
+        this.allHistoryOrders = all.filter(o =>
+          o.orderStatus === OrderStatus.Served ||
+          o.orderStatus === OrderStatus.Completed ||
+          o.orderStatus === OrderStatus.Cancelled
+        );
 
-          this.applyHistoryFilter();
-        },
-        error: err => console.error('Error refreshing history:', err)
-      });
-  }
+        this.applyHistoryFilter();
+      },
+      error: err => console.error('Error refreshing history:', err)
+    });
+}
+
 updateReadyTables(): void {
   this.readyTables = this.groupByTable(this.readyToServeOrders);
 }
@@ -910,6 +914,8 @@ private getOrders(): void {
             productName: i.productName,
             quantity: i.quantity,
               unitPrice: i.unitPrice, 
+  orderItemID: i.orderItemID || i.orderItemId || i.id || i.OrderItemID, // ✅ Handle all possible property names
+
 
             customizations: i.customizations || []
           })),
@@ -1125,8 +1131,27 @@ completeRequest(requestId: number): void {
 
  
 updateOrderItemQuantity(item: any, newQuantity: number): void {
+  console.log('🔄 Updating item:', item); // Debug log
+  
+  // Try different possible property names for order item ID
+  const orderItemID = item.orderItemID || item.orderItemId || item.id || item.OrderItemID || item.itemId;
+  
+  console.log('🔍 Extracted order item ID:', orderItemID);
+  
+  if (!orderItemID) {
+    console.error('❌ No valid order item ID found for item:', item);
+    alert('Cannot update item: Missing item identifier');
+    return;
+  }
+
   if (newQuantity <= 0) {
     this.removeOrderItem(item);
+    return;
+  }
+
+  // Check if order is locked first
+  if (this.isOrderLocked()) {
+    alert('Cannot modify order that has been served, completed, or cancelled');
     return;
   }
 
@@ -1135,64 +1160,108 @@ updateOrderItemQuantity(item: any, newQuantity: number): void {
     changedByUserId: this.getCurrentUserId()
   };
 
-  this.http.put(`${this.API_BASE}/order/${this.selectedOrderForEdit.orderID}/items/${item.orderItemID}?restaurantId=${this.restaurantId}`, payload)
-    .subscribe({
-      next: () => {
-        this.getOrders(); // Refresh orders
-        this.pushAlert('order', `✅ Updated ${item.productName} quantity to ${newQuantity}`);
-        this.showEditOrderModal = false; // Close modal after update
-      },
-      error: (err) => {
-        console.error('Error updating item quantity:', err);
-        alert('Failed to update item quantity');
-      }
-    });
+  console.log('📤 Making API call with:', {
+    orderId: this.selectedOrderForEdit.orderID,
+    itemId: orderItemID,
+    restaurantId: this.restaurantId,
+    payload: payload
+  });
+
+  this.http.put(
+    `${this.API_BASE}/order/${this.selectedOrderForEdit.orderID}/update-item/${orderItemID}?restaurantId=${this.restaurantId}`, 
+    payload,
+    this.httpOptions
+  ).subscribe({
+    next: (response: any) => {
+      this.pushAlert('order', `✅ Updated ${item.productName} quantity to ${newQuantity}`);
+      this.getOrders(); // Refresh orders
+      this.showEditOrderModal = false; // Close modal after update
+    },
+    error: (err) => {
+      console.error('Error updating item quantity:', err);
+      alert('Failed to update item quantity: ' + (err.error?.message || err.message));
+    }
+  });
 }
 
 removeOrderItem(item: any): void {
+  console.log('🗑️ Removing item:', item);
+  
+  // Try different possible property names for order item ID
+  const orderItemID = item.orderItemID || item.orderItemId || item.id || item.OrderItemID || item.itemId;
+  
+  console.log('🔍 Extracted order item ID for removal:', orderItemID);
+  
+  if (!orderItemID) {
+    console.error('❌ No valid order item ID found for item:', item);
+    alert('Cannot remove item: Missing item identifier');
+    return;
+  }
+
+  if (this.isOrderLocked()) {
+    alert('Cannot modify order that has been served, completed, or cancelled');
+    return;
+  }
+
   if (confirm(`Remove ${item.productName} from order?`)) {
     const payload = {
       quantity: 0, // This will remove the item
       changedByUserId: this.getCurrentUserId()
     };
 
-    this.http.put(`${this.API_BASE}/order/${this.selectedOrderForEdit.orderID}/items/${item.orderItemID}?restaurantId=${this.restaurantId}`, payload)
-      .subscribe({
-        next: () => {
-          this.getOrders();
-          this.pushAlert('order', `❌ Removed ${item.productName} from order`);
-          this.showEditOrderModal = false;
-        },
-        error: (err) => {
-          console.error('Error removing item:', err);
-          alert('Failed to remove item');
-        }
-      });
+    this.http.put(
+      `${this.API_BASE}/order/${this.selectedOrderForEdit.orderID}/update-item/${orderItemID}?restaurantId=${this.restaurantId}`,
+      payload,
+      this.httpOptions
+    ).subscribe({
+      next: (response: any) => {
+        this.getOrders();
+        this.pushAlert('order', `❌ Removed ${item.productName} from order`);
+        this.showEditOrderModal = false;
+      },
+      error: (err) => {
+        console.error('Error removing item:', err);
+        alert('Failed to remove item: ' + (err.error?.message || err.message));
+      }
+    });
   }
 }
 
+
 addItemToOrder(product: any): void {
+  if (this.isOrderLocked()) {
+    alert('Cannot modify order that has been served, completed, or cancelled');
+    return;
+  }
+
   const payload = {
     productID: product.productID,
     quantity: 1,
     changedByUserId: this.getCurrentUserId()
   };
 
-  this.http.post(`${this.API_BASE}/order/${this.selectedOrderForEdit.orderID}/items?restaurantId=${this.restaurantId}`, payload)
-    .subscribe({
-      next: () => {
-        this.getOrders();
-        this.pushAlert('order', `✅ Added ${product.productName} to order`);
-        this.showEditOrderModal = false;
-      },
-      error: (err) => {
-        console.error('Error adding item to order:', err);
-        alert('Failed to add item to order');
-      }
-    });
+  this.http.post(
+    `${this.API_BASE}/order/${this.selectedOrderForEdit.orderID}/add-item?restaurantId=${this.restaurantId}`,
+    payload,
+    this.httpOptions
+  ).subscribe({
+    next: () => {
+      this.getOrders();
+      this.pushAlert('order', `✅ Added ${product.productName} to order`);
+      this.showEditOrderModal = false;
+    },
+    error: (err) => {
+      console.error('Error adding item to order:', err);
+      alert('Failed to add item to order: ' + (err.error?.message || err.message));
+    }
+  });
 }
-
 cancelOrder(order: any): void {
+  if (this.isOrderLocked()) {
+    alert('Cannot cancel order that has been served, completed, or cancelled');
+    return;
+  }
+
   const reason = prompt('Reason for cancellation:');
   if (reason === null) return; // User cancelled
 
@@ -1201,18 +1270,23 @@ cancelOrder(order: any): void {
     changedByUserId: this.getCurrentUserId()
   };
 
-  this.http.delete(`${this.API_BASE}/order/${order.orderID}/cancel?restaurantId=${this.restaurantId}`, { body: payload })
-    .subscribe({
-      next: () => {
-        this.getOrders();
-        this.pushAlert('order', `❌ Order #${order.orderID} cancelled`);
-        this.showEditOrderModal = false;
-      },
-      error: (err) => {
-        console.error('Error cancelling order:', err);
-        alert('Failed to cancel order');
-      }
-    });
+  this.http.delete(
+    `${this.API_BASE}/order/${order.orderID}/cancel?restaurantId=${this.restaurantId}`,
+    { 
+      body: payload,
+      headers: this.httpOptions.headers 
+    }
+  ).subscribe({
+    next: () => {
+      this.getOrders();
+      this.pushAlert('order', `❌ Order #${order.orderID} cancelled`);
+      this.showEditOrderModal = false;
+    },
+    error: (err) => {
+      console.error('Error cancelling order:', err);
+      alert('Failed to cancel order: ' + (err.error?.message || err.message));
+    }
+  });
 }
 
 getOrderChangeHistory(orderId: number): void {
@@ -1414,6 +1488,11 @@ getSelectedProductsTotal(): number {
 }
 
 addSelectedProductsToOrder(): void {
+  if (this.isOrderLocked()) {
+    alert('Cannot modify order that has been served, completed, or cancelled');
+    return;
+  }
+
   const productsToAdd: any[] = [];
   
   this.productQuantities.forEach((quantity, productId) => {
@@ -1435,14 +1514,36 @@ addSelectedProductsToOrder(): void {
     return;
   }
 
-  // Add products to order
+  // Add products one by one
+  let completed = 0;
   productsToAdd.forEach(product => {
-    this.addItemToOrder(product);
-  });
+    const payload = {
+      productID: product.productID,
+      quantity: product.quantity,
+      changedByUserId: this.getCurrentUserId()
+    };
 
-  // Reset quantities
-  this.productQuantities.clear();
-  this.showProductList = false;
+    this.http.post(
+      `${this.API_BASE}/order/${this.selectedOrderForEdit.orderID}/add-item?restaurantId=${this.restaurantId}`,
+      payload,
+      this.httpOptions
+    ).subscribe({
+      next: () => {
+        completed++;
+        if (completed === productsToAdd.length) {
+          this.getOrders();
+          this.pushAlert('order', `✅ Added ${productsToAdd.length} items to order`);
+          this.productQuantities.clear();
+          this.showProductList = false;
+          this.showEditOrderModal = false;
+        }
+      },
+      error: (err) => {
+        console.error('Error adding item:', err);
+        alert(`Failed to add ${product.productName}: ${err.error?.message || err.message}`);
+      }
+    });
+  });
 }
 
 printOrderBill(orderId: number): void {
