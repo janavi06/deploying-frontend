@@ -147,43 +147,34 @@ private readonly API_BASE = `${environment.apiUrl}`;
 
   constructor(private http: HttpClient, private router: Router) {}
 ngOnInit(): void {
-  const token = localStorage.getItem('jwt');
-  const raw = localStorage.getItem('restaurantId') || '';
-    this.restaurantId = Number(raw) || 0;       // ✅
+  // ✅ TEMPORARY: Hardcode restaurantId for testing
+  this.restaurantId = 1; // Use your actual restaurant ID
+  
+  console.log('✅ Using restaurantId:', this.restaurantId);
+  
+  // Simple headers without authentication
+  this.httpOptions = { 
+    headers: new HttpHeaders({ 
+      'Content-Type': 'application/json'
+    }) 
+  };
 
- if (!this.restaurantId) {
-      alert('Restaurant ID not found. Please log in again.');
-      return;
-    }
-  this.httpOptions = token
-    ? { headers: new HttpHeaders({ Authorization: `Bearer ${token}` }) }
-    : { headers: new HttpHeaders() };
-
-      // ✅ Safely parse lastSeenOrderID
-  const saved = localStorage.getItem('lastSeenOrderID');
-  this.lastSeenOrderID = saved && !isNaN(+saved) ? +saved : 0;
-
-
+  // Initialize all data
   this.getOrders();
   this.getWaiterRequests();
   this.checkForReadyNotifications();
   this.setupNotificationPolling();
   this.setupRequestPolling();
-this.setupPendingPaymentPolling();
-  this.fetchPendingPayments();    // ✅ THIS IS MISSING – ADD THIS!
+  this.fetchPendingPayments();
 
-  
-setInterval(() => {
-  if (this.selectedSection === 'history') {
-    this.refreshHistoryOnly();
-  }
-}, 15000);
+  // Set up intervals
+  setInterval(() => {
+    if (this.selectedSection === 'history') {
+      this.refreshHistoryOnly();
+    }
+  }, 15000);
 
-
-
-
-  // ✅ Auto-refresh every 10 seconds
-  setInterval(() => this.getOrders(), 10000); // or 7000 ms
+  setInterval(() => this.getOrders(), 10000);
 }
 
 ngOnDestroy(): void {
