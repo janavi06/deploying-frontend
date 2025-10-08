@@ -1,24 +1,48 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { tap } from 'rxjs/operators';
-import { environment } from '../../environments/environment';
-@Injectable({ providedIn: 'root' })
+import { Router } from '@angular/router';
+
+@Injectable({
+  providedIn: 'root'
+})
 export class AuthService {
- private base = `${environment.apiUrl}/auth`;
-  private readonly TOKEN_KEY = 'jwt';
+  private tokenKey = 'scanui_token';
 
-  constructor(private http: HttpClient) {}
+  role: string | null = null;
+  restaurantId: string | null = null;
 
-  register(user: any) {
-    return this.http.post(`${this.base}/register`, user);
+  constructor(private router: Router) {
+    this.loadAuthData();
   }
 
-  login(creds: { email: string; password: string }) {
-    return this.http.post<{ token: string }>(`${this.base}/login`, creds)
-      .pipe(tap(res => localStorage.setItem(this.TOKEN_KEY, res.token)));
+  // Save token + data to localStorage
+  setAuthData(token: string, role: string, restaurantId: string) {
+    localStorage.setItem(this.tokenKey, token);
+    localStorage.setItem('role', role);
+    localStorage.setItem('restaurantId', restaurantId);
+    this.role = role;
+    this.restaurantId = restaurantId;
   }
 
-  get token() { return localStorage.getItem(this.TOKEN_KEY); }
-  get isLoggedIn() { return !!this.token; }
-  logout() { localStorage.removeItem(this.TOKEN_KEY); }
+  // Load from localStorage on app start
+  loadAuthData() {
+    this.role = localStorage.getItem('role');
+    this.restaurantId = localStorage.getItem('restaurantId');
+  }
+
+  getToken(): string | null {
+    return localStorage.getItem(this.tokenKey);
+  }
+
+  logout() {
+    localStorage.removeItem(this.tokenKey);
+    localStorage.removeItem('role');
+    localStorage.removeItem('restaurantId');
+    this.role = null;
+    this.restaurantId = null;
+    this.router.navigate(['/login']);
+  }
+
+  isLoggedIn(): boolean {
+    return !!this.getToken();
+  }
 }

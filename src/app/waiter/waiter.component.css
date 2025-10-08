@@ -2155,16 +2155,7 @@ button:hover:not(:disabled) {
   gap: 12px;
 }
 
-.order-mini-card {
-  background: #f8f8f8;
-  border-radius: 10px;
-  padding: 12px 16px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-  width: 220px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
+
 
 .order-id {
   font-weight: bold;
@@ -2210,9 +2201,7 @@ button:hover:not(:disabled) {
   transition: transform 0.2s;
 }
 
-.order-mini-card:hover {
-  transform: translateY(-3px);
-}
+
 
 .order-id {
   font-weight: bold;
@@ -2289,11 +2278,6 @@ body {
   font-size: 0.7rem;
   padding: 1px 6px;
 }
-.order-mini-card {
-  width: 180px; /* reduced from 230px */
-  padding: 8px 12px;
-  font-size: 13px;
-}
 
 .order-id {
   font-size: 14px;
@@ -2349,11 +2333,7 @@ body {
   font-size: 15px;  /* was 14px */
   padding: 8px 0;   /* was 6px 0 */
 }
-.order-mini-card {
-  font-size: 14px; /* was 13px */
-  padding: 10px 14px; /* slightly increased padding */
-  width: 200px; /* was 180px */
-}
+
 
 .order-id {
   font-size: 15px; /* was 14px */
@@ -2749,3 +2729,311 @@ body {
     transform: translateY(0) scale(1);
   }
 }
+/* Compact button styles */
+.compact-btn {
+  width: 32px !important;
+  height: 28px !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 12px !important;
+  border-radius: 4px !important;
+  min-width: auto !important;
+}
+
+.order-actions {
+  min-height: 32px;
+}
+
+
+.order-items {
+  margin-bottom: 8px;
+  max-height: 80px;
+  overflow-y: auto;
+}
+
+.order-header {
+  margin-bottom: 6px;
+}
+
+
+.order-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+
+.order-mini-card .order-actions {
+  display: flex;
+  flex-wrap: wrap; 
+  gap: 8px;       
+  margin-top: auto; 
+  padding-top: 10px;
+}
+
+
+/* Ensure Edit and Cancel buttons are always visible */
+.order-actions {
+  opacity: 1 !important;
+  visibility: visible !important;
+  display: flex !important;
+}
+
+/* Remove any hover-dependent visibility */
+.order-card:hover .order-actions,
+.order-mini-card:hover .order-actions {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* Specific button visibility */
+.btn-outline-primary,  /* Edit button */
+.btn-outline-danger {  /* Cancel button */
+  display: inline-flex !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* Ensure buttons maintain proper spacing and layout */
+.order-actions .btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  margin: 2px;
+}
+
+/* Remove any transitions that might affect visibility */
+.order-actions,
+.order-actions .btn {
+  transition: none !important;
+}
+
+/* Mobile responsiveness - ensure buttons stay visible */
+@media (max-width: 768px) {
+  .order-actions {
+    display: flex !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    flex-direction: row;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+  
+  .order-actions .btn {
+    flex: 0 0 auto;
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+}
+
+/* Override any potential parent element hiding */
+.order-card *,
+.order-mini-card * {
+  visibility: visible !important;
+}
+/* Aggressive override for button visibility */
+::ng-deep .order-actions .btn-outline-primary,
+::ng-deep .order-actions .btn-outline-danger {
+  display: inline-flex !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: all !important;
+}
+
+::ng-deep .order-actions {
+  display: flex !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: all !important;
+}
+
+/* Edit Button - Blue */
+.btn-outline-primary {
+  background-color: #007bff !important;
+  color: white !important;
+  border: 1px solid #007bff !important;
+  display: inline-flex !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.btn-outline-primary:hover {
+  background-color: #0056b3 !important;
+  border-color: #0056b3 !important;
+  color: white !important;
+}
+
+/* Cancel Button - Red */
+.btn-outline-danger {
+  background-color: #dc3545 !important;
+  color: white !important;
+  border: 1px solid #dc3545 !important;
+  display: inline-flex !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.btn-outline-danger:hover {
+  background-color: #c82333 !important;
+  border-color: #c82333 !important;
+  color: white !important;
+}
+
+/* Ensure buttons are always visible */
+.order-actions {
+  opacity: 1 !important;
+  visibility: visible !important;
+  display: flex !important;
+  gap: 8px;
+}
+
+.order-actions .btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 4px;
+}
+
+/* Remove any hover-dependent visibility */
+.order-card:hover .order-actions,
+.order-mini-card:hover .order-actions {
+  opacity: 1 !important;
+}
+
+/* Serve button styling */
+.btn-success {
+  background-color: #28a745 !important;
+  border-color: #28a745 !important;
+  color: white !important;
+}
+
+.btn-success:hover {
+  background-color: #218838 !important;
+  border-color: #218838 !important;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .order-actions {
+    flex-direction: row;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+  
+  .order-actions .btn {
+    padding: 5px 10px;
+    font-size: 12px;
+  }
+}
+.product-card {
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.product-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.quantity-badge {
+  display: inline-block;
+  min-width: 30px;
+  text-align: center;
+  font-weight: bold;
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+
+.selected-products-summary {
+  border-left: 4px solid #28a745;
+}
+
+.modal-xl {
+  max-width: 1200px;
+}
+
+.table th {
+  border-top: none;
+  font-weight: 600;
+}
+
+/* Add to your waiter.component.css */
+.payment-modal {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  max-width: 400px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  z-index: 1060;
+}
+
+.payment-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1055;
+}
+
+.payment-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+/* Ensure QR code container has proper dimensions */
+qrcode {
+  display: block;
+  margin: 0 auto;
+}
+
+qrcode canvas {
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+.payment-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1050;
+}
+
+.payment-modal {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  max-width: 400px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  z-index: 1051;
+}
+
+.payment-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+}
+

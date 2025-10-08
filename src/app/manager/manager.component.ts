@@ -2,20 +2,17 @@ import { Component, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Chart, registerables } from 'chart.js';
-import { NgChartsModule } from 'ng2-charts';
 import { environment } from '../../environments/environment';
 
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-import { ChartConfiguration, ChartData, ChartType } from 'chart.js';
-Chart.register(...registerables);
+
 
 @Component({
   selector: 'app-manager',
   standalone: true,
-  imports: [CommonModule, FormsModule, NgChartsModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './manager.component.html',
   styleUrls: ['./manager.component.css'],
 })
@@ -29,6 +26,7 @@ export class ManagerComponent implements OnInit {
   // Fixed: Remove duplicate declarations and use proper names
   readonly RESTAURANT_TABLE_API = `${environment.apiUrl}/restauranttables`; // Renamed
   readonly USER_API = `${environment.apiUrl}/user`; // Renamed
+readonly OFFER_API = `${environment.apiUrl}/offer`;
 
   // New API URLs for advanced features
   readonly STAFF_MANAGEMENT_API = `${environment.apiUrl}/staffmanagement`; // Renamed
@@ -65,11 +63,15 @@ export class ManagerComponent implements OnInit {
   competitiveAnalysis: any = {};
   kpis: any = {};
 
+  showAddStaffModal: boolean = false;
+showCreateShiftModal: boolean = false;
   // NEW: Chart data for analytics
   staffPerformanceChartData: any = {};
   expenseBreakdownChartData: any = {};
   customerSegmentationChartData: any = {};
   kpiTrendChartData: any = {};
+
+  showOfferModal: boolean = false;
 
   // NEW: Form models
   newStaff: any = {};
@@ -94,7 +96,7 @@ export class ManagerComponent implements OnInit {
 restaurantId: number = 0; 
 
   // Section management
-selectedSection: 'dashboard' | 'history' | 'editMenu' | 'settings' | 'reports' | 'staff' | 'tables' | 'expenses' | 'customers' | 'advanced' = 'dashboard';  isSidebarOpen = false;
+selectedSection: 'dashboard' | 'history' | 'editMenu' | 'settings' | 'reports' | 'staff' | 'tables' | 'expenses' | 'customers' | 'advanced' | 'offers' = 'dashboard';  isSidebarOpen = false;
 
   // Product management
   products: any[] = [];
@@ -117,6 +119,28 @@ selectedSection: 'dashboard' | 'history' | 'editMenu' | 'settings' | 'reports' |
   sortDirection: 'asc' | 'desc' = 'desc';
   orderStatuses = ['Pending', 'Confirmed', 'In Progress', 'Ready', 'Served', 'Completed', 'Cancelled'];
   paymentMethods = ['Cash', 'Card', 'UPI'];
+
+  // Add these properties
+activeOffers: any[] = [];
+offerStats: any = {
+  totalOffers: 0,
+  activeOffers: 0,
+  totalDiscounts: 0,
+  ordersWithOffers: 0
+};
+offerPerformanceChartData: any = {};
+newOffer: any = {
+  offerType: 'percent',
+  discountPercent: null,
+  discountAmount: null,
+  code: '',
+  description: '',
+  minBillAmount: 0,
+  validFrom: '',
+  validTo: '',
+  autoApply: true,
+  isActive: true
+};
 
   // Filters
   filterDateOption: 'today' | 'yesterday' | 'last7' | 'last30' | 'thismonth' | 'lastmonth' | 'custom' = 'last7';
@@ -158,90 +182,24 @@ newCustomer: any = {
 
 
   // Report data
-  reportData: any = {
-    totalRevenue: 0,
-    totalOrders: 0,
-    avgOrderValue: 0,
-    cancellationRate: 0,
-    revenueChange: 0,
-    orderChange: 0,
-    aovChange: 0,
-    cancellationChange: 0,
-    topItems: [],
-    bottomItems: [],
-    categoryPerformance: [],
-    dailyData: [],
-    topTables: []
-  };
-
-  // Charts
-  salesTrendChartData: any = { labels: [], datasets: [] };
-  paymentMethodChartData: any = { labels: [], datasets: [] };
-  hourlySalesChartData: any = { labels: [], datasets: [] };
-  topItemsChartData: any = { labels: [], datasets: [] };
-  categoryRevenueChartData: any = { labels: [], datasets: [] };
-
-  // ✨ START: NEW CHART DATA
-  waiterLoadChartData: any = { labels: [], datasets: [] };
-// ✨ END: NEW CHART DATA
-
-  // Chart options
-  salesTrendChartOptions = {
-    responsive: true,
-    scales: {
-      y: {
-        beginAtZero: true,
-        title: { display: true, text: 'Revenue (₹)' }
-      },
-      x: {
-        title: { display: true, text: 'Date' }
-      }
-    },
-    plugins: {
-      tooltip: {
-        callbacks: {
-          label: (context: any) => `₹${context.raw.toLocaleString('en-IN')}`
-        }
-      }
-    }
-  };
-
-doughnutChartOptions = {
-  responsive: true,
-  plugins: {
-    legend: { 
-      position: 'bottom' as const // Explicitly type as const
-    }
-  }
+reportData: any = {
+  totalRevenue: 0,
+  totalOrders: 0,
+  avgOrderValue: 0,
+  cancellationRate: 0,
+  revenueChange: 0,
+  orderChange: 0,
+  aovChange: 0,
+  cancellationChange: 0,
+  topItems: [],
+  bottomItems: [],
+  categoryPerformance: [],
+  dailyData: [],
+  topTables: [],
+  paymentMethods: [],
+  hourlyData: [],
+  totalCancellations: 0
 };
-  barChartOptions = {
-    responsive: true,
-    scales: {
-      y: { beginAtZero: true }
-    }
-  };
-
-horizontalBarChartOptions = {
-  responsive: true,
-  indexAxis: 'y' as const, // Explicitly type as const
-  scales: {
-    x: {
-      beginAtZero: true,
-      title: { display: true, text: 'Quantity Sold' }
-    }
-  }
-};
-
-
-pieChartOptions = {
-  responsive: true,
-  plugins: {
-    legend: { 
-      position: 'bottom' as const // Explicitly type as const
-    }
-  }
-};
-
   constructor(private http: HttpClient) {
     const today = new Date();
     this.customStartDate = this.formatDate(new Date(today.setDate(today.getDate() - 6)))
@@ -265,6 +223,7 @@ ngOnInit(): void {
     this.loadExpenseData();
     this.loadCustomerData();
     this.loadAdvancedAnalytics();
+  this.loadOffersData();
 
   // Auto-refresh intervals
     setInterval(() => {
@@ -320,7 +279,6 @@ loadDashboardData(): void {
 
         this.oldestPendingOrder = oldestPending;
 
-        this.prepareWaiterLoadChart();
       },
       error: (err) => {
         console.error('Error loading dashboard data:', err);
@@ -390,39 +348,119 @@ loadDashboardData(): void {
     });
   }
 
-// ✨ NEW: Prepare Waiter Load Chart Data
-  prepareWaiterLoadChart(): void {
-    const waiterLoad = this.activeOrders.reduce((acc, order) => {
-      const waiterName = order.waiterName || `Waiter ${order.waiterUserID || 'Unassigned'}`;
-      acc[waiterName] = (acc[waiterName] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
 
-    this.waiterLoadChartData = {
-      labels: Object.keys(waiterLoad),
-      datasets: [
-        {
-          label: 'Active Orders Assigned',
-          data: Object.values(waiterLoad),
-          backgroundColor: '#6366f1',
-          hoverBackgroundColor: '#4f46e5'
-        }
-      ]
-    };
-  }
 
-  // Override selectSection to also load dashboard data
-  selectSection(section: any) {
-    this.selectedSection = section;
-    this.isSidebarOpen = false;
-    if (section === 'history') {
-      this.applyFilters();
-    } else if (section === 'reports') {
-      this.loadReportData();
-    } else if (section === 'dashboard') {
-      this.loadDashboardData();
+// Add these methods
+loadOffersData(): void {
+  this.loadActiveOffers();
+  this.loadOfferStats();
+  this.loadOfferPerformance();
+}
+
+loadActiveOffers(): void {
+  this.http.get<any>(`${this.OFFER_API}/restaurant/${this.restaurantId}`).subscribe({
+    next: (res) => {
+      this.activeOffers = res;
+    },
+    error: (err) => console.error('Error loading offers:', err)
+  });
+}
+
+loadOfferStats(): void {
+  this.http.get<any>(`${this.OFFER_API}/stats?restaurantId=${this.restaurantId}`).subscribe({
+    next: (res) => {
+      this.offerStats = res;
+    },
+    error: (err) => console.error('Error loading offer stats:', err)
+  });
+}
+
+loadOfferPerformance(): void {
+  this.http.get<any>(`${this.OFFER_API}/performance?restaurantId=${this.restaurantId}`).subscribe({
+    next: (res) => {
+      this.prepareOfferPerformanceChart(res);
+    },
+    error: (err) => console.error('Error loading offer performance:', err)
+  });
+}
+
+
+// Add this helper method to close modals
+closeModalById(modalId: string): void {
+  const modal = document.getElementById(modalId);
+  if (modal) {
+    // Remove show class and backdrop
+    modal.classList.remove('show');
+    modal.style.display = 'none';
+    document.body.classList.remove('modal-open');
+    
+    // Remove backdrop
+    const backdrop = document.querySelector('.modal-backdrop');
+    if (backdrop) {
+      backdrop.remove();
     }
   }
+}
+
+deleteOffer(offerID: number): void {
+  if (confirm('Are you sure you want to delete this offer?')) {
+    this.http.delete(`${this.OFFER_API}/${offerID}?restaurantId=${this.restaurantId}`).subscribe({
+      next: () => {
+        this.loadOffersData();
+      },
+      error: (err) => {
+        console.error('Error deleting offer:', err);
+        alert('Failed to delete offer');
+      }
+    });
+  }
+}
+
+prepareOfferPerformanceChart(performanceData: any): void {
+  // Use safe data access with fallbacks
+  const labels = performanceData?.labels || ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
+  const orders = performanceData?.orders || [0, 0, 0, 0];
+  const discounts = performanceData?.discounts || [0, 0, 0, 0];
+
+  this.offerPerformanceChartData = {
+    labels: labels,
+    datasets: [
+      {
+        label: 'Orders with Offers',
+        data: orders,
+        backgroundColor: '#3b82f6',
+        yAxisID: 'y'
+      },
+      {
+        label: 'Discount Amount (₹)',
+        data: discounts,
+        backgroundColor: '#10b981',
+        type: 'line' as const,
+        yAxisID: 'y1',
+        borderColor: '#10b981',
+        borderWidth: 2,
+        fill: false
+      }
+    ]
+  };
+}
+
+
+// Update the selectSection method to load offers data
+selectSection(section: any) {
+  this.selectedSection = section;
+  this.isSidebarOpen = false;
+  if (section === 'history') {
+    this.applyFilters();
+  } else if (section === 'reports') {
+    this.loadReportData();
+  } else if (section === 'dashboard') {
+    this.loadDashboardData();
+  } else if (section === 'offers') {
+    this.loadOffersData();
+  }
+}
+
 
 
 viewBill(orderId: number): void {
@@ -660,104 +698,87 @@ getTableCountByStatus(status: string): number {
   }
 
   // Reports Methods
-  loadReportData(): void {
-    const params: any = {
-      restaurantId: this.restaurantId,
-      reportType: this.selectedReport,
-      timeRange: this.reportTimeRange
-    };
+// Update the loadReportData method to handle the API response properly
+loadReportData(): void {
+  const params: any = {
+    restaurantId: this.restaurantId,
+    reportType: this.selectedReport,
+    timeRange: this.reportTimeRange
+  };
 
-    if (this.reportTimeRange === 'custom') {
-      params.startDate = this.customReportStartDate;
-      params.endDate = this.customReportEndDate;
-    }
-
-    if (this.comparePeriod !== 'none') {
-      params.compareWith = this.comparePeriod;
-    }
-
-    this.http.get(`${this.REPORT_API}/sales-analytics`, { params }).subscribe({
-      next: (res: any) => {
-        this.reportData = res;
-        this.prepareChartData(res);
-      },
-      error: err => console.error('Error loading report:', err)
-    });
+  if (this.reportTimeRange === 'custom') {
+    params.startDate = this.customReportStartDate;
+    params.endDate = this.customReportEndDate;
   }
 
+  if (this.comparePeriod !== 'none') {
+    params.compareWith = this.comparePeriod;
+  }
+
+  this.http.get(`${this.REPORT_API}/sales-analytics`, { params }).subscribe({
+    next: (res: any) => {
+      // Ensure all required properties are set
+      this.reportData = {
+        totalRevenue: res.totalRevenue || 0,
+        totalOrders: res.totalOrders || 0,
+        avgOrderValue: res.avgOrderValue || 0,
+        cancellationRate: res.cancellationRate || 0,
+        revenueChange: res.revenueChange || 0,
+        orderChange: res.orderChange || 0,
+        aovChange: res.aovChange || 0,
+        cancellationChange: res.cancellationChange || 0,
+        topItems: res.topItems || [],
+        bottomItems: res.bottomItems || [],
+        categoryPerformance: res.categoryPerformance || [],
+        dailyData: res.dailyData || [],
+        topTables: res.topTables || [],
+        paymentMethods: res.paymentMethods || [],
+        hourlyData: res.hourlyData || [],
+        totalCancellations: res.totalCancellations || 0
+      };
+    },
+    error: err => {
+      console.error('Error loading report:', err);
+      // Set default empty data on error
+      this.reportData = {
+        totalRevenue: 0,
+        totalOrders: 0,
+        avgOrderValue: 0,
+        cancellationRate: 0,
+        revenueChange: 0,
+        orderChange: 0,
+        aovChange: 0,
+        cancellationChange: 0,
+        topItems: [],
+        bottomItems: [],
+        categoryPerformance: [],
+        dailyData: [],
+        topTables: [],
+        paymentMethods: [],
+        hourlyData: [],
+        totalCancellations: 0
+      };
+    }
+  });
+}
+getPaymentMethodPercentage(methodAmount: number): string {
+  if (!this.reportData.totalRevenue || this.reportData.totalRevenue <= 0) {
+    return '0%';
+  }
+  const percentage = (methodAmount / this.reportData.totalRevenue) * 100;
+  return percentage.toFixed(1) + '%';
+}
+
+// Add this helper method for safe number display
+safeNumber(value: any, defaultValue: number = 0): number {
+  return Number(value) || defaultValue;
+}
 
   selectReport(report: string): void {
     this.selectedReport = report;
     this.loadReportData();
   }
 
-  prepareChartData(reportData: any): void {
-    // Sales Trend Chart
-    this.salesTrendChartData = {
-      labels: reportData.timeSeriesData?.labels || [],
-      datasets: [
-        {
-          label: 'Revenue',
-          data: reportData.timeSeriesData?.revenues || [],
-          borderColor: '#3b82f6',
-          backgroundColor: 'rgba(59, 130, 246, 0.1)',
-          tension: 0.3,
-          yAxisID: 'y'
-        }
-      ]
-    };
-    
-    // Payment Method Chart
-    this.paymentMethodChartData = {
-      labels: reportData.paymentMethods?.map((p: any) => p.method) || [],
-      datasets: [{
-        data: reportData.paymentMethods?.map((p: any) => p.amount) || [],
-        backgroundColor: ['#3b82f6', '#10b981', '#6366f1']
-      }]
-    };
-
-    // Hourly Sales Chart
-    this.hourlySalesChartData = {
-      labels: reportData.hourlyData?.labels || [],
-      datasets: [
-        {
-          label: 'Hourly Revenue',
-          data: reportData.hourlyData?.revenues || [],
-          backgroundColor: 'rgba(75, 192, 192, 0.6)'
-        }
-      ]
-    };
-
-    // Top Items Chart
-    this.topItemsChartData = {
-      labels: reportData.topItems?.map((i: any) => i.productName) || [],
-      datasets: [
-        {
-          label: 'Quantity Sold',
-          data: reportData.topItems?.map((i: any) => i.quantity) || [],
-          backgroundColor: 'rgba(153, 102, 255, 0.6)'
-        }
-      ]
-    };
-
-    // Category Revenue Chart
-    this.categoryRevenueChartData = {
-      labels: reportData.categoryPerformance?.map((c: any) => c.categoryName) || [],
-      datasets: [
-        {
-          label: 'Revenue by Category',
-          data: reportData.categoryPerformance?.map((c: any) => c.revenue) || [],
-          backgroundColor: [
-            'rgba(255, 99, 132, 0.6)',
-            'rgba(54, 162, 235, 0.6)',
-            'rgba(255, 206, 86, 0.6)',
-            'rgba(75, 192, 192, 0.6)',
-            'rgba(153, 102, 255, 0.6)'
-          ]
-        }
-      ]
-    };
-  }
 
   getComparisonPeriod(): string {
     switch (this.comparePeriod) {
@@ -971,38 +992,12 @@ private getFormattedDateRange(): string {
       next: (res) => {
         this.staffPerformance = res.performance;
         this.staffLeaderboard = res.leaderboard;
-        this.prepareStaffPerformanceChart();
       },
       error: (err) => console.error('Error loading staff performance:', err)
     });
   }
 
-  addStaff(): void {
-    this.http.post(`${this.STAFF_MANAGEMENT_API}/staff`, {
-      ...this.newStaff,
-      restaurantId: this.restaurantId
-    }).subscribe({
-      next: () => {
-        this.loadStaffData();
-        this.newStaff = {};
-        // Close modal or reset form
-      },
-      error: (err) => console.error('Error adding staff:', err)
-    });
-  }
-
-  createShift(): void {
-    this.http.post(`${this.STAFF_MANAGEMENT_API}/shifts`, {
-      ...this.newShift,
-      restaurantId: this.restaurantId
-    }).subscribe({
-      next: () => {
-        this.loadStaffData();
-        this.newShift = {};
-      },
-      error: (err) => console.error('Error creating shift:', err)
-    });
-  }
+ 
 
   // NEW: Table Management Methods
   loadTableData(): void {
@@ -1046,7 +1041,6 @@ private getFormattedDateRange(): string {
       next: (res) => {
         this.expenses = res.expenses;
         this.expenseSummary = res.summary;
-        this.prepareExpenseBreakdownChart();
       },
       error: (err) => console.error('Error loading expenses:', err)
     });
@@ -1094,7 +1088,6 @@ private getFormattedDateRange(): string {
     this.http.get<any>(`${this.CUSTOMER_API}/analytics?restaurantId=${this.restaurantId}`).subscribe({
       next: (res) => {
         this.customerAnalytics = res.data;
-        this.prepareCustomerSegmentationChart();
       },
       error: (err) => console.error('Error loading customer analytics:', err)
     });
@@ -1105,12 +1098,41 @@ private getFormattedDateRange(): string {
     });
   }
 
+  showModal(modalId: string): void {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+      modal.classList.add('show');
+      modal.style.display = 'block';
+      document.body.classList.add('modal-open');
+      
+      // Add backdrop
+      const backdrop = document.createElement('div');
+      backdrop.className = 'modal-backdrop fade show';
+      document.body.appendChild(backdrop);
+    }
+  }
+
+  // Helper method to hide modal
+  hideModal(modalId: string): void {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+      modal.classList.remove('show');
+      modal.style.display = 'none';
+      document.body.classList.remove('modal-open');
+      
+      // Remove backdrop
+      const backdrop = document.querySelector('.modal-backdrop');
+      if (backdrop) {
+        backdrop.remove();
+      }
+    }
+  }
+
   // NEW: Advanced Analytics Methods
   loadAdvancedAnalytics(): void {
     this.http.get<any>(`${this.ADVANCED_ANALYTICS_API}/dashboard?restaurantId=${this.restaurantId}`).subscribe({
       next: (res) => {
         this.advancedDashboard = res;
-        this.prepareKPITrendChart();
       },
       error: (err) => console.error('Error loading advanced analytics:', err)
     });
@@ -1133,73 +1155,7 @@ private getFormattedDateRange(): string {
     });
   }
 
-  // NEW: Chart Preparation Methods
-  prepareStaffPerformanceChart(): void {
-    this.staffPerformanceChartData = {
-      labels: this.staffLeaderboard.map(s => s.staffName),
-      datasets: [
-        {
-          label: 'Total Sales',
-          data: this.staffLeaderboard.map(s => s.totalSales),
-          backgroundColor: '#3b82f6'
-        },
-        {
-          label: 'Efficiency Score',
-          data: this.staffLeaderboard.map(s => s.avgEfficiency),
-          backgroundColor: '#10b981',
-          type: 'line',
-          yAxisID: 'y1'
-        }
-      ]
-    };
-  }
 
-  prepareExpenseBreakdownChart(): void {
-    this.expenseBreakdownChartData = {
-      labels: this.expenseSummary.map(e => e.category),
-      datasets: [{
-        data: this.expenseSummary.map(e => e.totalAmount),
-        backgroundColor: [
-          '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6',
-          '#06b6d4', '#84cc16', '#f97316', '#ec4899', '#64748b'
-        ]
-      }]
-    };
-  }
-
-  prepareCustomerSegmentationChart(): void {
-    if (this.customerAnalytics.customerSegmentation) {
-      this.customerSegmentationChartData = {
-        labels: Object.keys(this.customerAnalytics.customerSegmentation),
-        datasets: [{
-          data: Object.values(this.customerAnalytics.customerSegmentation),
-          backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444']
-        }]
-      };
-    }
-  }
-
-  prepareKPITrendChart(): void {
-    // This would use historical KPI data
-    this.kpiTrendChartData = {
-      labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
-      datasets: [
-        {
-          label: 'Revenue',
-          data: [12000, 15000, 14000, 16000],
-          borderColor: '#3b82f6',
-          tension: 0.3
-        },
-        {
-          label: 'Customer Satisfaction',
-          data: [4.2, 4.5, 4.3, 4.6],
-          borderColor: '#10b981',
-          tension: 0.3,
-          yAxisID: 'y1'
-        }
-      ]
-    };
-  }
 // Staff Management Methods
 editStaff(staff: any): void {
   // Populate the form with staff data for editing
@@ -1591,6 +1547,156 @@ getTimeInStatus(timestamp: string | Date): string { // <- Change input type
       error: (err) => console.error('Failed to acknowledge request:', err)
     });
   }
+
+
+// Open offer modal
+openOfferModal(): void {
+  this.showOfferModal = true;
+  // Prevent body scrolling when modal is open
+  document.body.classList.add('modal-open');
+}
+
+// Close offer modal
+closeOfferModal(): void {
+  this.showOfferModal = false;
+  // Re-enable body scrolling
+  document.body.classList.remove('modal-open');
+  this.resetNewOffer();
+}
+
+// Handle offer type changes
+onOfferTypeChange(): void {
+  // Reset the other type's value when switching
+  if (this.newOffer.offerType === 'percent') {
+    this.newOffer.discountAmount = null;
+  } else {
+    this.newOffer.discountPercent = null;
+  }
+}
+
+// Handle offer code changes
+onOfferCodeChange(): void {
+  // If code is provided, disable auto-apply; if empty, enable it
+  if (this.newOffer.code && this.newOffer.code.trim() !== '') {
+    this.newOffer.autoApply = false;
+  } else {
+    this.newOffer.autoApply = true;
+  }
+}
+
+// Validate offer form
+isOfferFormValid(): boolean {
+  if (!this.newOffer.description || !this.newOffer.validFrom || !this.newOffer.validTo) {
+    return false;
+  }
+
+  if (this.newOffer.offerType === 'percent') {
+    return !!(this.newOffer.discountPercent && this.newOffer.discountPercent > 0 && this.newOffer.discountPercent <= 100);
+  } else {
+    return !!(this.newOffer.discountAmount && this.newOffer.discountAmount > 0);
+  }
+}
+
+// Update your createOffer method
+createOffer(): void {
+  if (!this.isOfferFormValid()) {
+    alert('Please fill in all required fields correctly.');
+    return;
+  }
+
+  // Prepare the offer data
+  const offerData = {
+    restaurantID: this.restaurantId,
+    code: this.newOffer.code?.trim() || null,
+    description: this.newOffer.description,
+    discountAmount: this.newOffer.offerType === 'amount' ? this.newOffer.discountAmount : null,
+    discountPercent: this.newOffer.offerType === 'percent' ? this.newOffer.discountPercent : null,
+    minBillAmount: this.newOffer.minBillAmount || 0,
+    validFrom: new Date(this.newOffer.validFrom).toISOString(),
+    validTo: new Date(this.newOffer.validTo).toISOString(),
+    autoApply: this.newOffer.autoApply,
+    isActive: true
+  };
+
+  this.http.post(this.OFFER_API, offerData).subscribe({
+    next: (res: any) => {
+      this.loadOffersData();
+      this.closeOfferModal();
+      alert('Offer created successfully!');
+    },
+    error: (err) => {
+      console.error('Error creating offer:', err);
+      alert('Failed to create offer: ' + (err.error?.message || 'Unknown error'));
+    }
+  });
+}
+
+// Update your resetNewOffer method
+resetNewOffer(): void {
+  this.newOffer = {
+    offerType: 'percent',
+    discountPercent: null,
+    discountAmount: null,
+    code: '',
+    description: '',
+    minBillAmount: 0,
+    validFrom: '',
+    validTo: '',
+    autoApply: true,
+    isActive: true
+  };
+}
+
+// Add these methods to your component
+openAddStaffModal(): void {
+  this.showAddStaffModal = true;
+  document.body.style.overflow = 'hidden'; // Prevent background scrolling
+}
+
+closeAddStaffModal(): void {
+  this.showAddStaffModal = false;
+  document.body.style.overflow = ''; // Restore scrolling
+  this.newStaff = {}; // Reset form
+}
+
+openCreateShiftModal(): void {
+  this.showCreateShiftModal = true;
+  document.body.style.overflow = 'hidden'; // Prevent background scrolling
+}
+
+closeCreateShiftModal(): void {
+  this.showCreateShiftModal = false;
+  document.body.style.overflow = ''; // Restore scrolling
+  this.newShift = {}; // Reset form
+}
+
+// Update your existing addStaff method to close the modal
+addStaff(): void {
+  this.http.post(`${this.STAFF_MANAGEMENT_API}/staff`, {
+    ...this.newStaff,
+    restaurantId: this.restaurantId
+  }).subscribe({
+    next: () => {
+      this.loadStaffData();
+      this.closeAddStaffModal(); // Close modal on success
+    },
+    error: (err) => console.error('Error adding staff:', err)
+  });
+}
+
+// Update your existing createShift method to close the modal
+createShift(): void {
+  this.http.post(`${this.STAFF_MANAGEMENT_API}/shifts`, {
+    ...this.newShift,
+    restaurantId: this.restaurantId
+  }).subscribe({
+    next: () => {
+      this.loadStaffData();
+      this.closeCreateShiftModal(); // Close modal on success
+    },
+    error: (err) => console.error('Error creating shift:', err)
+  });
+}
   handleImageUpload(event: any) {
     const file = event.target.files[0];
     if (file) {

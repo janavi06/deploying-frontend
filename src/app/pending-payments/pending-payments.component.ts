@@ -30,24 +30,34 @@ export class PendingPaymentsComponent {
   }
 
   markAsPaid(paymentId: number): void {
-    if (!this.restaurantId) {
-      this.error = 'Restaurant ID missing.';
-      return;
-    }
-
-    this.http.put(
-      `${this.API_BASE}/order/pending-payments/${paymentId}/clear?restaurantId=${this.restaurantId}`, // ✅ Include restaurantId in query
-      null,
-      this.httpOptions
-    ).subscribe({
-      next: () => {
-        this.payments = this.payments.filter(p => p.paymentId !== paymentId);
-        this.paymentCleared.emit(paymentId);
-      },
-      error: err => {
-        console.error('Error marking payment:', err);
-        this.error = 'Error clearing payment.';
-      }
-    });
+  console.log('🔍 Marking payment as paid - PaymentID:', paymentId); // Debug log
+  
+  if (!this.restaurantId) {
+    this.error = 'Restaurant ID missing.';
+    return;
   }
+
+  if (!paymentId || paymentId <= 0) {
+    this.error = 'Invalid payment ID.';
+    console.error('Invalid paymentId:', paymentId);
+    return;
+  }
+
+  // ✅ FIXED: Use the correct parameter name that matches your backend
+  this.http.put(
+    `${this.API_BASE}/order/pending-payments/${paymentId}/clear?restaurantId=${this.restaurantId}`,
+    null,
+    this.httpOptions
+  ).subscribe({
+    next: () => {
+      console.log('✅ Payment cleared successfully:', paymentId);
+      this.payments = this.payments.filter(p => p.paymentId !== paymentId);
+      this.paymentCleared.emit(paymentId);
+    },
+    error: err => {
+      console.error('❌ Error marking payment:', err);
+      this.error = 'Error clearing payment: ' + (err.error?.message || 'Unknown error');
+    }
+  });
+}
 }

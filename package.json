@@ -26,7 +26,7 @@
     "@microsoft/signalr": "^8.0.7",
     "@zxing/ngx-scanner": "^20.0.0",
     "angularx-qrcode": "^20.0.0",
-    "bootstrap": "^5.3.3",
+    "bootstrap": "^5.3.8",
     "chart.js": "^4.5.0",
     "file-saver": "^2.0.5",
     "jspdf": "^3.0.1",

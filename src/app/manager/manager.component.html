@@ -19,15 +19,19 @@
       <li (click)="selectSection('staff')" [class.active]="selectedSection === 'staff'">
   <i class="bi bi-people-fill"></i> Staff Management
 </li>
+
+<li (click)="selectSection('offers')" [class.active]="selectedSection === 'offers'">
+  <i class="bi bi-tag-fill"></i> Offers & Discounts
+</li>
 <!-- <li (click)="selectSection('tables')" [class.active]="selectedSection === 'tables'">
   <i class="bi bi-table"></i> Table Management
 </li>
 <li (click)="selectSection('expenses')" [class.active]="selectedSection === 'expenses'">
   <i class="bi bi-cash-coin"></i> Expenses
 </li> -->
-<li (click)="selectSection('customers')" [class.active]="selectedSection === 'customers'">
+<!-- <li (click)="selectSection('customers')" [class.active]="selectedSection === 'customers'">
   <i class="bi bi-person-badge"></i> Customers
-</li>
+</li> -->
 <!-- <li (click)="selectSection('advanced')" [class.active]="selectedSection === 'advanced'">
   <i class="bi bi-graph-up-arrow"></i> Advanced Analytics
 </li> -->
@@ -49,10 +53,10 @@
       <h2>Staff Management</h2>
     </div>
     <div class="col-auto">
-      <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addStaffModal">
+      <button class="btn btn-primary" (click)="openAddStaffModal()">
         <i class="bi bi-person-plus"></i> Add Staff
       </button>
-      <button class="btn btn-success ms-2" data-bs-toggle="modal" data-bs-target="#createShiftModal">
+      <button class="btn btn-success ms-2" (click)="openCreateShiftModal()">
         <i class="bi bi-calendar-plus"></i> Create Shift
       </button>
     </div>
@@ -115,13 +119,7 @@
           <h5 class="card-title mb-0">Staff Performance</h5>
         </div>
         <div class="card-body">
-          <div class="chart-container" style="height: 300px;">
-            <canvas baseChart
-              [data]="staffPerformanceChartData"
-              [options]="barChartOptions"
-              [type]="'bar'">
-            </canvas>
-          </div>
+         
         </div>
       </div>
     </div>
@@ -176,6 +174,131 @@
                 </tr>
               </tbody>
             </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- OFFERS & DISCOUNTS SECTION -->
+<!-- OFFERS & DISCOUNTS SECTION -->
+<section *ngIf="selectedSection === 'offers'" class="offers-section">
+  <div class="row mb-4">
+    <div class="col">
+      <h2>Offers & Discounts</h2>
+    </div>
+    <div class="col-auto">
+      <!-- Remove data-bs attributes and use Angular click binding -->
+      <button class="btn btn-primary" (click)="openOfferModal()">
+        <i class="bi bi-plus-circle"></i> Create Offer
+      </button>
+    </div>
+  </div>
+
+  <!-- Active Offers -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">Active Offers</h5>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-hover">
+              <thead>
+                <tr>
+                  <th>Offer Code</th>
+                  <th>Description</th>
+                  <th>Discount</th>
+                  <th>Min. Bill</th>
+                  <th>Valid From</th>
+                  <th>Valid To</th>
+                  <th>Auto Apply</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let offer of activeOffers">
+                  <td>
+                    <strong>{{ offer.code || 'Auto' }}</strong>
+                  </td>
+                  <td>{{ offer.description }}</td>
+                  <td>
+                    <span *ngIf="offer.discountAmount" class="text-success">
+                      ₹{{ offer.discountAmount }} OFF
+                    </span>
+                    <span *ngIf="offer.discountPercent" class="text-success">
+                      {{ offer.discountPercent }}% OFF
+                    </span>
+                  </td>
+                  <td>{{ offer.minBillAmount | currency:'INR' }}</td>
+                  <td>{{ offer.validFrom | date:'shortDate' }}</td>
+                  <td>{{ offer.validTo | date:'shortDate' }}</td>
+                  <td>
+                    <span class="badge" [ngClass]="offer.autoApply ? 'bg-success' : 'bg-secondary'">
+                      {{ offer.autoApply ? 'Yes' : 'No' }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="badge bg-success">Active</span>
+                  </td>
+                  <td>
+                    <button class="btn btn-sm btn-outline-danger" (click)="deleteOffer(offer.offerID)">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </td>
+                </tr>
+                <tr *ngIf="activeOffers.length === 0">
+                  <td colspan="9" class="text-center text-muted py-4">
+                    No active offers. Create your first offer!
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Offer Performance -->
+  <div class="row mt-4">
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">Offer Performance</h5>
+        </div>
+        <div class="card-body">
+          
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">Offer Statistics</h5>
+        </div>
+        <div class="card-body">
+          <div class="row text-center">
+            <div class="col-6 mb-3">
+              <h3 class="text-primary">{{ offerStats.totalOffers }}</h3>
+              <p class="text-muted mb-0">Total Offers</p>
+            </div>
+            <div class="col-6 mb-3">
+              <h3 class="text-success">{{ offerStats.activeOffers }}</h3>
+              <p class="text-muted mb-0">Active Offers</p>
+            </div>
+            <div class="col-6">
+              <h3 class="text-info">{{ offerStats.totalDiscounts | currency:'INR' }}</h3>
+              <p class="text-muted mb-0">Total Discounts</p>
+            </div>
+            <div class="col-6">
+              <h3 class="text-warning">{{ offerStats.ordersWithOffers }}</h3>
+              <p class="text-muted mb-0">Orders with Offers</p>
+            </div>
           </div>
         </div>
       </div>
@@ -325,13 +448,9 @@
           <h5 class="card-title mb-0">Expense Summary</h5>
         </div>
         <div class="card-body">
-          <div class="chart-container" style="height: 300px;">
-            <canvas baseChart
-              [data]="expenseBreakdownChartData"
-              [options]="doughnutChartOptions"
-              [type]="'doughnut'">
-            </canvas>
-          </div>
+          
+          
+
         </div>
       </div>
     </div>
@@ -449,13 +568,8 @@
           <h5 class="card-title mb-0">Customer Segmentation</h5>
         </div>
         <div class="card-body">
-          <div class="chart-container" style="height: 300px;">
-            <canvas baseChart
-              [data]="customerSegmentationChartData"
-              [options]="pieChartOptions"
-              [type]="'pie'">
-            </canvas>
-          </div>
+          
+          
         </div>
       </div>
     </div>
@@ -720,13 +834,8 @@
           <h5 class="card-title mb-0">KPI Trends</h5>
         </div>
         <div class="card-body">
-          <div class="chart-container" style="height: 300px;">
-            <canvas baseChart
-              [data]="kpiTrendChartData"
-              [options]="salesTrendChartOptions"
-              [type]="'line'">
-            </canvas>
-          </div>
+         
+          
         </div>
       </div>
     </div>
@@ -862,18 +971,7 @@
             </div>
           </div>
         </div>
-        <!-- <div class="col-lg-4">
-          <div class="card h-100">
-            <div class="card-header">
-              <h5 class="card-title-icon"><i class="bi bi-people-fill me-2"></i>Waiter Load</h5>
-            </div>
-            <div class="card-body d-flex align-items-center">
-              <div class="chart-container w-100" style="height: 150px;">
-                <canvas baseChart [data]="waiterLoadChartData" [options]="barChartOptions" [type]="'bar'"></canvas>
-              </div>
-            </div>
-          </div>
-        </div> -->
+
         <div class="col-lg-4">
           <div class="card h-100">
             <div class="card-header">
@@ -1240,9 +1338,9 @@
   </div>
 </section>
 
-    <!-- REPORTS SECTION -->
+   
 
-<!-- Enhanced Reports Section -->
+<!-- REPORTS SECTION -->
 <section *ngIf="selectedSection === 'reports'" class="report-section">
   <div class="card">
     <div class="card-header">
@@ -1323,7 +1421,7 @@
                   </span>
                 </div>
               </div>
-              <p class="mb-0 mt-2" *ngIf="reportData.revenueChange">
+              <p class="mb-0 mt-2" *ngIf="reportData.revenueChange !== undefined">
                 <span [class.text-success]="reportData.revenueChange >= 0" 
                       [class.text-danger]="reportData.revenueChange < 0">
                   <i class="bi" [ngClass]="{'bi-arrow-up': reportData.revenueChange >= 0, 
@@ -1348,7 +1446,7 @@
                   </span>
                 </div>
               </div>
-              <p class="mb-0 mt-2" *ngIf="reportData.orderChange">
+              <p class="mb-0 mt-2" *ngIf="reportData.orderChange !== undefined">
                 <span [class.text-success]="reportData.orderChange >= 0" 
                       [class.text-danger]="reportData.orderChange < 0">
                   <i class="bi" [ngClass]="{'bi-arrow-up': reportData.orderChange >= 0, 
@@ -1373,7 +1471,7 @@
                   </span>
                 </div>
               </div>
-              <p class="mb-0 mt-2" *ngIf="reportData.aovChange">
+              <p class="mb-0 mt-2" *ngIf="reportData.aovChange !== undefined">
                 <span [class.text-success]="reportData.aovChange >= 0" 
                       [class.text-danger]="reportData.aovChange < 0">
                   <i class="bi" [ngClass]="{'bi-arrow-up': reportData.aovChange >= 0, 
@@ -1390,7 +1488,7 @@
               <div class="d-flex justify-content-between">
                 <div>
                   <h6 class="text-muted mb-2">Cancellation Rate</h6>
-                  <h3 class="mb-0">{{reportData.cancellationRate | percent}}</h3>
+                  <h3 class="mb-0">{{reportData.cancellationRate | percent:'1.1-1'}}</h3>
                 </div>
                 <div class="avatar-sm">
                   <span class="avatar-title bg-soft-warning rounded">
@@ -1398,7 +1496,7 @@
                   </span>
                 </div>
               </div>
-              <p class="mb-0 mt-2" *ngIf="reportData.cancellationChange">
+              <p class="mb-0 mt-2" *ngIf="reportData.cancellationChange !== undefined">
                 <span [class.text-success]="reportData.cancellationChange <= 0" 
                       [class.text-danger]="reportData.cancellationChange > 0">
                   <i class="bi" [ngClass]="{'bi-arrow-up': reportData.cancellationChange <= 0, 
@@ -1411,43 +1509,82 @@
         </div>
       </div>
 
-      <!-- Main Report Content -->
-      <div class="row">
-        <div class="col-md-8">
-          <!-- Sales Trend Chart -->
-          <div class="card mb-4">
+      <!-- Performance Summary -->
+      <div class="row mb-4">
+        <div class="col-md-6">
+          <div class="card">
             <div class="card-header">
-              <h6 class="mb-0">Sales Trend</h6>
+              <h6 class="mb-0">Daily Performance</h6>
             </div>
             <div class="card-body">
-              <div class="chart-container" style="height: 300px;">
-                <canvas baseChart
-                  [data]="salesTrendChartData"
-                  [options]="salesTrendChartOptions"
-                  [type]="'line'">
-                </canvas>
+              <div class="table-responsive" *ngIf="reportData.dailyData && reportData.dailyData.length > 0">
+                <table class="table table-sm">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th class="text-end">Orders</th>
+                      <th class="text-end">Revenue</th>
+                      <th class="text-end">Avg. Order</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let day of reportData.dailyData.slice(0, 7)">
+                      <td>{{day.date | date:'MMM dd'}}</td>
+                      <td class="text-end">{{day.orderCount}}</td>
+                      <td class="text-end">{{day.revenue | currency:'INR'}}</td>
+                      <td class="text-end">{{day.avgOrderValue | currency:'INR'}}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div *ngIf="!reportData.dailyData || reportData.dailyData.length === 0" class="text-center text-muted py-3">
+                <i class="bi bi-calendar-x display-4"></i>
+                <p class="mt-2">No daily data available</p>
               </div>
             </div>
           </div>
         </div>
-        <div class="col-md-4">
-          <!-- Payment Method Distribution -->
-          <div class="card mb-4">
-            <div class="card-header">
-              <h6 class="mb-0">Payment Methods</h6>
-            </div>
-            <div class="card-body">
-              <div class="chart-container" style="height: 300px;">
-                <canvas baseChart
-                  [data]="paymentMethodChartData"
-                  [options]="doughnutChartOptions"
-                  [type]="'doughnut'">
-                </canvas>
-              </div>
-            </div>
-          </div>
-        </div>
+        
+<!-- Payment Methods Section - Fixed -->
+<div class="col-md-6">
+  <div class="card">
+    <div class="card-header">
+      <h6 class="mb-0">Payment Methods</h6>
+    </div>
+    <div class="card-body">
+      <div class="table-responsive" *ngIf="reportData.paymentMethods && reportData.paymentMethods.length > 0">
+        <table class="table table-sm">
+          <thead>
+            <tr>
+              <th>Method</th>
+              <th class="text-end">Orders</th>
+              <th class="text-end">Amount</th>
+              <th class="text-end">% of Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let method of reportData.paymentMethods">
+              <td>
+                <i class="bi" 
+                   [class.bi-cash]="method.method === 'Cash'"
+                   [class.bi-credit-card]="method.method === 'Card'"
+                   [class.bi-phone]="method.method === 'UPI'"></i>
+                {{method.method}}
+              </td>
+              <td class="text-end">{{method.count}}</td>
+              <td class="text-end">{{method.amount | currency:'INR'}}</td>
+              <td class="text-end">{{getPaymentMethodPercentage(method.amount)}}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
+      <div *ngIf="!reportData.paymentMethods || reportData.paymentMethods.length === 0" class="text-center text-muted py-3">
+        <i class="bi bi-credit-card display-4"></i>
+        <p class="mt-2">No payment data available</p>
+      </div>
+    </div>
+  </div>
+</div>
 
       <!-- Report-Specific Content -->
       <div *ngIf="selectedReport === 'sales'">
@@ -1456,26 +1593,10 @@
           <div class="col-md-6">
             <div class="card mb-4">
               <div class="card-header">
-                <h6 class="mb-0">Hourly Sales Performance</h6>
-              </div>
-              <div class="card-body">
-                <div class="chart-container" style="height: 250px;">
-                  <canvas baseChart
-                    [data]="hourlySalesChartData"
-                    [options]="barChartOptions"
-                    [type]="'bar'">
-                  </canvas>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="col-md-6">
-            <div class="card mb-4">
-              <div class="card-header">
                 <h6 class="mb-0">Top Performing Tables</h6>
               </div>
               <div class="card-body">
-                <div class="table-responsive">
+                <div class="table-responsive" *ngIf="reportData.topTables && reportData.topTables.length > 0">
                   <table class="table table-sm">
                     <thead>
                       <tr>
@@ -1495,6 +1616,41 @@
                     </tbody>
                   </table>
                 </div>
+                <div *ngIf="!reportData.topTables || reportData.topTables.length === 0" class="text-center text-muted py-3">
+                  <i class="bi bi-table display-4"></i>
+                  <p class="mt-2">No table data available</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="card mb-4">
+              <div class="card-header">
+                <h6 class="mb-0">Hourly Performance</h6>
+              </div>
+              <div class="card-body">
+                <div class="table-responsive" *ngIf="reportData.hourlyData && reportData.hourlyData.length > 0">
+                  <table class="table table-sm">
+                    <thead>
+                      <tr>
+                        <th>Hour</th>
+                        <th class="text-end">Orders</th>
+                        <th class="text-end">Revenue</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let hour of reportData.hourlyData">
+                        <td>{{hour.hour}}:00 - {{hour.hour}}:59</td>
+                        <td class="text-end">{{hour.orderCount}}</td>
+                        <td class="text-end">{{hour.revenue | currency:'INR'}}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div *ngIf="!reportData.hourlyData || reportData.hourlyData.length === 0" class="text-center text-muted py-3">
+                  <i class="bi bi-clock display-4"></i>
+                  <p class="mt-2">No hourly data available</p>
+                </div>
               </div>
             </div>
           </div>
@@ -1510,12 +1666,29 @@
                 <h6 class="mb-0">Top Selling Items</h6>
               </div>
               <div class="card-body">
-                <div class="chart-container" style="height: 300px;">
-                  <canvas baseChart
-                    [data]="topItemsChartData"
-                    [options]="horizontalBarChartOptions"
-                    [type]="'bar'">
-                  </canvas>
+                <div class="table-responsive" *ngIf="reportData.topItems && reportData.topItems.length > 0">
+                  <table class="table table-sm">
+                    <thead>
+                      <tr>
+                        <th>Item</th>
+                        <th class="text-end">Qty Sold</th>
+                        <th class="text-end">Revenue</th>
+                        <th class="text-end">% of Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let item of reportData.topItems">
+                        <td>{{item.productName}}</td>
+                        <td class="text-end">{{item.quantity}}</td>
+                        <td class="text-end">{{item.revenue | currency:'INR'}}</td>
+                        <td class="text-end">{{item.percentage | percent:'1.1-1'}}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div *ngIf="!reportData.topItems || reportData.topItems.length === 0" class="text-center text-muted py-3">
+                  <i class="bi bi-cup-hot display-4"></i>
+                  <p class="mt-2">No item data available</p>
                 </div>
               </div>
             </div>
@@ -1526,7 +1699,7 @@
                 <h6 class="mb-0">Least Selling Items</h6>
               </div>
               <div class="card-body">
-                <div class="table-responsive">
+                <div class="table-responsive" *ngIf="reportData.bottomItems && reportData.bottomItems.length > 0">
                   <table class="table table-sm">
                     <thead>
                       <tr>
@@ -1546,6 +1719,10 @@
                     </tbody>
                   </table>
                 </div>
+                <div *ngIf="!reportData.bottomItems || reportData.bottomItems.length === 0" class="text-center text-muted py-3">
+                  <i class="bi bi-cup-straw display-4"></i>
+                  <p class="mt-2">No low-performing items</p>
+                </div>
               </div>
             </div>
           </div>
@@ -1555,33 +1732,18 @@
       <div *ngIf="selectedReport === 'category'">
         <!-- Category Report Content -->
         <div class="row">
-          <div class="col-md-6">
-            <div class="card mb-4">
-              <div class="card-header">
-                <h6 class="mb-0">Revenue by Category</h6>
-              </div>
-              <div class="card-body">
-                <div class="chart-container" style="height: 350px;">
-                  <canvas baseChart
-                    [data]="categoryRevenueChartData"
-                    [options]="pieChartOptions"
-                    [type]="'pie'">
-                  </canvas>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="col-md-6">
+          <div class="col-md-8">
             <div class="card mb-4">
               <div class="card-header">
                 <h6 class="mb-0">Category Performance</h6>
               </div>
               <div class="card-body">
-                <div class="table-responsive">
+                <div class="table-responsive" *ngIf="reportData.categoryPerformance && reportData.categoryPerformance.length > 0">
                   <table class="table table-sm">
                     <thead>
                       <tr>
                         <th>Category</th>
+                        <th class="text-end">Items Sold</th>
                         <th class="text-end">Revenue</th>
                         <th class="text-end">% of Total</th>
                         <th class="text-end">Avg. Price</th>
@@ -1590,6 +1752,7 @@
                     <tbody>
                       <tr *ngFor="let category of reportData.categoryPerformance">
                         <td>{{category.categoryName}}</td>
+                        <td class="text-end">{{category.quantity}}</td>
                         <td class="text-end">{{category.revenue | currency:'INR'}}</td>
                         <td class="text-end">{{category.percentage | percent:'1.1-1'}}</td>
                         <td class="text-end">{{category.avgPrice | currency:'INR'}}</td>
@@ -1597,20 +1760,27 @@
                     </tbody>
                   </table>
                 </div>
+                <div *ngIf="!reportData.categoryPerformance || reportData.categoryPerformance.length === 0" class="text-center text-muted py-3">
+                  <i class="bi bi-tags display-4"></i>
+                  <p class="mt-2">No category data available</p>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Data Table -->
+      <!-- Detailed Data Table -->
       <div class="card mb-4">
-        <div class="card-header">
+        <div class="card-header d-flex justify-content-between align-items-center">
           <h6 class="mb-0">Detailed Data</h6>
+          <button class="btn btn-sm btn-outline-primary" (click)="exportToCSV()">
+            <i class="bi bi-download me-1"></i> Export CSV
+          </button>
         </div>
         <div class="card-body">
           <div class="table-responsive">
-            <table class="table table-sm">
+            <table class="table table-sm" *ngIf="reportData.dailyData && reportData.dailyData.length > 0">
               <thead>
                 <tr>
                   <th>Date</th>
@@ -1623,11 +1793,11 @@
               </thead>
               <tbody>
                 <tr *ngFor="let day of reportData.dailyData">
-                  <td>{{day.date | date}}</td>
+                  <td>{{day.date | date:'mediumDate'}}</td>
                   <td class="text-end">{{day.orderCount}}</td>
                   <td class="text-end">{{day.revenue | currency:'INR'}}</td>
                   <td class="text-end">{{day.avgOrderValue | currency:'INR'}}</td>
-                  <td class="text-end">{{day.cancellations}}</td>
+                  <td class="text-end">{{day.cancellations || 0}}</td>
                   <td class="text-end">{{day.cancellationRate | percent:'1.1-1'}}</td>
                 </tr>
               </tbody>
@@ -1637,15 +1807,48 @@
                   <th class="text-end">{{reportData.totalOrders}}</th>
                   <th class="text-end">{{reportData.totalRevenue | currency:'INR'}}</th>
                   <th class="text-end">{{reportData.avgOrderValue | currency:'INR'}}</th>
-                  <th class="text-end">{{reportData.totalCancellations}}</th>
+                  <th class="text-end">{{reportData.totalCancellations || 0}}</th>
                   <th class="text-end">{{reportData.cancellationRate | percent:'1.1-1'}}</th>
                 </tr>
               </tfoot>
             </table>
+            <div *ngIf="!reportData.dailyData || reportData.dailyData.length === 0" class="text-center text-muted py-4">
+              <i class="bi bi-clipboard-data display-4"></i>
+              <p class="mt-2">No detailed data available for the selected period</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Summary Stats -->
+      <div class="row">
+        <div class="col-md-4">
+          <div class="card">
+            <div class="card-body text-center">
+              <h3 class="text-primary">{{reportData.totalOrders || 0}}</h3>
+              <p class="text-muted mb-0">Total Orders</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card">
+            <div class="card-body text-center">
+              <h3 class="text-success">{{reportData.totalRevenue | currency:'INR'}}</h3>
+              <p class="text-muted mb-0">Total Revenue</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card">
+            <div class="card-body text-center">
+              <h3 class="text-info">{{reportData.avgOrderValue | currency:'INR'}}</h3>
+              <p class="text-muted mb-0">Average Order Value</p>
+            </div>
           </div>
         </div>
       </div>
     </div>
+  </div>
   </div>
 </section>
 
@@ -1840,105 +2043,103 @@
 
 
 <!-- Add Staff Modal -->
-<div class="modal fade" id="addStaffModal" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Add Staff Member</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <form #staffForm="ngForm">
-          <div class="mb-3">
-            <label class="form-label">Name *</label>
-            <input type="text" class="form-control" [(ngModel)]="newStaff.name" name="name" required>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Role *</label>
-            <select class="form-select" [(ngModel)]="newStaff.role" name="role" required>
-              <option value="">Select Role</option>
-              <option value="Waiter">Waiter</option>
-              <option value="Chef">Chef</option>
-              <option value="Manager">Manager</option>
-              <option value="Cashier">Cashier</option>
-              <option value="Cleaner">Cleaner</option>
-            </select>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Phone</label>
-            <input type="tel" class="form-control" [(ngModel)]="newStaff.phone" name="phone">
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Email</label>
-            <input type="email" class="form-control" [(ngModel)]="newStaff.email" name="email">
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Hourly Rate (₹)</label>
-            <input type="number" class="form-control" [(ngModel)]="newStaff.hourlyRate" name="hourlyRate" step="0.01" min="0">
-          </div>
-        </form>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-primary" (click)="addStaff()" [disabled]="!staffForm.form.valid">Add Staff</button>
-      </div>
+<!-- Add Staff Modal -->
+<div class="modal-overlay" *ngIf="showAddStaffModal" (click)="closeAddStaffModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h5 class="modal-title">Add Staff Member</h5>
+      <button type="button" class="btn-close" (click)="closeAddStaffModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <form #staffForm="ngForm">
+        <div class="mb-3">
+          <label class="form-label">Name *</label>
+          <input type="text" class="form-control" [(ngModel)]="newStaff.name" name="name" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Role *</label>
+          <select class="form-select" [(ngModel)]="newStaff.role" name="role" required>
+            <option value="">Select Role</option>
+            <option value="Waiter">Waiter</option>
+            <option value="Chef">Chef</option>
+            <option value="Manager">Manager</option>
+            <option value="Cashier">Cashier</option>
+            <option value="Cleaner">Cleaner</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Phone</label>
+          <input type="tel" class="form-control" [(ngModel)]="newStaff.phone" name="phone">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Email</label>
+          <input type="email" class="form-control" [(ngModel)]="newStaff.email" name="email">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Hourly Rate (₹)</label>
+          <input type="number" class="form-control" [(ngModel)]="newStaff.hourlyRate" name="hourlyRate" step="0.01" min="0">
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" (click)="closeAddStaffModal()">Cancel</button>
+      <button type="button" class="btn btn-primary" (click)="addStaff()" [disabled]="!staffForm.form.valid">Add Staff</button>
     </div>
   </div>
 </div>
 
 <!-- Create Shift Modal -->
-<div class="modal fade" id="createShiftModal" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Create Shift</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <form #shiftForm="ngForm">
-          <div class="mb-3">
-            <label class="form-label">Staff Member *</label>
-            <select class="form-select" [(ngModel)]="newShift.staffID" name="staffID" required>
-              <option value="">Select Staff</option>
-              <option *ngFor="let staff of staffMembers" [value]="staff.staffID">{{ staff.name }} - {{ staff.role }}</option>
-            </select>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Shift Date *</label>
-            <input type="date" class="form-control" [(ngModel)]="newShift.shiftDate" name="shiftDate" required>
-          </div>
-          <div class="row">
-            <div class="col-md-6">
-              <div class="mb-3">
-                <label class="form-label">Start Time *</label>
-                <input type="time" class="form-control" [(ngModel)]="newShift.startTime" name="startTime" required>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="mb-3">
-                <label class="form-label">End Time *</label>
-                <input type="time" class="form-control" [(ngModel)]="newShift.endTime" name="endTime" required>
-              </div>
+<!-- Create Shift Modal -->
+<div class="modal-overlay" *ngIf="showCreateShiftModal" (click)="closeCreateShiftModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h5 class="modal-title">Create Shift</h5>
+      <button type="button" class="btn-close" (click)="closeCreateShiftModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <form #shiftForm="ngForm">
+        <div class="mb-3">
+          <label class="form-label">Staff Member *</label>
+          <select class="form-select" [(ngModel)]="newShift.staffID" name="staffID" required>
+            <option value="">Select Staff</option>
+            <option *ngFor="let staff of staffMembers" [value]="staff.staffID">{{ staff.name }} - {{ staff.role }}</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Shift Date *</label>
+          <input type="date" class="form-control" [(ngModel)]="newShift.shiftDate" name="shiftDate" required>
+        </div>
+        <div class="row">
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label class="form-label">Start Time *</label>
+              <input type="time" class="form-control" [(ngModel)]="newShift.startTime" name="startTime" required>
             </div>
           </div>
-          <div class="mb-3">
-            <label class="form-label">Role for Shift</label>
-            <select class="form-select" [(ngModel)]="newShift.role" name="role">
-              <option value="Waiter">Waiter</option>
-              <option value="Chef">Chef</option>
-              <option value="Cashier">Cashier</option>
-            </select>
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label class="form-label">End Time *</label>
+              <input type="time" class="form-control" [(ngModel)]="newShift.endTime" name="endTime" required>
+            </div>
           </div>
-          <div class="mb-3">
-            <label class="form-label">Notes</label>
-            <textarea class="form-control" [(ngModel)]="newShift.notes" name="notes" rows="3"></textarea>
-          </div>
-        </form>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-primary" (click)="createShift()" [disabled]="!shiftForm.form.valid">Create Shift</button>
-      </div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Role for Shift</label>
+          <select class="form-select" [(ngModel)]="newShift.role" name="role">
+            <option value="Waiter">Waiter</option>
+            <option value="Chef">Chef</option>
+            <option value="Cashier">Cashier</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Notes</label>
+          <textarea class="form-control" [(ngModel)]="newShift.notes" name="notes" rows="3"></textarea>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" (click)="closeCreateShiftModal()">Cancel</button>
+      <button type="button" class="btn btn-primary" (click)="createShift()" [disabled]="!shiftForm.form.valid">Create Shift</button>
     </div>
   </div>
 </div>
@@ -2176,6 +2377,111 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
         <button type="button" class="btn btn-primary" (click)="addCustomer()" [disabled]="!customerForm.form.valid">Add Customer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Angular-Controlled Offer Modal -->
+<div class="modal-backdrop fade show" *ngIf="showOfferModal" (click)="closeOfferModal()"></div>
+<div class="modal fade" [class.show]="showOfferModal" [style.display]="showOfferModal ? 'block' : 'none'">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Create New Offer</h5>
+        <button type="button" class="btn-close" (click)="closeOfferModal()"></button>
+      </div>
+      <div class="modal-body">
+        <form #offerForm="ngForm">
+          <!-- Offer Type -->
+          <div class="mb-3">
+            <label class="form-label">Offer Type *</label>
+            <div class="btn-group w-100" role="group">
+              <input type="radio" class="btn-check" name="offerType" id="percent" 
+                     [(ngModel)]="newOffer.offerType" value="percent" required (change)="onOfferTypeChange()">
+              <label class="btn btn-outline-primary" for="percent">Percentage</label>
+              
+              <input type="radio" class="btn-check" name="offerType" id="amount" 
+                     [(ngModel)]="newOffer.offerType" value="amount" required (change)="onOfferTypeChange()">
+              <label class="btn btn-outline-primary" for="amount">Fixed Amount</label>
+            </div>
+          </div>
+
+          <!-- Discount Value -->
+          <div class="mb-3" *ngIf="newOffer.offerType === 'percent'">
+            <label class="form-label">Discount Percentage *</label>
+            <div class="input-group">
+              <input type="number" class="form-control" [(ngModel)]="newOffer.discountPercent" 
+                     name="discountPercent" min="1" max="100" step="1" required>
+              <span class="input-group-text">%</span>
+            </div>
+          </div>
+
+          <div class="mb-3" *ngIf="newOffer.offerType === 'amount'">
+            <label class="form-label">Discount Amount *</label>
+            <div class="input-group">
+              <span class="input-group-text">₹</span>
+              <input type="number" class="form-control" [(ngModel)]="newOffer.discountAmount" 
+                     name="discountAmount" min="1" step="1" required>
+            </div>
+          </div>
+
+          <!-- Offer Code (Optional) -->
+          <div class="mb-3">
+            <label class="form-label">Offer Code</label>
+            <input type="text" class="form-control" [(ngModel)]="newOffer.code" name="code"
+                   placeholder="Leave empty for auto-apply offers"
+                   (input)="onOfferCodeChange()">
+            <small class="text-muted">If no code is provided, offer will be auto-applied to eligible bills</small>
+          </div>
+
+          <!-- Description -->
+          <div class="mb-3">
+            <label class="form-label">Description *</label>
+            <textarea class="form-control" [(ngModel)]="newOffer.description" name="description" 
+                      rows="2" required placeholder="E.g., Weekend Special, Festival Offer..."></textarea>
+          </div>
+
+          <!-- Minimum Bill Amount -->
+          <div class="mb-3">
+            <label class="form-label">Minimum Bill Amount</label>
+            <div class="input-group">
+              <span class="input-group-text">₹</span>
+              <input type="number" class="form-control" [(ngModel)]="newOffer.minBillAmount" 
+                     name="minBillAmount" min="0" step="1" value="0">
+            </div>
+          </div>
+
+          <!-- Validity Period -->
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Valid From *</label>
+                <input type="datetime-local" class="form-control" [(ngModel)]="newOffer.validFrom" 
+                       name="validFrom" required>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Valid To *</label>
+                <input type="datetime-local" class="form-control" [(ngModel)]="newOffer.validTo" 
+                       name="validTo" required>
+              </div>
+            </div>
+          </div>
+
+          <!-- Auto Apply -->
+          <div class="mb-3 form-check form-switch">
+            <input type="checkbox" class="form-check-input" [(ngModel)]="newOffer.autoApply" 
+                   name="autoApply" id="autoApply">
+            <label class="form-check-label" for="autoApply">Auto-apply to eligible bills</label>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeOfferModal()">Cancel</button>
+        <button type="button" class="btn btn-primary" (click)="createOffer()" 
+                [disabled]="!isOfferFormValid()">Create Offer</button>
       </div>
     </div>
   </div>

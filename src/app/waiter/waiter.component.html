@@ -1,289 +1,262 @@
 <div class="waiter-dashboard">
-  <!-- Sidebar -->
   <aside class="sidebar" [class.open]="isSidebarOpen">
-<ul class="sidebar-menu">
-
-  <li (click)="navigateToNewOrder()" [class.active]="selectedSection === 'newOrder'">
-  New Order
-</li>
-  <li (click)="selectedSection = 'orders'" [class.active]="selectedSection === 'orders'">
-    Orders ({{ orders.length }})
-  </li>
+    <ul class="sidebar-menu">
 
 
-<li (click)="selectedSection = 'pendingPayments'" [class.active]="selectedSection === 'pendingPayments'">
-  Pending Payments <span *ngIf="pendingPayments.length" class="badge">({{ pendingPayments.length }})</span>
-</li>
+      <li (click)="navigateToNewOrder()" [class.active]="selectedSection === 'newOrder'">New Order</li>
 
+      <li (click)="selectedSection = 'orders'" [class.active]="selectedSection === 'orders'">
+        Orders ({{ orders.length }})
+      </li>
 
-  <li (click)="selectedSection = 'requests'" [class.active]="selectedSection === 'requests'">
-    Service Requests ({{ unreadRequests.length }})
-  </li>
+      <li (click)="selectedSection = 'pendingPayments'" [class.active]="selectedSection === 'pendingPayments'">
+        Pending Payments
+        <span *ngIf="pendingPayments.length" class="badge">({{ pendingPayments.length }})</span>
+      </li>
 
+      <li (click)="selectedSection = 'requests'" [class.active]="selectedSection === 'requests'">
+        Service Requests ({{ unreadRequests.length }})
+      </li>
 
-  <li (click)="selectedSection = 'history'" [class.active]="selectedSection === 'history'">
-    History
-  </li>
+      <li (click)="selectedSection = 'history'" [class.active]="selectedSection === 'history'">
+        History
+      </li>
 
-</ul>
+    </ul>
 
   </aside>
 
-  <!-- Main Content -->
   <main class="main-content" [class.sidebar-open]="isSidebarOpen">
     <header class="dashboard-header">
       <button class="sidebar-toggle" (click)="toggleSidebar()">☰</button>
       <h1>Waiter Dashboard</h1>
     </header>
 
-<!-- Notification Panel (keep this exactly as you had it) -->
-<div class="notification-panel" *ngIf="unreadRequests.length > 0">
-  <div class="notification-header">
-    <h3>New Service Requests</h3>
-    <button class="clear-btn" (click)="clearAllNotifications()">Clear All</button>
-  </div>
-  <div class="notification-list">
-    <div *ngFor="let request of unreadRequests" class="notification-item">
-      <div class="notification-content">
-        <strong>Table {{ request.tableNumber }}</strong>
-        <p>{{ request.message }}</p>
-        <small>{{ request.requestTime | date:'shortTime' }}</small>
+    <div class="notification-panel" *ngIf="unreadRequests.length > 0">
+      <div class="notification-header">
+        <h3>New Service Requests</h3>
+        <button class="clear-btn" (click)="clearAllNotifications()">Clear All</button>
       </div>
-      <button class="notification-action" (click)="acceptRequest(request.waiterRequestID)">
-        Accept
-      </button>
-    </div>
-  </div>
-</div>
-
-    <!-- Pending Payments -->
-<section *ngIf="selectedSection === 'pendingPayments'" class="pending-payments">
-  <!-- Tabs -->
-  <div class="d-flex gap-2 mb-2">
-    <button class="btn btn-sm"
-            [class.btn-dark]="selectedPayTab==='verify'"
-            [class.btn-outline-dark]="selectedPayTab!=='verify'"
-            (click)="switchPayTab('verify')">
-      Verify (Customer)
-      <span *ngIf="verifyPayments.length" class="badge">({{ verifyPayments.length }})</span>
-    </button>
-
-    <button class="btn btn-sm"
-            [class.btn-dark]="selectedPayTab==='collect'"
-            [class.btn-outline-dark]="selectedPayTab!=='collect'"
-            (click)="switchPayTab('collect')">
-      Collect (Waiter)
-      <span *ngIf="collectPayments.length" class="badge">({{ collectPayments.length }})</span>
-    </button>
-  </div>
-
-  <!-- VERIFY (Customer-paid) -->
-  <div *ngIf="selectedPayTab==='verify'">
-    <app-pending-payments
-      [payments]="verifyPayments"
-      (paymentCleared)="onPaymentCleared($event)">
-    </app-pending-payments>
-  </div>
-
-  <!-- COLLECT (Waiter) -->
-  <div *ngIf="selectedPayTab==='collect'">
-    <div class="card mb-2 p-2" *ngFor="let p of collectPayments">
-      <div class="d-flex justify-content-between align-items-center">
-        <div>
-          <div><strong>Table {{ p.tableNo }}</strong> • Order #{{ p.orderID }}</div>
-          <div>Amount: ₹{{ p.amount | number:'1.2-2' }}</div>
-          <div>Status: {{ p.status }}</div>
-        </div>
-        <div>
-          <button class="btn btn-dark btn-sm" (click)="openCollectModal(p)">Collect Payment</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Collect Payment Modal -->
-  <div class="payment-overlay" *ngIf="collectModal.open">
-    <div class="payment-modal" (click)="$event.stopPropagation()">
-      <div class="d-flex justify-content-between align-items-center mb-2">
-        <h4 class="m-0">Collect Payment</h4>
-        <button class="btn btn-sm btn-light" (click)="closeCollectModal()">✕</button>
-      </div>
-
-      <div class="mb-2"><strong>Order #{{ collectModal.orderId }}</strong> • ₹{{ collectModal.amount | number:'1.2-2' }}</div>
-
-      <div class="btn-group mb-3">
-        <button class="btn btn-sm"
-                [class.btn-dark]="collectModal.tab==='UPI'"
-                [class.btn-outline-dark]="collectModal.tab!=='UPI'"
-                (click)="collectModal.tab='UPI'">UPI</button>
-        <button class="btn btn-sm"
-                [class.btn-dark]="collectModal.tab==='CASH'"
-                [class.btn-outline-dark]="collectModal.tab!=='CASH'"
-                (click)="collectModal.tab='CASH'">Cash</button>
-      </div>
-
-      <!-- UPI tab -->
-      <div *ngIf="collectModal.tab==='UPI'">
-        <div class="mb-2" *ngIf="!collectModal.upiUri">
-          <button class="btn btn-primary w-100" [disabled]="busyCollect" (click)="initiateUpi()">Get UPI QR</button>
-        </div>
-
-        <div *ngIf="collectModal.upiUri">
-          <div class="text-center mb-2">
-            <!-- you already use angularx-qrcode in NewOrder; we’ll reuse it -->
-            <qrcode [qrdata]="collectModal.upiUri" [width]="220" [errorCorrectionLevel]="'M'"></qrcode>
+      <div class="notification-list">
+        <div *ngFor="let request of unreadRequests" class="notification-item">
+          <div class="notification-content">
+            <strong>Table {{ request.tableNumber }}</strong>
+            <p>{{ request.message }}</p>
+            <small>{{ request.requestTime | date:'shortTime' }}</small>
           </div>
-          <div class="small text-muted text-center mb-2">Scan to pay. Auto-completes when paid.</div>
-          <div class="d-grid gap-2">
-            <a class="btn btn-outline-secondary" [href]="collectModal.upiUri">Open in UPI app</a>
-            <button class="btn btn-dark" [disabled]="busyCollect" (click)="finalizeIfPaid()">Refresh Status</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- CASH tab -->
-      <div *ngIf="collectModal.tab==='CASH'">
-        <button class="btn btn-success w-100" [disabled]="busyCollect" (click)="markCashReceived()">Confirm Cash Received</button>
-      </div>
-    </div>
-    <div class="payment-backdrop" (click)="closeCollectModal()"></div>
-  </div>
-</section>
-
-
-
-<!-- New Order (embedded) -->
-<section *ngIf="selectedSection === 'newOrder'" class="new-order-embedded">
-  <app-new-order
-    [restaurantId]="restaurantId"
-    (orderPlaced)="onNewOrderPlaced($event)"
-    (closed)="onNewOrderClosed()">
-  </app-new-order>
-</section>
-
-
-         
-<section *ngIf="selectedSection === 'orders'" class="waiter-table-layout">
-
-
-  <!-- Table cards -->
-  <div class="table-row">
-    <div
-      *ngFor="let group of groupedUpcomingOrders"
-      class="table-card"
-      [class.active]="selectedTableNo === group.tableNo"
-      (click)="selectTableForOrders(group.tableNo)"
-    >
-      Table {{ group.tableNo }}
-      <span class="badge">{{ group.orders.length }}</span>
-    </div>
-  </div>
-
-    <!-- ✅ Move this heading here -->
-  <h4 *ngIf="selectedTableNo !== null" class="orders-heading">
-    🧾 Orders for Table {{ selectedTableNo }}
-  </h4>
-
-  <!-- Orders for selected table -->
-<div class="order-card-grid mt-3" *ngIf="selectedTableNo !== null">
-  <ng-container *ngFor="let group of groupedUpcomingOrders">
-    <ng-container *ngIf="group.tableNo === selectedTableNo">
-      <div class="order-mini-card" *ngFor="let order of group.orders">
-
-        <!-- ✅ Order No + Time in same row -->
-        <div class="order-header" style="display: flex; justify-content: space-between; align-items: center;">
-          <div class="order-id">Order No: {{ order.orderID }}</div>
-          <div class="order-time">{{ getElapsedTime(order.createdAt) }}</div>
-        </div>
-
-        <!-- Order Items -->
-        <ul class="order-items">
-          <li *ngFor="let item of order.items">
-            {{ item.productName || ('Item ' + item.productID) }} × {{ item.quantity }}
-          </li>
-        </ul>
-
-        <!-- Serve Button -->
-
-<div class="order-actions mt-2"
-     *ngIf="order.orderStatus === OrderStatus.Confirmed && order.kitchenStatus === KitchenStatus.Ready">
-  <button class="btn btn-success btn-sm" (click)="serveOrder(order.orderID)">Serve</button>
-</div>
-
-      </div>
-    </ng-container>
-  </ng-container>
-</div>
-
-
-
-</section>
-
-
-
-
-<!-- <section *ngIf="selectedSection === 'readyOrders'" class="ready-serve-section">
-  <h2>Orders Ready to Serve ({{ getOrderCount(OrderStatus.Confirmed) }})</h2>
-
-
-  <div class="table-grid">
-    <div
-      class="table-card"
-      [class.active]="selectedReadyTable === null"
-      (click)="selectTable(null)"
-    >
-      All Tables
-    </div>
-    <div
-      class="table-card"
-      *ngFor="let table of readyTables"
-      [class.active]="selectedReadyTable === table.tableNo"
-      (click)="selectTable(table.tableNo)"
-    >
-      Table {{ table.tableNo }}
-    </div>
-  </div>
-
-
-  <div class="order-card-container flex-grow-2">
-    <h3 *ngIf="selectedReadyTable !== null">
-      Orders for Table {{ selectedReadyTable }}
-    </h3>
-    <h3 *ngIf="selectedReadyTable === null">
-      Orders for All Tables
-    </h3>
-
-    <div class="order-grid">
-      <div
-        *ngFor="let order of selectedReadyOrders"
-        class="ready-order-card"
-      >
-        <div class="ready-order-id">Order #{{ order.orderID }}</div>
-
-        <div *ngFor="let item of order.items" class="ready-order-item">
-          <span class="item-name">{{ item.productName || 'Item ' + item.productID }}</span>
-          <span class="item-qty">Qty: {{ item.quantity }}</span>
-        </div>
-
-        <div class="ready-order-actions mt-2">
-          <button class="action-btn serve" (click)="serveOrder(order.orderID)">
-            Serve
+          <button class="notification-action" (click)="acceptRequest(request.waiterRequestID)">
+            Accept
           </button>
         </div>
       </div>
     </div>
+
+    <section *ngIf="selectedSection === 'pendingPayments'" class="pending-payments">
+      <div class="d-flex gap-2 mb-2">
+        <button class="btn btn-sm" [class.btn-dark]="selectedPayTab==='verify'"
+          [class.btn-outline-dark]="selectedPayTab!=='verify'" (click)="switchPayTab('verify')">
+          Verify (Customer)
+          <span *ngIf="verifyPayments.length" class="badge">({{ verifyPayments.length }})</span>
+        </button>
+
+        <button class="btn btn-sm" [class.btn-dark]="selectedPayTab==='collect'"
+          [class.btn-outline-dark]="selectedPayTab!=='collect'" (click)="switchPayTab('collect')">
+          Collect (Waiter)
+          <span *ngIf="collectPayments.length" class="badge">({{ collectPayments.length }})</span>
+        </button>
+      </div>
+
+      <div *ngIf="selectedPayTab==='verify'">
+        <app-pending-payments [payments]="verifyPayments" (paymentCleared)="onPaymentCleared($event)">
+        </app-pending-payments>
+      </div>
+
+<!-- In your waiter component HTML - Updated Collect Payment Modal Section -->
+<div *ngIf="selectedPayTab==='collect'">
+  <div class="card mb-2 p-2" *ngFor="let p of collectPayments">
+    <div class="d-flex justify-content-between align-items-center">
+      <div>
+        <div><strong>Table {{ p.tableNo }}</strong> • Order #{{ p.orderID }}</div>
+        <div>Amount: ₹{{ p.amount | number:'1.2-2' }}</div>
+        <div>Status: {{ p.status }}</div>
+      </div>
+      <div>
+        <button class="btn btn-dark btn-sm" (click)="openCollectModal(p)">Collect Payment</button>
+      </div>
+    </div>
   </div>
+</div>
 
-  <ng-template #noReady>
-    <p>No orders ready to serve.</p>
+<div class="payment-overlay" *ngIf="collectModal.open">
+  <div class="payment-modal" (click)="$event.stopPropagation()">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h4 class="m-0">Collect Payment</h4>
+      <button class="btn btn-sm btn-light" (click)="closeCollectModal()" [disabled]="busyCollect">✕</button>
+    </div>
+
+    <div class="mb-3">
+      <div><strong>Order #{{ collectModal.orderId }}</strong></div>
+      <div class="fs-5 text-success">₹{{ collectModal.amount | number:'1.2-2' }}</div>
+      <div class="text-muted small">Table {{ getTableNoFromOrder(collectModal.orderId) }}</div>
+    </div>
+
+    <div class="btn-group w-100 mb-3">
+      <button class="btn btn-sm" 
+              [class.btn-dark]="collectModal.tab === 'UPI'"
+              [class.btn-outline-dark]="collectModal.tab !== 'UPI'" 
+              (click)="setCollectModalTab('UPI')"
+              [disabled]="busyCollect">UPI</button>
+      <button class="btn btn-sm" 
+              [class.btn-dark]="collectModal.tab === 'CASH'"
+              [class.btn-outline-dark]="collectModal.tab !== 'CASH'" 
+              (click)="setCollectModalTab('CASH')"
+              [disabled]="busyCollect">Cash</button>
+    </div>
+
+    <!-- UPI Tab - UPDATED -->
+    <div *ngIf="collectModal.tab==='UPI'">
+      <div class="mb-3" *ngIf="!collectModal.upiUri">
+        <button class="btn btn-primary w-100" 
+                [disabled]="busyCollect" 
+                (click)="initiateUpi()">
+          <span *ngIf="busyCollect" class="spinner-border spinner-border-sm me-2"></span>
+          Generate UPI QR Code
+        </button>
+      </div>
+      
+      <div *ngIf="collectModal.upiUri" class="text-center">
+        <div class="mb-3">
+          <qrcode [qrdata]="collectModal.upiUri" [width]="220" [errorCorrectionLevel]="'M'"></qrcode>
+        </div>
+        <div class="small text-muted mb-3">Scan the QR code to pay</div>
+        <div class="d-grid gap-2">
+          <!-- REMOVED: Open in UPI App button -->
+          <button class="btn btn-success" 
+                  [disabled]="busyCollect" 
+                  (click)="markUpiAsPaid()">
+            <span *ngIf="busyCollect" class="spinner-border spinner-border-sm me-2"></span>
+            Mark as Paid
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cash Tab -->
+    <div *ngIf="collectModal.tab==='CASH'">
+      <div class="alert alert-info mb-3">
+        <small>Confirm that you have received cash payment from the customer.</small>
+      </div>
+      <button class="btn btn-success w-100" 
+              [disabled]="busyCollect" 
+              (click)="markCashReceived()">
+        <span *ngIf="busyCollect" class="spinner-border spinner-border-sm me-2"></span>
+        Confirm Cash Received
+      </button>
+    </div>
+  </div>
+  <div class="payment-backdrop" (click)="closeCollectModal()"></div>
+</div>
+    </section>
+
+
+<!-- In your waiter component HTML -->
+<div *ngIf="selectedSection === 'newOrder'" class="new-order-embedded">
+  <app-new-order [restaurantId]="restaurantId" 
+                 (orderPlaced)="onNewOrderPlaced($event)"
+                 (closed)="onNewOrderClosed()"
+                 [showPaymentOptions]="true"> <!-- Add this input -->
+  </app-new-order>
+</div>
+
+    <section *ngIf="selectedSection === 'orders'" class="waiter-table-layout">
+
+
+      <div class="table-row">
+        <div *ngFor="let group of groupedUpcomingOrders" class="table-card"
+          [class.active]="selectedTableNo === group.tableNo" (click)="selectTableForOrders(group.tableNo)">
+
+          Table {{ group.tableNo }}
+          <span class="badge">{{ group.orders.length }}</span>
+        </div>
+      </div>
+
+      <h4 *ngIf="selectedTableNo !== null" class="orders-heading">
+        🧾 Orders for Table {{ selectedTableNo }}
+      </h4>
+
+      <div class="order-card-grid mt-3" *ngIf="selectedTableNo !== null">
+        <ng-container *ngFor="let group of groupedUpcomingOrders">
+          <ng-container *ngIf="group.tableNo === selectedTableNo">
+            <div class="order-mini-card" *ngFor="let order of group.orders">
+
+              <div class="order-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <div class="order-id">Order No: {{ order.orderID }}</div>
+                <div class="order-time">{{ getElapsedTime(order.createdAt) }}</div>
+              </div>
+
+              <ul class="order-items">
+                <li *ngFor="let item of order.items">
+                  {{ item.productName || ('Item ' + item.productID) }} × {{ item.quantity }}
+                  <span *ngIf="item.customizations?.length" class="text-muted small">
+                    ({{ getCustomizationsText(item.customizations) }})
+                  </span>
+                </li>
+              </ul>
+              <div class="order-payment-info border-top pt-2 mt-2">
+  <div *ngIf="order.latestPayment; else pendingPayment">
+    <div class="d-flex justify-content-between align-items-center">
+      <div>
+        <span class="text-muted small">{{ order.latestPayment.method || 'N/A' }}</span>
+        <span class="badge ms-1" [class]="getPaymentStatusBadgeClass(order.latestPayment.status)">
+            {{ order.latestPayment.status || 'Pending' }}
+        </span>
+      </div>
+      <div class="fw-bold text-success">
+        ₹{{ order.latestPayment.amount | number:'1.2-2' }}
+      </div>
+    </div>
+  </div>
+  <ng-template #pendingPayment>
+    <div class="d-flex justify-content-between align-items-center">
+        <span class="text-muted small">Payment Due</span>
+        <span class="fw-bold text-primary">
+            ₹{{ calculateOrderTotal(order) | number:'1.2-2' }}
+        </span>
+    </div>
   </ng-template>
-</section>
- -->
+</div>
+
+<div class="order-actions mt-2 d-flex justify-content-end gap-1 flex-wrap">
+  <!-- Edit Button - Blue -->
+  <button *ngIf="order.orderStatus === 'Pending' || order.orderStatus === 'Confirmed'"
+          class="btn btn-sm btn-outline-primary" 
+          (click)="openEditOrderModal(order)">
+    <i class="bi bi-pencil"></i> Edit
+  </button>
+
+  <!-- Serve Button - Green - UPDATED: Show for all Confirmed orders regardless of kitchen status -->
+  <button *ngIf="order.orderStatus === OrderStatus.Confirmed"
+          class="btn btn-success btn-sm" 
+          (click)="serveOrder(order.orderID)">
+    <i class="bi bi-check-lg"></i> Serve
+  </button>
+
+  <!-- Cancel Button - Red -->
+  <button *ngIf="order.orderStatus === 'Pending' || order.orderStatus === 'Confirmed'"
+          class="btn btn-sm btn-outline-danger" 
+          (click)="cancelOrder(order)">
+    <i class="bi bi-x-circle"></i> Cancel
+  </button>
+</div>
+            </div>
+          </ng-container>
+        </ng-container>
+      </div>
 
 
 
+    </section>
 
-    <!-- Service Requests -->
     <section *ngIf="selectedSection === 'requests'" class="service-requests">
       <h2 class="sr-heading">Service Requests</h2>
       <p *ngIf="waiterRequests.length === 0" class="sr-empty">
@@ -299,86 +272,369 @@
             <small class="sr-time">
               ({{ request.requestTime | date:'shortTime' }})
             </small>
-            <!-- <button class="sr-accept-btn"
-                    (click)="acceptRequest(request.waiterRequestID)">
-              Accept
-            </button> -->
           </div>
         </li>
       </ul>
     </section>
 
-<!-- History -->
-<section *ngIf="selectedSection === 'history'" class="order-history">
+    <section *ngIf="selectedSection === 'history'" class="order-history">
 
-  <!-- 🔽 Filter Dropdown -->
-<div class="d-flex justify-content-end mb-2">
-  <label class="me-2 fw-bold">Show:</label>
-  <select class="form-select form-select-sm w-auto"
-          [(ngModel)]="historyFilter"
+      <div class="d-flex justify-content-end mb-2">
+        <label class="me-2 fw-bold">Show:</label>
+        <select class="form-select form-select-sm w-auto" [(ngModel)]="historyFilter"
           (change)="applyHistoryFilter()">
-    <option value="today">Today</option>
-    <option value="2days">Last 2 Days</option>
-    <option value="all">All</option>
-  </select>
+          <option value="today">Today</option>
+          <option value="2days">Last 2 Days</option>
+          <option value="all">All</option>
+        </select>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table align-middle table-borderless">
+          <thead>
+            <tr>
+              <th>Table No</th>
+              <th>Order ID</th>
+              <th>Items</th>
+              <th>Payment Method</th>
+              <th>Amount</th>
+              <th>Status</th>
+              <th>Paid At</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let order of historyOrders">
+              <td>{{ order.tableNo }}</td>
+              <td>{{ order.orderID }}</td>
+              <td>
+                <ul class="list-unstyled mb-0">
+                  <li *ngFor="let item of order.items">
+                    {{ item.productName || ('Product ' + item.productID) }} × {{ item.quantity }}
+                  </li>
+                </ul>
+              </td>
+              <td>{{ order.latestPayment?.method || 'N/A' }}</td>
+              <td>
+                ₹{{ order.latestPayment ? (order.latestPayment.amount | number:'1.2-2') : '0.00' }}
+              </td>
+              <td>{{ order.latestPayment?.status || 'N/A' }}</td>
+              <td>
+                {{ order.latestPayment?.paidAt ? (order.latestPayment?.paidAt | date:'short') : 'N/A' }}
+              </td>
+            </tr>
+
+            <tr *ngIf="historyOrders.length === 0">
+              <td colspan="7" class="text-center py-4">
+                No historical orders available.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+
+
+    <div class="floating-alerts-container">
+      <div *ngFor="let alert of activeAlerts" class="floating-alert floating-{{ alert.type }}">
+        {{ alert.message }}
+      </div>
+    </div>
+
+    <!-- Enhanced Edit Order Modal -->
+<div class="modal-backdrop fade show" *ngIf="showEditOrderModal"></div>
+<div class="modal fade show" *ngIf="showEditOrderModal" style="display: block; z-index: 1055;">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title">
+          <i class="bi bi-pencil-square me-2"></i>
+          Edit Order #{{selectedOrderForEdit?.orderID}} - Table {{selectedOrderForEdit?.tableNo}}
+        </h5>
+        <button type="button" class="btn-close btn-close-white" (click)="closeEditOrderModal()"></button>
+      </div>
+      
+      <div class="modal-body">
+        <div *ngIf="selectedOrderForEdit">
+          
+          <!-- Order Summary & Payment Info -->
+          <div class="row mb-4">
+            <div class="col-md-6">
+              <div class="card h-100">
+                <div class="card-header bg-light">
+                  <h6 class="mb-0">Order Summary</h6>
+                </div>
+                <div class="card-body">
+                  <div class="d-flex justify-content-between mb-2">
+                    <span><strong>Status:</strong></span>
+                    <span class="badge" [class]="getStatusBadgeClass(selectedOrderForEdit.orderStatus)">
+                      {{selectedOrderForEdit.orderStatus}}
+                    </span>
+                  </div>
+                  <div class="d-flex justify-content-between mb-2">
+                    <span><strong>Kitchen Status:</strong></span>
+                    <span class="badge" [class]="getKitchenStatusBadgeClass(selectedOrderForEdit.kitchenStatus)">
+                      {{selectedOrderForEdit.kitchenStatus}}
+                    </span>
+                  </div>
+                  <div class="d-flex justify-content-between mb-2">
+                    <span><strong>Created:</strong></span>
+                    <span>{{selectedOrderForEdit.createdAt | date:'short'}}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="col-md-6">
+              <div class="card h-100">
+                <div class="card-header bg-light">
+                  <h6 class="mb-0">Payment Information</h6>
+                </div>
+                <div class="card-body">
+                  <div class="d-flex justify-content-between mb-2" *ngIf="selectedOrderForEdit.latestPayment">
+                    <span><strong>Payment Method:</strong></span>
+                    <span>{{selectedOrderForEdit.latestPayment.method || 'Not specified'}}</span>
+                  </div>
+                  <div class="d-flex justify-content-between mb-2" *ngIf="selectedOrderForEdit.latestPayment">
+                    <span><strong>Payment Status:</strong></span>
+                    <span class="badge" [class]="getPaymentStatusBadgeClass(selectedOrderForEdit.latestPayment.status)">
+                      {{selectedOrderForEdit.latestPayment.status || 'Pending'}}
+                    </span>
+                  </div>
+                  <div class="d-flex justify-content-between mb-2">
+                    <span><strong>Total Amount:</strong></span>
+                    <span class="fw-bold text-primary">
+                      ₹{{calculateOrderTotal(selectedOrderForEdit) | number:'1.2-2'}}
+                    </span>
+                  </div>
+                  <div class="d-flex justify-content-between" *ngIf="selectedOrderForEdit.latestPayment?.paidAt">
+                    <span><strong>Paid At:</strong></span>
+                    <span>{{selectedOrderForEdit.latestPayment.paidAt | date:'short'}}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Current Items Section -->
+          <div class="mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h6 class="mb-0">Current Order Items</h6>
+              <span class="badge bg-primary">{{selectedOrderForEdit.items?.length || 0}} items</span>
+            </div>
+            
+            <div *ngIf="selectedOrderForEdit.items?.length; else noItems" class="table-responsive">
+              <table class="table table-hover">
+                <thead class="table-light">
+                  <tr>
+                    <th>Item</th>
+                    <th>Customizations</th>
+                    <th class="text-center">Price</th>
+                    <th class="text-center">Quantity</th>
+                    <th class="text-center">Total</th>
+                    <th class="text-center">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let item of selectedOrderForEdit.items; let i = index" 
+                      class="align-middle">
+                    <td>
+                      <div>
+                        <strong>{{item.productName || 'Product ' + item.productID}}</strong>
+                      </div>
+                      <small class="text-muted">ID: {{item.productID}}</small>
+                    </td>
+                    <td>
+                      <small *ngIf="item.customizations?.length" class="text-muted">
+                        {{ getCustomizationsText(item.customizations) }}
+                      </small>
+                      <span *ngIf="!item.customizations?.length" class="text-muted">-</span>
+                    </td>
+                    <td class="text-center">₹{{item.unitPrice | number:'1.2-2'}}</td>
+                    <td class="text-center">
+                      <div class="d-flex align-items-center justify-content-center gap-2">
+                        <button class="btn btn-sm btn-outline-danger" 
+                                (click)="updateOrderItemQuantity(item, item.quantity - 1)"
+                                [disabled]="item.quantity <= 1 || isOrderLocked()">
+                          −
+                        </button>
+                        <span class="mx-2 fw-bold" style="min-width: 30px; text-align: center;">
+                          {{item.quantity}}
+                        </span>
+                        <button class="btn btn-sm btn-outline-success" 
+                                (click)="updateOrderItemQuantity(item, item.quantity + 1)"
+                                [disabled]="isOrderLocked()">
+                          +
+                        </button>
+                      </div>
+                    </td>
+                    <td class="text-center fw-bold">
+                      ₹{{(item.unitPrice * item.quantity) | number:'1.2-2'}}
+                    </td>
+                    <td class="text-center">
+                      <button class="btn btn-sm btn-outline-danger" 
+                              (click)="removeOrderItem(item)"
+                              [disabled]="isOrderLocked()"
+                              title="Remove Item">
+                        <i class="bi bi-trash"></i>
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+                <tfoot class="table-light">
+                  <tr>
+                    <td colspan="4" class="text-end fw-bold">Grand Total:</td>
+                    <td class="text-center fw-bold text-primary">
+                      ₹{{calculateOrderTotal(selectedOrderForEdit) | number:'1.2-2'}}
+                    </td>
+                    <td></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+            
+            <ng-template #noItems>
+              <div class="text-center text-muted py-4 border rounded">
+                <i class="bi bi-cart-x display-4 d-block mb-2"></i>
+                No items in this order
+              </div>
+            </ng-template>
+          </div>
+
+          <!-- Add More Items Section -->
+          <div class="mb-4" *ngIf="!isOrderLocked()">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h6 class="mb-0">Add More Items</h6>
+              <button class="btn btn-sm btn-outline-primary" (click)="toggleProductList()">
+                <i class="bi" [class.bi-chevron-down]="!showProductList" [class.bi-chevron-up]="showProductList"></i>
+                {{showProductList ? 'Hide' : 'Show'}} Menu
+              </button>
+            </div>
+            
+            <div *ngIf="showProductList" class="product-selection">
+              <!-- Product Search Filter -->
+              <div class="row mb-3">
+                <div class="col-md-6">
+                  <input type="text" class="form-control" placeholder="Search products..." 
+                         [(ngModel)]="productSearch" (input)="filterProducts()">
+                </div>
+                <div class="col-md-6">
+                  <select class="form-control" [(ngModel)]="selectedCategory" (change)="filterProducts()">
+                    <option value="">All Categories</option>
+                    <option *ngFor="let category of productCategories" [value]="category">
+                      {{category}}
+                    </option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Products Grid -->
+              <div class="row g-3">
+                <div *ngFor="let product of filteredAvailableProducts" class="col-xl-3 col-lg-4 col-md-6">
+                  <div class="card h-100 product-card">
+                    <div class="card-body d-flex flex-column">
+                      <h6 class="card-title">{{product.productName}}</h6>
+                      <p class="card-text text-muted small flex-grow-1">
+                        {{product.productDescription || 'No description available'}}
+                      </p>
+                      <div class="d-flex justify-content-between align-items-center mt-auto">
+                        <span class="fw-bold text-primary">₹{{product.price | number:'1.2-2'}}</span>
+                        <div class="d-flex align-items-center gap-2">
+                          <button class="btn btn-sm btn-outline-secondary" 
+                                  (click)="decreaseProductQuantity(product)"
+                                  [disabled]="getProductQuantity(product) <= 0">
+                            −
+                          </button>
+                          <span class="quantity-badge">{{getProductQuantity(product)}}</span>
+                          <button class="btn btn-sm btn-outline-secondary" 
+                                  (click)="increaseProductQuantity(product)">
+                            +
+                          </button>
+                          <button class="btn btn-sm btn-primary" 
+                                  (click)="addSelectedProductsToOrder()"
+                                  [disabled]="getSelectedProductsCount() === 0">
+                            Add
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Selected Products Summary -->
+              <div *ngIf="getSelectedProductsCount() > 0" class="selected-products-summary mt-3 p-3 bg-light rounded">
+                <div class="d-flex justify-content-between align-items-center">
+                  <div>
+                    <strong>{{getSelectedProductsCount()}} items selected</strong>
+                    <span class="text-muted ms-2">(Total: ₹{{getSelectedProductsTotal() | number:'1.2-2'}})</span>
+                  </div>
+                  <button class="btn btn-success" (click)="addSelectedProductsToOrder()">
+                    <i class="bi bi-cart-plus me-1"></i>
+                    Add Selected Items to Order
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="d-flex gap-2 border-top pt-3 flex-wrap">
+            <button class="btn btn-danger" 
+                    (click)="cancelOrder(selectedOrderForEdit)"
+                    [disabled]="isOrderLocked()">
+              <i class="bi bi-x-circle me-1"></i> Cancel Order
+            </button>
+            
+            <button class="btn btn-outline-secondary" 
+                    (click)="getOrderChangeHistory(selectedOrderForEdit.orderID)">
+              <i class="bi bi-clock-history me-1"></i> Change History
+            </button>
+
+            <button class="btn btn-outline-info" 
+                    (click)="printOrderBill(selectedOrderForEdit.orderID)">
+              <i class="bi bi-printer me-1"></i> Print Bill
+            </button>
+
+            <button class="btn btn-secondary ms-auto" (click)="closeEditOrderModal()">
+              <i class="bi bi-x-lg me-1"></i> Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
-  <div class="table-responsive">
-    <table class="table align-middle table-borderless">
-      <thead>
-        <tr>
-          <th>Table No</th>
-          <th>Order ID</th>
-          <th>Items</th>
-          <th>Payment Method</th>
-          <th>Amount</th>
-          <th>Status</th>
-          <th>Paid At</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let order of historyOrders">
-          <td>{{ order.tableNo }}</td>
-          <td>{{ order.orderID }}</td>
-          <td>
-            <ul class="list-unstyled mb-0">
-              <li *ngFor="let item of order.items">
-                {{ item.productName || ('Product ' + item.productID) }} × {{ item.quantity }}
-              </li>
-            </ul>
-          </td>
-          <td>{{ order.latestPayment?.method || 'N/A' }}</td>
-          <td>
-            ₹{{ order.latestPayment ? (order.latestPayment.amount | number:'1.2-2') : '0.00' }}
-          </td>
-          <td>{{ order.latestPayment?.status || 'N/A' }}</td>
-          <td>
-            {{ order.latestPayment?.paidAt ? (order.latestPayment?.paidAt | date:'short') : 'N/A' }}
-          </td>
-        </tr>
+    <div class="modal-backdrop fade show" *ngIf="showChangeHistoryModal"></div>
+    <div class="modal fade show" *ngIf="showChangeHistoryModal" style="display: block; z-index: 1060;">
+      <div class="modal-dialog modal-dialog-scrollable">
+        <div class="modal-content">
+          <div class="modal-header bg-dark text-white">
+            <h5 class="modal-title">Order Change History #{{selectedOrderForEdit?.orderID}}</h5>
+            <button type="button" class="btn-close btn-close-white" (click)="showChangeHistoryModal = false"></button>
+          </div>
+          <div class="modal-body">
+            <div *ngFor="let change of orderChangeHistory; let i = index"
+              class="border-start border-3 ps-3 mb-3" [class.border-primary]="change.changeType === 'ITEM_ADDED'"
+              [class.border-danger]="change.changeType === 'ITEM_REMOVED' || change.changeType === 'ORDER_CANCELLED'"
+              [class.border-warning]="change.changeType === 'ITEM_QTY_CHANGED'"
+              [class.border-info]="change.changeType === 'ITEM_CUSTOMIZATION_CHANGED'">
+              <div class="d-flex justify-content-between align-items-start">
+                <strong class="text-capitalize">{{change.changeType.replace('_', ' ').toLowerCase()}}</strong>
+                <small class="text-muted">{{change.changedAt | date:'short'}}</small>
+              </div>
+              <p class="mb-1">{{change.description}}</p>
+              <small class="text-muted">By: {{change.changedBy}}</small>
+            </div>
 
-        <tr *ngIf="historyOrders.length === 0">
-          <td colspan="7" class="text-center py-4">
-            No historical orders available.
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-</section>
-
-
-
-<!-- 🔔 Floating Notifications -->
-<div class="floating-alerts-container">
-  <div
-    *ngFor="let alert of activeAlerts"
-    class="floating-alert floating-{{ alert.type }}"
-  >
-    {{ alert.message }}
-  </div>
-</div>
-
+            <div *ngIf="!orderChangeHistory.length" class="text-center text-muted py-4">
+              No changes recorded for this order
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
   </main>
 </div>

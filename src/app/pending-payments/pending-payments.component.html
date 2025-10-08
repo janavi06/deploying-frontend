@@ -17,7 +17,7 @@
   <tbody>
     <tr *ngFor="let p of payments">
       <td>{{ p.tableNo }}</td>
-      <td>{{ p.orderId }}</td>
+      <td>{{ p.orderID }}</td> <!-- Changed from orderId to orderID -->
       <td>{{ p.amount | number:'1.2-2' }}</td>
       <td>{{ p.method }}</td>
       <td>
@@ -28,7 +28,8 @@
         </ul>
       </td>
       <td>
-        <button class="btn btn-success btn-sm" (click)="markAsPaid(p.paymentId)">
+        <!-- Ensure we're passing the correct payment ID -->
+        <button class="btn btn-success btn-sm" (click)="markAsPaid(p.paymentID || p.paymentId)">
           Mark Paid
         </button>
       </td>

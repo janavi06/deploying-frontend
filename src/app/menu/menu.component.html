@@ -396,16 +396,19 @@
     </div>
   </div>
 </div>
-<!-- Single Image Zoom Modal (no prev/next) -->
+<!-- Single Image Modal (Full Size) -->
 <div class="image-modal" *ngIf="showImageModal">
   <div class="image-modal-backdrop" (click)="closeImageModal()"></div>
 
-  <div class="image-modal-content" (wheel)="onWheelZoom($event)" tabindex="0">
+  <div class="image-modal-content" tabindex="0">
     <!-- Top-right cross close -->
-    <button class="modal-close btn-close" (click)="closeImageModal()" aria-label="Close"></button>
-
+<button class="modal-close" (click)="closeImageModal()" aria-label="Close">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M18 6L6 18M6 6L18 18" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+</button>
     <div class="modal-body d-flex align-items-center justify-content-center">
-      <div class="image-zoom-wrapper" (dblclick)="toggleZoom()">
+      <div class="image-container">
         <!-- spinner while image loads -->
         <div *ngIf="!modalImageLoaded" class="modal-image-spinner">
           <div class="spinner-border" role="status"></div>
@@ -414,8 +417,7 @@
         <img
           [src]="modalImageUrl"
           [alt]="modalImageAlt"
-          class="image-zoom"
-          [style.transform]="'scale(' + zoom + ')'"
+          class="full-size-image"
           (load)="onModalImageLoad()"
           draggable="false"
         />

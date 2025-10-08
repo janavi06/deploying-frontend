@@ -500,28 +500,20 @@ async placeFinalOrder(): Promise<void> {
   }
 }
 openImageModal(item: any) {
-  const imageUrl = this.getImageUrl(item?.imagePath);
-  if (!imageUrl) return;
-
-  this.modalImageLoaded = false;
-  this.modalImageUrl = imageUrl;
-  this.modalImageAlt = item?.productName || '';
-  this.zoom = 1;
+  this.modalImageUrl = this.getImageUrl(item.imagePath);
+  this.modalImageAlt = item.productName;
   this.showImageModal = true;
-
-  // lock background scroll and listen for Escape
-  document.body.style.overflow = 'hidden';
-  window.addEventListener('keydown', this.keydownHandler);
+  this.modalImageLoaded = false;
 }
 
 closeImageModal() {
   this.showImageModal = false;
   this.modalImageUrl = '';
   this.modalImageAlt = '';
-  this.modalImageLoaded = false;
-  this.zoom = 1;
-  document.body.style.overflow = '';
-  window.removeEventListener('keydown', this.keydownHandler);
+}
+
+onModalImageLoad() {
+  this.modalImageLoaded = true;
 }
 
 /** Zoom via mouse wheel (desktop) */
@@ -536,10 +528,6 @@ toggleZoom() {
   this.zoom = (this.zoom === 1) ? 2 : 1;
 }
 
-/** Called when modal image finishes loading */
-onModalImageLoad(): void {
-  this.modalImageLoaded = true;
-}
 
 // Add this helper method to validate steps
 private isValidOrderStep(step: number): step is OrderStep {
