@@ -222,13 +222,11 @@ async submitWithPreference() {
         paymentPreference: 'PayLater'
       });
       
-      alert(`✅ Order #${this.orderID} placed successfully! Payment is pending in the "Collect" tab.`);
       this.resetAndClose();
     }
 
   } catch (e: any) {
     console.error('❌ Error placing waiter order:', e);
-    alert(`Failed to place order: ${e.error?.message || 'Please try again'}`);
     this.busy = false;
   }
 }
@@ -282,7 +280,6 @@ async submitWithPreference() {
       }
     } catch (e) {
       console.error(e);
-      alert('Payment initiation failed');
     } finally {
       this.busyPay = false;
     }
@@ -295,9 +292,7 @@ async submitWithPreference() {
   async copyUpiUri() {
     try {
       await navigator.clipboard.writeText(this.upiUri);
-      alert('UPI link copied!');
     } catch {
-      alert('Copy failed');
     }
   }
 
@@ -731,7 +726,6 @@ addToCart() {
 
     } catch (e) {
       console.error(e);
-      alert('Failed to place order');
     } finally {
       this.busy = false;
     }
@@ -744,30 +738,53 @@ addToCart() {
     ).subscribe(() => this.resetAndClose());
   }
 
-  async collectPayment() {
-    if (!this.method) return;
-    this.busyPay = true;
-    try {
-      if (this.method === 'UPI') {
-        await this.http.post(
-          `${this.API}/order/${this.orderID}/initiate-payment?method=UPI&restaurantId=${this.restaurantId}`, {}
-        ).toPromise();
-      }
-      await this.http.put(
-        `${this.API}/order/pending-payments/${this.orderID}/clear?restaurantId=${this.restaurantId}`, {}
-      ).toPromise();
+//   async collectPayment() {
+//     if (!this.method) return;
+//     this.busyPay = true;
+//     try {
+//       if (this.method === 'UPI') {
+//         await this.http.post(
+//           `${this.API}/order/${this.orderID}/initiate-payment?method=UPI&restaurantId=${this.restaurantId}`, {}
+//         ).toPromise();
+//       }
+//       await this.http.put(
+//         `${this.API}/order/pending-payments/${this.orderID}/clear?restaurantId=${this.restaurantId}`, {}
+//       ).toPromise();
 
-      window.open(`${this.API}/order/${this.orderID}/bill`, '_blank');
-      this.resetAndClose();
+//       window.open(`${this.API}/order/${this.orderID}/bill`, '_blank');
+//       this.resetAndClose();
 
-    } catch (e) {
-      console.error(e);
-      alert('Payment error');
-    } finally {
-      this.busyPay = false;
-    }
-  }
+//     } catch (e) {
+//       console.error(e);
+//       alert('Payment error');
+//     } finally {
+//       this.busyPay = false;
+//     }
+//   }
+async collectPayment() {
+  if (!this.method) return;
+  this.busyPay = true;
+  try {
+    if (this.method === 'UPI') {
+      await this.http.post(
+        `${this.API}/order/${this.orderID}/initiate-payment?method=UPI&restaurantId=${this.restaurantId}`, {}
+      ).toPromise();
+    }
+    await this.http.put(
+      `${this.API}/order/pending-payments/${this.orderID}/clear?restaurantId=${this.restaurantId}`, {}
+    ).toPromise();
 
+    // ❌ REMOVED: Bill download
+    // window.open(`${this.API_BASE}/order/${this.orderID}/bill`, '_blank');
+    
+    this.resetAndClose();
+
+  } catch (e) {
+    console.error(e);
+  } finally {
+    this.busyPay = false;
+  }
+}
 
 // Add these methods to your NewOrderComponent class
 
@@ -792,7 +809,6 @@ async initiateUPIPayment() {
     this.paymentStage = 2;
   } catch (e) {
     console.error('UPI initiation failed:', e);
-    alert('Failed to initialize UPI payment');
   } finally {
     this.busyPay = false;
   }
@@ -821,9 +837,90 @@ private pushSuccessAlert(message: string) {
 
 
 
+// async markUPIPaid() {
+//   if (!this.paymentId) {
+//     alert('Payment not initialized');
+//     return;
+//   }
+
+//   this.busyPay = true;
+//   try {
+//     // Mark UPI payment as completed
+//     await this.http.put(
+//       `${this.API}/order/pending-payments/${this.paymentId}/clear?restaurantId=${this.restaurantId}`,
+//       {}
+//     ).toPromise();
+
+//     // Download bill
+//     window.open(`${this.API}/order/${this.orderID}/bill?restaurantId=${this.restaurantId}`, '_blank');
+    
+//     // ✅ For PayNow orders: Order stays in Orders section
+//     this.orderPlaced.emit({ 
+//       orderID: this.orderID,
+//       paymentStatus: 'paid',
+//       paymentMethod: 'UPI',
+//       paymentPreference: 'PayNow'
+//     });
+    
+//     this.pushSuccessAlert(`✅ Order #${this.orderID} placed and paid via UPI! Order is in Orders section.`);
+    
+//     this.resetAndClose();
+//   } catch (e) {
+//     console.error('Failed to mark UPI as paid:', e);
+//     alert('Error completing UPI payment');
+//   } finally {
+//     this.busyPay = false;
+//   }
+// }
+
+// async markCashPaid() {
+//   this.busyPay = true;
+//   try {
+//     // Create cash payment and mark as completed immediately
+//     const started: any = await this.http.post(
+//       `${this.API}/order/${this.orderID}/initiate-payment?method=Cash&restaurantId=${this.restaurantId}&channel=Waiter`,
+//       {}
+//     ).toPromise();
+
+//     const pid = started?.paymentId;
+//     if (pid) {
+//       await this.http.put(
+//         `${this.API}/order/pending-payments/${pid}/clear?restaurantId=${this.restaurantId}`,
+//         {}
+//       ).toPromise();
+//     }
+
+//     // Download bill
+//     window.open(`${this.API}/order/${this.orderID}/bill?restaurantId=${this.restaurantId}`, '_blank');
+    
+//     // ✅ For PayNow orders: Order stays in Orders section
+//     this.orderPlaced.emit({ 
+//       orderID: this.orderID,
+//       paymentStatus: 'paid',
+//       paymentMethod: 'Cash',
+//       paymentPreference: 'PayNow'
+//     });
+    
+//     this.pushSuccessAlert(`✅ Order #${this.orderID} placed and paid via Cash! Order is in Orders section.`);
+    
+//     this.resetAndClose();
+//   } catch (e) {
+//     console.error('Cash payment failed:', e);
+//     alert('Error processing cash payment');
+//   } finally {
+//     this.busyPay = false;
+//   }
+// }
+
+
+
+
+
+
+
+
 async markUPIPaid() {
   if (!this.paymentId) {
-    alert('Payment not initialized');
     return;
   }
 
@@ -835,8 +932,8 @@ async markUPIPaid() {
       {}
     ).toPromise();
 
-    // Download bill
-    window.open(`${this.API}/order/${this.orderID}/bill?restaurantId=${this.restaurantId}`, '_blank');
+    // ❌ REMOVED: Bill download
+    // window.open(`${this.API_BASE}/order/${this.orderID}/bill?restaurantId=${this.restaurantId}`, '_blank');
     
     // ✅ For PayNow orders: Order stays in Orders section
     this.orderPlaced.emit({ 
@@ -851,7 +948,6 @@ async markUPIPaid() {
     this.resetAndClose();
   } catch (e) {
     console.error('Failed to mark UPI as paid:', e);
-    alert('Error completing UPI payment');
   } finally {
     this.busyPay = false;
   }
@@ -874,8 +970,8 @@ async markCashPaid() {
       ).toPromise();
     }
 
-    // Download bill
-    window.open(`${this.API}/order/${this.orderID}/bill?restaurantId=${this.restaurantId}`, '_blank');
+    // ❌ REMOVED: Bill download
+    // window.open(`${this.API_BASE}/order/${this.orderID}/bill?restaurantId=${this.restaurantId}`, '_blank');
     
     // ✅ For PayNow orders: Order stays in Orders section
     this.orderPlaced.emit({ 
@@ -890,12 +986,10 @@ async markCashPaid() {
     this.resetAndClose();
   } catch (e) {
     console.error('Cash payment failed:', e);
-    alert('Error processing cash payment');
   } finally {
     this.busyPay = false;
   }
 }
-
 
   private resetAndClose() {
     this.paymentStage = 0;

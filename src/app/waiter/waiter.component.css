@@ -3037,3 +3037,21 @@ qrcode canvas {
   z-index: -1;
 }
 
+/* Style for items with pending changes */
+.item-has-changes {
+  background-color: #fff3cd !important;
+  border-left: 4px solid #ffc107 !important;
+}
+
+/* Style for pending removal items */
+.item-pending-removal {
+  background-color: #f8d7da !important;
+  border-left: 4px solid #dc3545 !important;
+  opacity: 0.7;
+}
+
+/* Style for new items */
+.item-new-addition {
+  background-color: #d1edff !important;
+  border-left: 4px solid #0d6efd !important;
+}

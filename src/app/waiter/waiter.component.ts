@@ -1,13 +1,14 @@
-   import { Component, OnInit } from '@angular/core';
+  import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders, HttpClientModule } from '@angular/common/http';
-import { Router } from '@angular/router';
+import { Router ,ActivatedRoute} from '@angular/router';
 import { environment } from '../../environments/environment';
 import { PendingPaymentsComponent } from '../pending-payments/pending-payments.component';  // ← import it!
 import { NewOrderComponent } from '../new-order/new-order.component';
 import { QRCodeComponent } from 'angularx-qrcode';
 import { firstValueFrom } from 'rxjs'; // ✅ ADD THIS IMPORT
+
 
 export enum OrderStatus {
   Pending   = "Pending",
@@ -53,7 +54,6 @@ export interface Order {
     kitchenStatus?: KitchenStatus;  // Add this line
 
 }
-
 
 export interface WaiterRequest {
   waiterRequestID: number;
@@ -117,6 +117,18 @@ availableProducts: any[] = [];
 orderChangeHistory: any[] = [];
 showChangeHistoryModal = false;
 selectedProductCategory: string = '';
+// Add these properties to your component class
+originalOrderData: any = null;
+isSavingChanges = false;
+pendingChanges: { 
+  quantityUpdates: Map<number, number>, 
+  itemsToRemove: number[],
+  itemsToAdd: any[] 
+} = {
+  quantityUpdates: new Map<number, number>(),
+  itemsToRemove: [],
+  itemsToAdd: []
+};
 
 
 selectedPayTab: 'verify' | 'collect' = 'verify';
@@ -147,13 +159,84 @@ private readonly API_BASE = `${environment.apiUrl}`;
 
   private httpOptions: { headers: HttpHeaders } = { headers: new HttpHeaders() };
 
-  constructor(private http: HttpClient, private router: Router) {}
+  constructor(private http: HttpClient, private router: Router, private route: ActivatedRoute) {}
 ngOnInit(): void {
-  // ✅ TEMPORARY: Hardcode restaurantId for testing
-  this.restaurantId = 1; // Use your actual restaurant ID
+  // ✅ Get restaurantId from URL parameters FIRST
+  this.route.queryParams.subscribe(params => {
+    const urlRestaurantId = params['restaurantId'] || 
+                           params['restaurantid'] || 
+                           params['restaurant'] || 
+                           params['rid'] || 
+                           0;
+    
+    if (urlRestaurantId) {
+      this.restaurantId = +urlRestaurantId;
+      this.initializeDashboard();
+    } else {
+      // Fallback: try to get from localStorage or user data
+      this.initializeFromPersistedData();
+    }
+
+    
+  });
+
+  window.addEventListener('beforeunload', () => {
+    this.persistUIState();
+  });
+
   
-  console.log('✅ Using restaurantId:', this.restaurantId);
+}
+
+private initializeFromPersistedData(): void {
+  // Try to get restaurantId from localStorage first
+  const persistedRestaurantId = localStorage.getItem('waiter_restaurantId');
+  if (persistedRestaurantId) {
+    this.restaurantId = +persistedRestaurantId;
+    this.initializeDashboard();
+    return;
+  }
+
+  // Fallback to user data
+  const userData = localStorage.getItem('userData');
+  if (userData) {
+    const user = JSON.parse(userData);
+    this.restaurantId = user.restaurantId || user.restaurantID || 0;
+  }
   
+  if (this.restaurantId) {
+    // Persist for future refreshes
+    localStorage.setItem('waiter_restaurantId', this.restaurantId.toString());
+    this.initializeDashboard();
+  } else {
+    this.showRestaurantError();
+  }
+}
+  private initializeFromUserData(): void {
+    const userData = localStorage.getItem('userData');
+    if (userData) {
+      const user = JSON.parse(userData);
+      this.restaurantId = user.restaurantId || user.restaurantID || 0;
+    }
+    
+    if (this.restaurantId) {
+      this.initializeDashboard();
+    } else {
+      this.showRestaurantError();
+    }
+  }
+
+private initializeDashboard(): void {
+  console.log('✅ Initializing waiter dashboard for restaurant:', this.restaurantId);
+  
+  // Persist restaurantId immediately
+  localStorage.setItem('waiter_restaurantId', this.restaurantId.toString());
+  
+  // Restore UI state
+  this.restoreUIState();
+  
+  // Update page title
+  document.title = `Waiter Dashboard - Restaurant ${this.restaurantId}`;
+
   // Simple headers without authentication
   this.httpOptions = { 
     headers: new HttpHeaders({ 
@@ -177,7 +260,23 @@ ngOnInit(): void {
   }, 15000);
 
   setInterval(() => this.getOrders(), 10000);
+   setInterval(() => this.persistUIState(), 30000); // Every 30 seconds
 }
+  private showRestaurantError(): void {
+    this.error = 'No restaurant specified. Please access via: https://scanui.netlify.app/waiter?restaurantId=YOUR_RESTAURANT_ID';
+    console.error(this.error);
+  }
+
+ // ✅ ADD method to generate shareable URL
+  getShareableUrl(): string {
+    return `https://scanui.netlify.app/waiter?restaurantId=${this.restaurantId}`;
+  }
+
+  // ✅ ADD method to copy URL to clipboard
+  copyShareableUrl(): void {
+    navigator.clipboard.writeText(this.getShareableUrl()).then(() => {
+    });
+  }
 
 ngOnDestroy(): void {
   // Clear all intervals when component is destroyed
@@ -189,11 +288,49 @@ ngOnDestroy(): void {
     clearInterval(this.requestPollingInterval);
   }
   
+  // Remove event listener
+  window.removeEventListener('beforeunload', () => {
+    this.persistUIState();
+  });
+
+  
+}
+private persistUIState(): void {
+  const uiState = {
+    selectedSection: this.selectedSection,
+    selectedTableNo: this.selectedTableNo,
+    selectedPayTab: this.selectedPayTab,
+    historyFilter: this.historyFilter,
+    isSidebarOpen: this.isSidebarOpen,
+    lastUpdated: Date.now()
+  };
+  localStorage.setItem('waiter_ui_state', JSON.stringify(uiState));
 }
 
+private restoreUIState(): void {
+  const saved = localStorage.getItem('waiter_ui_state');
+  if (saved) {
+    try {
+      const uiState = JSON.parse(saved);
+      
+      // Only restore if not too old (e.g., within last 2 hours)
+      if (Date.now() - (uiState.lastUpdated || 0) < 2 * 60 * 60 * 1000) {
+        this.selectedSection = uiState.selectedSection || 'orders';
+        this.selectedTableNo = uiState.selectedTableNo;
+        this.selectedPayTab = uiState.selectedPayTab || 'verify';
+        this.historyFilter = uiState.historyFilter || 'today';
+        this.isSidebarOpen = uiState.isSidebarOpen || false;
+      }
+    } catch (e) {
+      console.warn('Failed to restore UI state:', e);
+    }
+  }
+}
 switchPayTab(tab: 'verify' | 'collect') {
   if (this.selectedPayTab === tab) return;
   this.selectedPayTab = tab;
+    this.persistUIState(); // ✅ Persist tab selection
+
   this.loadPendingByTab();
 }
 
@@ -257,6 +394,8 @@ private splitPending(payments: any[]) {
 
 selectTableForOrders(tableNo: number): void {
   this.selectedTableNo = tableNo;
+    this.persistUIState(); // ✅ Persist table selection
+
 }
 
 private setupPendingPaymentPolling(): void {
@@ -282,7 +421,7 @@ onNewOrderPlaced(e: {
     }
   } else {
     // PayLater orders
-    this.pushAlert('order', `💰 Order #${e.orderID} placed - Payment pending in Collect tab`);
+    this.pushAlert('order', ` Order #${e.orderID} placed - Payment pending in Collect tab`);
   }
   
   // Refresh orders to show the new order in the correct section
@@ -296,11 +435,13 @@ onNewOrderClosed() {
 
 
 
-private refreshHistoryOnly(): void {
-  this.http.get<any>(`${this.API_BASE}/order/with-waiter?restaurantId=${this.restaurantId}`, this.httpOptions)
-    .subscribe({
-      next: res => {
-        const all = this.unwrapArray<any>(res.orders).map(o => ({
+  private refreshHistoryOnly(): void {
+    if (!this.restaurantId) return;
+    
+    this.http.get<any>(`${this.API_BASE}/order/with-waiter?restaurantId=${this.restaurantId}`, this.httpOptions)
+      .subscribe({
+        next: res => {
+          const all = this.unwrapArray<any>(res.orders).map(o => ({
           orderID: o.orderID,
           tableNo: o.tableNo,
           orderStatus: this.mapOrderStatus(o.orderStatus),
@@ -321,18 +462,35 @@ private refreshHistoryOnly(): void {
           } : undefined
         }));
 
-        this.allHistoryOrders = all.filter(o =>
-          o.orderStatus === OrderStatus.Served ||
-          o.orderStatus === OrderStatus.Completed ||
-          o.orderStatus === OrderStatus.Cancelled
-        );
+this.allHistoryOrders = all.filter(o =>
+            o.orderStatus === OrderStatus.Served ||
+            o.orderStatus === OrderStatus.Completed ||
+            o.orderStatus === OrderStatus.Cancelled
+          );
+          this.applyHistoryFilter();
+        },
+        error: err => console.error('Error refreshing history:', err)
+      });
+  }
+applyHistoryFilter(): void {
+  const now = new Date();
 
-        this.applyHistoryFilter();
-      },
-      error: err => console.error('Error refreshing history:', err)
-    });
+  if (this.historyFilter === 'all') {
+    this.historyOrders = this.allHistoryOrders;
+  } else if (this.historyFilter === '2days') {
+    const cutoff = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000);
+    this.historyOrders = this.allHistoryOrders.filter(o =>
+      o.closedAt && new Date(o.closedAt) >= cutoff
+    );
+  } else if (this.historyFilter === 'today') {
+    const today = now.toDateString();
+    this.historyOrders = this.allHistoryOrders.filter(o =>
+      o.closedAt && new Date(o.closedAt).toDateString() === today
+    );
+  }
+  
+  this.persistUIState(); // ✅ Persist filter changes
 }
-
 updateReadyTables(): void {
   this.readyTables = this.groupByTable(this.readyToServeOrders);
 }
@@ -357,13 +515,18 @@ hasNewOrder(tableNo: number): boolean {
 
 
 
-private setupRequestPolling(): void {
-  this.requestPollingInterval = setInterval(() => {
-    this.checkForNewRequests();
-  }, 5000); // Check every 5 seconds
-}
+  // ✅ UPDATED: Include restaurantId in request polling
+  private setupRequestPolling(): void {
+    this.requestPollingInterval = setInterval(() => {
+      if (this.restaurantId) {
+        this.checkForNewRequests();
+      }
+    }, 5000);
+  }
 
-checkForNewRequests(): void {
+  checkForNewRequests(): void {
+    if (!this.restaurantId) return;
+    
     this.http.get<any[]>(`${this.API_BASE}/order/waiter/requests/unnotified?restaurantId=${this.restaurantId}`, this.httpOptions)
       .subscribe({
         next: (requests) => {
@@ -373,7 +536,7 @@ checkForNewRequests(): void {
 
             requests.forEach(request => {
               this.http.put(
-                `${this.API_BASE}/order/waiter/requests/mark-notified/${request.waiterRequestID}`,
+                `${this.API_BASE}/order/waiter/requests/mark-notified/${request.waiterRequestID}?restaurantId=${this.restaurantId}`,
                 null,
                 this.httpOptions
               ).subscribe();
@@ -416,7 +579,6 @@ markPaymentPaid(payment: any): void {  // Change parameter to accept the payment
 
   if (!paymentID) {
     console.error('Invalid paymentID: undefined. Full payment object:', payment);
-    alert('Cannot process payment: Payment ID is missing');
     return;
   }
 
@@ -442,7 +604,6 @@ markPaymentPaid(payment: any): void {  // Change parameter to accept the payment
       },
       error: (err) => {
         console.error('Failed to clear payment:', err);
-        alert('Error clearing payment.');
       }
     });
 }
@@ -457,50 +618,46 @@ setupNotificationPolling(): void {
   }, 30000);
 }
 
-checkForReadyNotifications(): void {
+ checkForReadyNotifications(): void {
+    if (!this.restaurantId) return;
+    
     this.http.get<any[]>(`${this.API_BASE}/order/waiter/notifications?restaurantId=${this.restaurantId}`, this.httpOptions)
-    .subscribe({
-      next: (notifications) => {
-        if (notifications.length > 0) {
-          this.readyNotifications = notifications;
+      .subscribe({
+        next: (notifications) => {
+          if (notifications.length > 0) {
+            this.readyNotifications = notifications;
 
-          notifications.forEach(n => {
-const exists = this.readyOrderMessages.some(m => m.notificationId === n.notificationId);
-            if (!exists) {
-              const msg = `✅ Order #${n.orderId} for Table ${n.tableNo} is ready to serve.`;
+            notifications.forEach(n => {
+              const exists = this.readyOrderMessages.some(m => m.notificationId === n.notificationId);
+              if (!exists) {
+                const msg = `✅ Order #${n.orderId} for Table ${n.tableNo} is ready to serve.`;
 
-              this.readyOrderSound.play().catch(() => {});
-              this.vibrate();
-              this.pushAlert('ready', msg);
+                this.readyOrderSound.play().catch(() => {});
+                this.vibrate();
+                this.pushAlert('ready', msg);
 
-              // Add to local ready messages
-this.readyOrderMessages.push({
-  notificationId: n.notificationId,
-  message: msg,
-  orderId: n.orderId,
-  tableNo: n.tableNo,
-  timestamp: Date.now()
-});
+                this.readyOrderMessages.push({
+                  notificationId: n.notificationId,
+                  message: msg,
+                  orderId: n.orderId,
+                  tableNo: n.tableNo,
+                  timestamp: Date.now()
+                });
 
+                this.acknowledgeNotification(n.notificationId);
 
-                  this.acknowledgeNotification(n.notificationId);
-
-
-              // Auto-dismiss ready message after 10s (UI purpose only)
-setTimeout(() => {
-  this.readyOrderMessages = this.readyOrderMessages.filter(m => m.notificationId !== n.notificationId);
-}, 10000);
-
-            }
-          });
-        } else {
-          this.readyNotifications = []; // Auto-clear
-        }
-      },
-      error: (err) => console.error('Error checking ready notifications:', err)
-    });
-}
-
+                setTimeout(() => {
+                  this.readyOrderMessages = this.readyOrderMessages.filter(m => m.notificationId !== n.notificationId);
+                }, 10000);
+              }
+            });
+          } else {
+            this.readyNotifications = [];
+          }
+        },
+        error: (err) => console.error('Error checking ready notifications:', err)
+      });
+  }
 
 showReadyOrderNotification(notifications: any[]): void {
   notifications.forEach(n => {
@@ -615,75 +772,74 @@ closeCollectModal() {
   this.collectModal.tab = 'UPI';
   this.busyCollect = false;
 }
-async initiateUpi() {
-  this.busyCollect = true;
-  try {
-    const resp: any = await firstValueFrom(
-      this.http.post(
-        `${this.API_BASE}/order/payments/initiate?orderId=${this.collectModal.orderId}&restaurantId=${this.restaurantId}&channel=Waiter&method=UPI`,
-        {},
-        this.httpOptions
-      )
-    );
+  async initiateUpi() {
+    if (!this.restaurantId) return;
     
+    this.busyCollect = true;
+    try {
+      const resp: any = await firstValueFrom(
+        this.http.post(
+          `${this.API_BASE}/order/payments/initiate?orderId=${this.collectModal.orderId}&restaurantId=${this.restaurantId}&channel=Waiter&method=UPI`,
+          {},
+          this.httpOptions
+        )
+      );
     console.log('UPI Init Response:', resp);
     
     if (resp && resp.upiUri) {
-      this.collectModal.paymentId = resp.paymentId || this.collectModal.paymentId;
-      this.collectModal.amount = resp.amount || this.collectModal.amount;
-      this.collectModal.upiUri = resp.upiUri;
-    } else {
-      alert('Failed to generate UPI QR. Please try again.');
+        this.collectModal.paymentId = resp.paymentId || this.collectModal.paymentId;
+        this.collectModal.amount = resp.amount || this.collectModal.amount;
+        this.collectModal.upiUri = resp.upiUri;
+      } else {
+      }
+    } catch (error: any) {
+      console.error('Error initiating UPI:', error);
+    } finally {
+      this.busyCollect = false;
     }
-  } catch (error: any) {
-    console.error('Error initiating UPI:', error);
-    alert(`Error: ${error.error?.message || 'Failed to generate UPI QR'}`);
-  } finally {
-    this.busyCollect = false;
   }
-}
 
 // In the collect modal finalizeIfPaid method, update the status check:
-async finalizeIfPaid() {
-  if (!this.collectModal.paymentId) {
-    alert('No payment ID found. Please generate QR code first.');
-    return;
-  }
+// async finalizeIfPaid() {
+//   if (!this.collectModal.paymentId) {
+//     alert('No payment ID found. Please generate QR code first.');
+//     return;
+//   }
   
-  this.busyCollect = true;
-  try {
-    const statusResponse: any = await firstValueFrom(
-      this.http.get(
-        `${this.API_BASE}/order/payments/${this.collectModal.paymentId}/status?restaurantId=${this.restaurantId}`,
-        this.httpOptions
-      )
-    );
+//   this.busyCollect = true;
+//   try {
+//     const statusResponse: any = await firstValueFrom(
+//       this.http.get(
+//         `${this.API_BASE}/order/payments/${this.collectModal.paymentId}/status?restaurantId=${this.restaurantId}`,
+//         this.httpOptions
+//       )
+//     );
 
-    console.log('Payment Status Response:', statusResponse);
+//     console.log('Payment Status Response:', statusResponse);
 
-    // Handle different possible status values
-    const paidStatuses = ['Paid', 'Completed', 'Success', 'Success'];
-    if (paidStatuses.includes(statusResponse?.status)) {
-      this.onPaymentCleared(this.collectModal.paymentId);
-      this.closeCollectModal();
+//     // Handle different possible status values
+//     const paidStatuses = ['Paid', 'Completed', 'Success', 'Success'];
+//     if (paidStatuses.includes(statusResponse?.status)) {
+//       this.onPaymentCleared(this.collectModal.paymentId);
+//       this.closeCollectModal();
       
-      // Open bill in new tab
-      window.open(`${this.API_BASE}/order/${this.collectModal.orderId}/bill?restaurantId=${this.restaurantId}`, '_blank');
+//       // Open bill in new tab
+//       window.open(`${this.API_BASE}/order/${this.collectModal.orderId}/bill?restaurantId=${this.restaurantId}`, '_blank');
       
-      this.pushAlert('payment', `✅ UPI payment received for Order #${this.collectModal.orderId}`);
+//       this.pushAlert('payment', `✅ UPI payment received for Order #${this.collectModal.orderId}`);
       
-      // Refresh orders to move to history
-      this.getOrders();
-    } else {
-      alert(`Payment status: ${statusResponse?.status || 'Pending'}. Please ask customer to complete payment.`);
-    }
-  } catch (error: any) {
-    console.error('Error checking payment status:', error);
-    alert(`Error checking payment status: ${error.error?.message || 'Please try again'}`);
-  } finally {
-    this.busyCollect = false;
-  }
-}
+//       // Refresh orders to move to history
+//       this.getOrders();
+//     } else {
+//       alert(`Payment status: ${statusResponse?.status || 'Pending'}. Please ask customer to complete payment.`);
+//     }
+//   } catch (error: any) {
+//     console.error('Error checking payment status:', error);
+//     alert(`Error checking payment status: ${error.error?.message || 'Please try again'}`);
+//   } finally {
+//     this.busyCollect = false;
+//   }
+// }
 // Helper method to get table number from order
 getTableNoFromOrder(orderId: number): number {
   const order = this.orders.find(o => o.orderID === orderId);
@@ -691,135 +847,173 @@ getTableNoFromOrder(orderId: number): number {
 }
 
 // Fix the markCashReceived method
-async markCashReceived() {
-  this.busyCollect = true;
-  try {
-    // First, initiate payment if not already done
-    if (!this.collectModal.paymentId) {
-      const started: any = await firstValueFrom(
-        this.http.post(
-          `${this.API_BASE}/order/payments/initiate?orderId=${this.collectModal.orderId}&restaurantId=${this.restaurantId}&channel=Waiter&method=Cash`,
-          {},
-          this.httpOptions
-        )
-      );
+// async markCashReceived() {
+//   this.busyCollect = true;
+//   try {
+//     // First, initiate payment if not already done
+//     if (!this.collectModal.paymentId) {
+//       const started: any = await firstValueFrom(
+//         this.http.post(
+//           `${this.API_BASE}/order/payments/initiate?orderId=${this.collectModal.orderId}&restaurantId=${this.restaurantId}&channel=Waiter&method=Cash`,
+//           {},
+//           this.httpOptions
+//         )
+//       );
       
-      if (started?.paymentId) {
-        this.collectModal.paymentId = started.paymentId;
-      } else {
-        throw new Error('Failed to initiate cash payment');
-      }
-    }
+//       if (started?.paymentId) {
+//         this.collectModal.paymentId = started.paymentId;
+//       } else {
+//         throw new Error('Failed to initiate cash payment');
+//       }
+//     }
 
-    // Mark cash payment as completed
-    const result: any = await firstValueFrom(
-      this.http.post(
-        `${this.API_BASE}/order/payments/${this.collectModal.paymentId}/cash-complete?restaurantId=${this.restaurantId}`,
-        {},
+//     // Mark cash payment as completed
+//     const result: any = await firstValueFrom(
+//       this.http.post(
+//         `${this.API_BASE}/order/payments/${this.collectModal.paymentId}/cash-complete?restaurantId=${this.restaurantId}`,
+//         {},
+//         this.httpOptions
+//       )
+//     );
+
+//     if (result.success) {
+//       this.onPaymentCleared(this.collectModal.paymentId);
+//       this.closeCollectModal();
+      
+//       // Open bill in new tab
+//       window.open(`${this.API_BASE}/order/${this.collectModal.orderId}/bill?restaurantId=${this.restaurantId}`, '_blank');
+      
+//       this.pushAlert('payment', `✅ Cash payment of ₹${this.collectModal.amount} collected for Order #${this.collectModal.orderId}`);
+      
+//       // Refresh orders to move to history
+//       this.getOrders();
+//     } else {
+//       throw new Error(result.message || 'Failed to mark cash as received');
+//     }
+//   } catch (error: any) {
+//     console.error('Error marking cash received:', error);
+//     alert(`Error: ${error.error?.message || 'Failed to process cash payment'}`);
+//   } finally {
+//     this.busyCollect = false;
+//   }
+// }
+
+
+// Enhanced fetchPendingPayments to handle different ID formats
+  fetchPendingPayments(): void {
+    if (!this.restaurantId) return;
+    
+    this.http.get<any[]>(`${this.API_BASE}/order/pending-payments?restaurantId=${this.restaurantId}`, this.httpOptions)
+      .subscribe({
+        next: (payments) => {
+          console.log('📦 Raw payments from API:', payments);
+          
+          this.pendingPayments = (payments || []).map(p => ({
+            ...p,
+            paymentId: p.paymentID || p.paymentId || p.id
+          }));
+          
+          this.splitPending(this.pendingPayments);
+        },
+        error: err => {
+          console.error('❌ Error fetching pending payments:', err);
+          this.error = 'Failed to load pending payments';
+        }
+      });
+  }
+
+// async markUpiAsPaid(): Promise<void> {
+//   if (!this.collectModal.paymentId) {
+//     alert('No payment ID found. Please generate QR code first.');
+//     return;
+//   }
+  
+//   this.busyCollect = true;
+//   try {
+//     // ✅ FIX: Use PUT instead of POST for completion
+//     const result: any = await firstValueFrom(
+//       this.http.put(
+//         `${this.API_BASE}/order/payments/${this.collectModal.paymentId}/complete?restaurantId=${this.restaurantId}`,
+//         {},
+//         this.httpOptions
+//       )
+//     );
+
+//     // ✅ FIX: Handle different success response formats
+//     if (result.success !== false) {
+//       // If we get here, payment was successful
+//       this.onPaymentCleared(this.collectModal.paymentId);
+//       this.closeCollectModal();
+      
+//       // Open bill in new tab
+//       window.open(`${this.API_BASE}/order/${this.collectModal.orderId}/bill?restaurantId=${this.restaurantId}`, '_blank');
+      
+//       this.pushAlert('payment', `✅ UPI payment marked as paid for Order #${this.collectModal.orderId}`);
+      
+//       // Refresh orders to move to history
+//       this.getOrders();
+//     } else {
+//       // Only throw error if success is explicitly false
+//       throw new Error(result.message || 'Failed to mark UPI payment as paid');
+//     }
+//   } catch (error: any) {
+//     console.error('Error marking UPI as paid:', error);
+    
+//     // ✅ FIX: Check if this is actually a success message in error form
+//     if (error.error?.message?.includes('completed successfully') || 
+//         error.message?.includes('completed successfully')) {
+//       // This is actually a success - process it as such
+//       console.log('🔄 Processing successful payment from error format');
+//       this.onPaymentCleared(this.collectModal.paymentId);
+//       this.closeCollectModal();
+      
+//       window.open(`${this.API_BASE}/order/${this.collectModal.orderId}/bill?restaurantId=${this.restaurantId}`, '_blank');
+//       this.pushAlert('payment', `✅ UPI payment completed for Order #${this.collectModal.orderId}`);
+//       this.getOrders();
+//     } else {
+//       // This is a real error
+//       alert(`Error: ${error.error?.message || error.message || 'Failed to process UPI payment'}`);
+//     }
+//   } finally {
+//     this.busyCollect = false;
+//   }
+// }
+// Add this debug method to test your endpoints
+async testPaymentEndpoints(): Promise<void> {
+  if (!this.collectModal.paymentId) return;
+  
+  console.log('🔧 Testing payment endpoints for payment ID:', this.collectModal.paymentId);
+  
+  try {
+    // Test GET endpoint
+    const status: any = await firstValueFrom(
+      this.http.get(
+        `${this.API_BASE}/order/payments/${this.collectModal.paymentId}/status?restaurantId=${this.restaurantId}`,
         this.httpOptions
       )
     );
-
-    if (result.success) {
-      this.onPaymentCleared(this.collectModal.paymentId);
-      this.closeCollectModal();
-      
-      // Open bill in new tab
-      window.open(`${this.API_BASE}/order/${this.collectModal.orderId}/bill?restaurantId=${this.restaurantId}`, '_blank');
-      
-      this.pushAlert('payment', `✅ Cash payment of ₹${this.collectModal.amount} collected for Order #${this.collectModal.orderId}`);
-      
-      // Refresh orders to move to history
-      this.getOrders();
-    } else {
-      throw new Error(result.message || 'Failed to mark cash as received');
-    }
-  } catch (error: any) {
-    console.error('Error marking cash received:', error);
-    alert(`Error: ${error.error?.message || 'Failed to process cash payment'}`);
-  } finally {
-    this.busyCollect = false;
-  }
-}
-
-onPaymentCleared(paymentId: number): void {
-  console.log('🔄 Processing payment cleared for ID:', paymentId);
-  
-  // Remove from all payment arrays
-  this.pendingPayments = this.pendingPayments.filter(p => p.paymentID !== paymentId);
-  this.verifyPayments = this.verifyPayments.filter(p => p.paymentID !== paymentId);
-  this.collectPayments = this.collectPayments.filter(p => p.paymentID !== paymentId);
-  
-  // Refresh data to ensure order moves to history
-  this.fetchPendingPayments();
-  this.getOrders(); // This will refresh both current orders and history
-  
-  this.pushAlert('payment', `✅ Payment cleared successfully!`);
-}
-// Enhanced fetchPendingPayments to handle different ID formats
-fetchPendingPayments(): void {
-  this.http.get<any[]>(`${this.API_BASE}/order/pending-payments?restaurantId=${this.restaurantId}`, this.httpOptions)
-    .subscribe({
-      next: (payments) => {
-        console.log('📦 Raw payments from API:', payments);
-        
-        // Normalize payment IDs to handle different formats
-        this.pendingPayments = (payments || []).map(p => ({
-          ...p,
-          // Ensure we have a consistent paymentId field
-          paymentId: p.paymentID || p.paymentId || p.id
-        }));
-        
-        this.splitPending(this.pendingPayments);
-        console.log('✅ Normalized payments:', this.pendingPayments);
-      },
-      error: err => {
-        console.error('❌ Error fetching pending payments:', err);
-        this.error = 'Failed to load pending payments'; // ✅ Now this will work
-      }
-    });
-}
-
-// Add this method to your WaiterComponent class
-async markUpiAsPaid(): Promise<void> {
-  if (!this.collectModal.paymentId) {
-    alert('No payment ID found. Please generate QR code first.');
-    return;
-  }
-  
-  this.busyCollect = true;
-  try {
-    // Mark UPI payment as paid directly without checking status
-    const result: any = await firstValueFrom(
-      this.http.post(
+    console.log('✅ GET status works:', status);
+    
+    // Test PUT endpoint
+    const complete: any = await firstValueFrom(
+      this.http.put(
         `${this.API_BASE}/order/payments/${this.collectModal.paymentId}/complete?restaurantId=${this.restaurantId}`,
         {},
         this.httpOptions
       )
     );
-
-    if (result.success) {
-      this.onPaymentCleared(this.collectModal.paymentId);
-      this.closeCollectModal();
-      
-      // Open bill in new tab
-      window.open(`${this.API_BASE}/order/${this.collectModal.orderId}/bill?restaurantId=${this.restaurantId}`, '_blank');
-      
-      this.pushAlert('payment', `✅ UPI payment marked as paid for Order #${this.collectModal.orderId}`);
-      
-      // Refresh orders to move to history
-      this.getOrders();
-    } else {
-      throw new Error(result.message || 'Failed to mark UPI payment as paid');
-    }
+    console.log('✅ PUT complete works:', complete);
+    
   } catch (error: any) {
-    console.error('Error marking UPI as paid:', error);
-    alert(`Error: ${error.error?.message || 'Failed to process UPI payment'}`);
-  } finally {
-    this.busyCollect = false;
+    console.error('❌ Endpoint test failed:', error);
+    console.log('Error details:', {
+      status: error.status,
+      statusText: error.statusText,
+      url: error.url,
+      method: error.method
+    });
   }
 }
-
   mapOrderStatus(status: any): OrderStatus {
     if (typeof status === 'number') {
       return [
@@ -871,6 +1065,8 @@ async markUpiAsPaid(): Promise<void> {
 
   toggleSidebar(): void {
     this.isSidebarOpen = !this.isSidebarOpen;
+      this.persistUIState(); // ✅ Persist sidebar state
+
   }
 
   get groupedOrdersByTable(): { tableNo: number; orders: Order[] }[] {
@@ -899,8 +1095,129 @@ async markUpiAsPaid(): Promise<void> {
   }, 20000); // auto-dismiss after 20s
 }
 
+async markUpiAsPaid(): Promise<void> {
+  if (!this.collectModal.paymentId) {
+    alert('No payment ID found. Please generate QR code first.');
+    return;
+  }
+  
+  this.busyCollect = true;
+  try {
+    const result: any = await firstValueFrom(
+      this.http.put(
+        `${this.API_BASE}/order/payments/${this.collectModal.paymentId}/complete?restaurantId=${this.restaurantId}`,
+        {},
+        this.httpOptions
+      )
+    );
 
+    console.log('Payment completion response:', result);
+
+    if (result.success !== false) {
+      this.onPaymentCleared(this.collectModal.paymentId);
+      this.closeCollectModal();
+      
+      this.pushAlert('payment', `✅ UPI payment completed! Order #${this.collectModal.orderId} moved to history`);
+      
+      // Simple refresh - order should now be in history
+      setTimeout(() => {
+        this.fetchPendingPayments();
+        this.getOrders(); // This will move the order from active to history
+      }, 1000);
+      
+    } else {
+      throw new Error(result.message || 'Failed to mark UPI payment as paid');
+    }
+  } catch (error: any) {
+    console.error('Error marking UPI as paid:', error);
+    
+    // Check if this is actually a success
+    if (error.error?.message?.includes('completed successfully') || 
+        error.message?.includes('completed successfully')) {
+      // Process as success
+      this.onPaymentCleared(this.collectModal.paymentId);
+      this.closeCollectModal();
+      
+      this.pushAlert('payment', `✅ UPI payment completed! Order #${this.collectModal.orderId} moved to history`);
+      
+      setTimeout(() => {
+        this.fetchPendingPayments();
+        this.getOrders();
+      }, 1000);
+    } else {
+      alert(`Error: ${error.error?.message || error.message || 'Failed to process UPI payment'}`);
+    }
+  } finally {
+    this.busyCollect = false;
+  }
+}
+
+async markCashReceived() {
+  this.busyCollect = true;
+  try {
+    // First, initiate payment if not already done
+    if (!this.collectModal.paymentId) {
+      const started: any = await firstValueFrom(
+        this.http.post(
+          `${this.API_BASE}/order/payments/initiate?orderId=${this.collectModal.orderId}&restaurantId=${this.restaurantId}&channel=Waiter&method=Cash`,
+          {},
+          this.httpOptions
+        )
+      );
+      
+      if (started?.paymentId) {
+        this.collectModal.paymentId = started.paymentId;
+      } else {
+        throw new Error('Failed to initiate cash payment');
+      }
+    }
+
+    // Mark cash payment as completed
+    const result: any = await firstValueFrom(
+      this.http.put(
+        `${this.API_BASE}/order/payments/${this.collectModal.paymentId}/complete?restaurantId=${this.restaurantId}`,
+        {},
+        this.httpOptions
+      )
+    );
+
+    console.log('Cash payment completion response:', result);
+
+    // Handle success
+    this.onPaymentCleared(this.collectModal.paymentId);
+    this.closeCollectModal();
+    
+    this.pushAlert('payment', `✅ Cash payment received! Order #${this.collectModal.orderId} moved to history`);
+    
+    // Simple refresh
+    setTimeout(() => {
+      this.fetchPendingPayments();
+      this.getOrders();
+    }, 1000);
+    
+  } catch (error: any) {
+    console.error('Error marking cash received:', error);
+    
+    // Check if payment was actually successful despite error
+    if (error.error?.message?.includes('completed successfully') || 
+        error.message?.includes('completed successfully')) {
+      // Process as success
+      this.onPaymentCleared(this.collectModal.paymentId);
+      this.closeCollectModal();
+      this.pushAlert('payment', `✅ Cash payment completed! Order #${this.collectModal.orderId} moved to history`);
+      this.fetchPendingPayments();
+      this.getOrders();
+    } else {
+      alert(`Error: ${error.error?.message || 'Failed to process cash payment'}`);
+    }
+  } finally {
+    this.busyCollect = false;
+  }
+}
+  // ✅ UPDATED: All API calls now include restaurantId
 private getOrders(): void {
+  if (!this.restaurantId) return;
+
   this.http.get<any>(`${this.API_BASE}/order/with-waiter?restaurantId=${this.restaurantId}`, this.httpOptions)
     .subscribe({
       next: res => {
@@ -908,15 +1225,14 @@ private getOrders(): void {
           orderID: o.orderID,
           tableNo: o.tableNo,
           orderStatus: this.mapOrderStatus(o.orderStatus),
+          // ✅ Kitchen status is just for display, not for logic
           kitchenStatus: o.kitchenStatus ? this.mapKitchenStatus(o.kitchenStatus) : KitchenStatus.Pending,
           items: this.unwrapArray<any>(o.items).map(i => ({
             productID: i.productID,
             productName: i.productName,
             quantity: i.quantity,
-              unitPrice: i.unitPrice, 
-  orderItemID: i.orderItemID || i.orderItemId || i.id || i.OrderItemID, // ✅ Handle all possible property names
-
-
+            unitPrice: i.unitPrice, 
+            orderItemID: i.orderItemID || i.orderItemId || i.id || i.OrderItemID,
             customizations: i.customizations || []
           })),
           createdAt: o.createdAt ? new Date(o.createdAt) : undefined,
@@ -929,54 +1245,33 @@ private getOrders(): void {
           } : undefined
         }));
 
-        // Current orders - only Pending and Confirmed status
+        // ✅ SIMPLE RULE: Active orders are ONLY Pending and Confirmed
         this.orders = all.filter(o =>
           o.orderStatus === OrderStatus.Pending || 
           o.orderStatus === OrderStatus.Confirmed
         );
 
-        // History orders - Served, Completed, Cancelled
+        // ✅ SIMPLE RULE: History orders are EVERYTHING ELSE
         this.allHistoryOrders = all.filter(o =>
-          o.orderStatus === OrderStatus.Served ||
           o.orderStatus === OrderStatus.Completed ||
-          o.orderStatus === OrderStatus.Cancelled
+          o.orderStatus === OrderStatus.Cancelled ||
+          o.orderStatus === OrderStatus.Served
         );
 
         this.applyHistoryFilter();
         
-        console.log('📊 Orders after payment clear:', {
-          currentOrders: this.orders.length,
-          historyOrders: this.allHistoryOrders.length,
-          allOrders: all.length
-        });
-
-        // Rest of your existing logic...
-        this.groupedUpcomingOrders = this.groupOrdersByTable(this.upcomingOrders);
+        // Group orders for display (kitchen status doesn't affect grouping)
+        this.groupedUpcomingOrders = this.groupOrdersByTable(this.orders);
         if (!this.selectedTableNo && this.groupedUpcomingOrders.length > 0) {
           this.selectedTableNo = this.groupedUpcomingOrders[0].tableNo;
         }
 
-        // New order notifications...
-        const newOrders = this.orders.filter(o =>
-          (o.orderStatus === OrderStatus.Pending || o.orderStatus === OrderStatus.Confirmed) &&
-          o.orderID > this.lastSeenOrderID
-        );
-
-        if (newOrders.length > 0) {
-          this.newOrderSound.play().catch(() => {});
-          this.vibrate();
-          this.lastSeenOrderID = Math.max(...newOrders.map(o => o.orderID), this.lastSeenOrderID);
-          localStorage.setItem('lastSeenOrderID', this.lastSeenOrderID.toString());
-        }
-
+        // Update display arrays
         this.updateReadyTables();
-        this.upcomingOrdersSorted = this.upcomingOrders
-          .sort((a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0));
       },
       error: err => console.error('Error fetching orders:', err)
     });
-  }
-applyHistoryFilter(): void {
+}lyHistoryFilter(): void {
   const now = new Date();
 
   if (this.historyFilter === 'all') {
@@ -992,6 +1287,8 @@ applyHistoryFilter(): void {
       o.closedAt && new Date(o.closedAt).toDateString() === today
     );
   }
+  
+  this.persistUIState(); // ✅ Persist filter changes
 }
 
 toggleTableGroup(tableGroup: any): void {
@@ -1034,9 +1331,13 @@ groupOrdersByTable(orders: Order[]): { tableNo: number; orders: Order[]; expande
   }));
 }
 
+  // ✅ UPDATED: Include restaurantId in waiter requests
   getWaiterRequests(): void {
+    if (!this.restaurantId) return;
+    
     this.http.get<{ data: WaiterRequest[] }>(
-      `${this.API_BASE}/order/waiter-requests?restaurantId=${this.restaurantId}`, this.httpOptions
+      `${this.API_BASE}/order/waiter-requests?restaurantId=${this.restaurantId}`, 
+      this.httpOptions
     ).subscribe({
       next: res => this.waiterRequests = res.data,
       error: err => console.error('Error fetching waiter requests:', err)
@@ -1057,12 +1358,27 @@ get upcomingOrders(): Order[] {
 
 // In your waiter.component.ts
 get readyToServeOrders(): Order[] {
+  // If you still want to show ready orders, base it purely on order status
   return this.orders.filter(o => 
-    o.orderStatus === OrderStatus.Confirmed &&
-    o.kitchenStatus === KitchenStatus.Ready
+    o.orderStatus === OrderStatus.Confirmed
+    // ✅ No kitchen status dependency
   );
 }
-
+serveOrder(orderID: number): void {
+  if (!this.restaurantId) return;
+  
+  this.http.put(`${this.API_BASE}/Order/${orderID}/serve?restaurantId=${this.restaurantId}`, null, this.httpOptions)
+    .subscribe({
+      next: () => {
+        this.getOrders(); // Refresh the orders list
+        this.pushAlert('order', `✅ Order #${orderID} marked as served and moved to history`);
+      },
+      error: err => {
+        console.error('Error serving order:', err);
+        alert('Failed to mark order as served');
+      }
+    });
+}
 
 groupByTable(orders: Order[]): { tableNo: number; orders: Order[]; expanded: boolean }[] {
   const map: Record<number, Order[]> = {};
@@ -1082,32 +1398,32 @@ groupByTable(orders: Order[]): { tableNo: number; orders: Order[]; expanded: boo
 
 
 
-acceptRequest(requestId: number): void {
-  this.http.put(
-    `${this.API_BASE}/order/waiter-requests/${requestId}/accept`,
-    null,
-    this.httpOptions
-  ).subscribe({
-    next: () => {
-      const accepted = this.unreadRequests.find(r => r.waiterRequestID === requestId);
+  acceptRequest(requestId: number): void {
+    if (!this.restaurantId) return;
+    
+    this.http.put(
+      `${this.API_BASE}/order/waiter-requests/${requestId}/accept?restaurantId=${this.restaurantId}`,
+      null,
+      this.httpOptions
+    ).subscribe({
+      next: () => {
+        const accepted = this.unreadRequests.find(r => r.waiterRequestID === requestId);
+        this.unreadRequests = this.unreadRequests.filter(r => r.waiterRequestID !== requestId);
 
-      // Remove from unread list
-      this.unreadRequests = this.unreadRequests.filter(r => r.waiterRequestID !== requestId);
+        if (accepted && !this.waiterRequests.some(r => r.waiterRequestID === requestId)) {
+          this.waiterRequests.push({ ...accepted, isAccepted: true });
+        }
 
-      // Add to waiterRequests with accepted flag
-      if (accepted && !this.waiterRequests.some(r => r.waiterRequestID === requestId)) {
-        this.waiterRequests.push({ ...accepted, isAccepted: true });
-      }
+        const index = this.waiterRequests.findIndex(r => r.waiterRequestID === requestId);
+        if (index !== -1) {
+          this.waiterRequests[index].isAccepted = true;
+        }
+      },
+      error: err => console.error('Error accepting request:', err)
+    });
+  }
 
-      // If already exists, update isAccepted flag
-      const index = this.waiterRequests.findIndex(r => r.waiterRequestID === requestId);
-      if (index !== -1) {
-        this.waiterRequests[index].isAccepted = true;
-      }
-    },
-    error: err => console.error('Error accepting request:', err)
-  });
-}
+
 
 
 
@@ -1130,17 +1446,20 @@ completeRequest(requestId: number): void {
   }
 
  
+
+
 updateOrderItemQuantity(item: any, newQuantity: number): void {
-  console.log('🔄 Updating item:', item); // Debug log
+  console.log('🔄 Updating item quantity:', item, newQuantity);
   
-  // Try different possible property names for order item ID
   const orderItemID = item.orderItemID || item.orderItemId || item.id || item.OrderItemID || item.itemId;
-  
-  console.log('🔍 Extracted order item ID:', orderItemID);
   
   if (!orderItemID) {
     console.error('❌ No valid order item ID found for item:', item);
-    alert('Cannot update item: Missing item identifier');
+    return;
+  }
+
+  if (this.isOrderLocked()) {
+
     return;
   }
 
@@ -1149,88 +1468,24 @@ updateOrderItemQuantity(item: any, newQuantity: number): void {
     return;
   }
 
-  // Check if order is locked first
-  if (this.isOrderLocked()) {
-    alert('Cannot modify order that has been served, completed, or cancelled');
-    return;
-  }
-
-  const payload = {
-    quantity: newQuantity,
-    changedByUserId: this.getCurrentUserId()
-  };
-
-  console.log('📤 Making API call with:', {
-    orderId: this.selectedOrderForEdit.orderID,
-    itemId: orderItemID,
-    restaurantId: this.restaurantId,
-    payload: payload
-  });
-
-  this.http.put(
-    `${this.API_BASE}/order/${this.selectedOrderForEdit.orderID}/update-item/${orderItemID}?restaurantId=${this.restaurantId}`, 
-    payload,
-    this.httpOptions
-  ).subscribe({
-    next: (response: any) => {
-      this.pushAlert('order', `✅ Updated ${item.productName} quantity to ${newQuantity}`);
-      this.getOrders(); // Refresh orders
-      this.showEditOrderModal = false; // Close modal after update
-    },
-    error: (err) => {
-      console.error('Error updating item quantity:', err);
-      alert('Failed to update item quantity: ' + (err.error?.message || err.message));
-    }
-  });
-}
-
-removeOrderItem(item: any): void {
-  console.log('🗑️ Removing item:', item);
+  // Store the change in pending changes instead of making API call immediately
+  this.pendingChanges.quantityUpdates.set(orderItemID, newQuantity);
   
-  // Try different possible property names for order item ID
-  const orderItemID = item.orderItemID || item.orderItemId || item.id || item.OrderItemID || item.itemId;
+  // Update the UI immediately for better UX
+  const itemIndex = this.selectedOrderForEdit.items.findIndex((i: any) => 
+    (i.orderItemID || i.orderItemId || i.id || i.OrderItemID || i.itemId) === orderItemID
+  );
   
-  console.log('🔍 Extracted order item ID for removal:', orderItemID);
+  if (itemIndex !== -1) {
+    this.selectedOrderForEdit.items[itemIndex].quantity = newQuantity;
+  }
   
-  if (!orderItemID) {
-    console.error('❌ No valid order item ID found for item:', item);
-    alert('Cannot remove item: Missing item identifier');
-    return;
-  }
-
-  if (this.isOrderLocked()) {
-    alert('Cannot modify order that has been served, completed, or cancelled');
-    return;
-  }
-
-  if (confirm(`Remove ${item.productName} from order?`)) {
-    const payload = {
-      quantity: 0, // This will remove the item
-      changedByUserId: this.getCurrentUserId()
-    };
-
-    this.http.put(
-      `${this.API_BASE}/order/${this.selectedOrderForEdit.orderID}/update-item/${orderItemID}?restaurantId=${this.restaurantId}`,
-      payload,
-      this.httpOptions
-    ).subscribe({
-      next: (response: any) => {
-        this.getOrders();
-        this.pushAlert('order', `❌ Removed ${item.productName} from order`);
-        this.showEditOrderModal = false;
-      },
-      error: (err) => {
-        console.error('Error removing item:', err);
-        alert('Failed to remove item: ' + (err.error?.message || err.message));
-      }
-    });
-  }
+  this.pushAlert('order', `📝 Quantity updated for ${item.productName} to ${newQuantity} (Pending Save)`);
 }
 
 
 addItemToOrder(product: any): void {
   if (this.isOrderLocked()) {
-    alert('Cannot modify order that has been served, completed, or cancelled');
     return;
   }
 
@@ -1252,13 +1507,11 @@ addItemToOrder(product: any): void {
     },
     error: (err) => {
       console.error('Error adding item to order:', err);
-      alert('Failed to add item to order: ' + (err.error?.message || err.message));
     }
   });
 }
 cancelOrder(order: any): void {
   if (this.isOrderLocked()) {
-    alert('Cannot cancel order that has been served, completed, or cancelled');
     return;
   }
 
@@ -1298,7 +1551,6 @@ getOrderChangeHistory(orderId: number): void {
       },
       error: (err) => {
         console.error('Error fetching change history:', err);
-        alert('Failed to load change history');
       }
     });
 }
@@ -1321,10 +1573,13 @@ getSelectedTableOrders(): any[] {
 switchSection(section: 'orders' | 'requests' | 'history' | 'pendingPayments' | 'readyOrders' | 'newOrder'): void {
   this.selectedSection = section;
   this.isSidebarOpen = false; // optional: auto-close sidebar after selecting
+  this.persistUIState(); // ✅ Persist on section change
+
 }
-// Add these two new methods to your WaiterComponent class
+// Original close method
 closeEditOrderModal(): void {
   this.showEditOrderModal = false;
+  this.resetPendingChanges();
 }
 getCustomizationsText(customizations: any[] | undefined): string {
   if (!customizations || customizations.length === 0) return '';
@@ -1336,7 +1591,114 @@ setCollectModalTab(tab: 'UPI' | 'CASH'): void {
     this.collectModal.upiUri = ''; // Reset UPI URI when switching tabs
   }
 }
+closeEditOrderModalWithConfirmation(): void {
+  if (this.hasUnsavedChanges()) {
+    if (confirm('You have unsaved changes. Are you sure you want to close without saving?')) {
+      this.closeEditOrderModal();
+    }
+  } else {
+    this.closeEditOrderModal();
+  }
+}
 
+// New method to save all changes
+async saveOrderChanges(): Promise<void> {
+  if (this.isSavingChanges) return;
+  
+  this.isSavingChanges = true;
+  
+  try {
+    let successCount = 0;
+    const totalChanges = this.pendingChanges.quantityUpdates.size + 
+                        this.pendingChanges.itemsToRemove.length + 
+                        this.pendingChanges.itemsToAdd.length;
+
+    // Process quantity updates
+    for (const [orderItemID, newQuantity] of this.pendingChanges.quantityUpdates) {
+      try {
+        const payload = {
+          quantity: newQuantity,
+          changedByUserId: this.getCurrentUserId()
+        };
+
+        await firstValueFrom(
+          this.http.put(
+            `${this.API_BASE}/order/${this.selectedOrderForEdit.orderID}/update-item/${orderItemID}?restaurantId=${this.restaurantId}`, 
+            payload,
+            this.httpOptions
+          )
+        );
+        successCount++;
+      } catch (error) {
+        console.error(`Error updating item ${orderItemID}:`, error);
+        throw new Error(`Failed to update item quantity: ${error}`);
+      }
+    }
+
+    // Process item removals
+    for (const orderItemID of this.pendingChanges.itemsToRemove) {
+      try {
+        const payload = {
+          quantity: 0, // This will remove the item
+          changedByUserId: this.getCurrentUserId()
+        };
+
+        await firstValueFrom(
+          this.http.put(
+            `${this.API_BASE}/order/${this.selectedOrderForEdit.orderID}/update-item/${orderItemID}?restaurantId=${this.restaurantId}`,
+            payload,
+            this.httpOptions
+          )
+        );
+        successCount++;
+      } catch (error) {
+        console.error(`Error removing item ${orderItemID}:`, error);
+        throw new Error(`Failed to remove item: ${error}`);
+      }
+    }
+
+    // Process new items
+    for (const product of this.pendingChanges.itemsToAdd) {
+      try {
+        const payload = {
+          productID: product.productID,
+          quantity: product.quantity,
+          changedByUserId: this.getCurrentUserId()
+        };
+
+        await firstValueFrom(
+          this.http.post(
+            `${this.API_BASE}/order/${this.selectedOrderForEdit.orderID}/add-item?restaurantId=${this.restaurantId}`,
+            payload,
+            this.httpOptions
+          )
+        );
+        successCount++;
+      } catch (error) {
+        console.error(`Error adding item ${product.productID}:`, error);
+        throw new Error(`Failed to add item: ${error}`);
+      }
+    }
+
+    // If all changes were successful
+    if (successCount === totalChanges) {
+      this.pushAlert('order', `✅ Successfully saved ${successCount} changes to order #${this.selectedOrderForEdit.orderID}`);
+      this.resetPendingChanges();
+      this.getOrders(); // Refresh orders from server
+      this.showEditOrderModal = false; // Close modal
+    } else {
+      throw new Error(`Only ${successCount} out of ${totalChanges} changes were saved`);
+    }
+
+  } catch (error: any) {
+    console.error('Error saving order changes:', error);
+    
+    // Refresh data to ensure consistency
+    this.getOrders();
+  } finally {
+    this.isSavingChanges = false;
+  }
+}
 async collectWaiterPayment(orderId: number, method: 'Cash' | 'UPI'): Promise<void> {
   try {
     const response: any = await firstValueFrom(
@@ -1356,7 +1718,7 @@ async collectWaiterPayment(orderId: number, method: 'Cash' | 'UPI'): Promise<voi
           this.httpOptions
         )
       );
-      this.pushAlert('payment', `💰 Cash payment collected for Order #${orderId}`);
+      this.pushAlert('payment', `Cash payment collected for Order #${orderId}`);
     } else {
       // UPI payment - show QR code
       this.openCollectModal({
@@ -1489,7 +1851,6 @@ getSelectedProductsTotal(): number {
 
 addSelectedProductsToOrder(): void {
   if (this.isOrderLocked()) {
-    alert('Cannot modify order that has been served, completed, or cancelled');
     return;
   }
 
@@ -1503,47 +1864,29 @@ addSelectedProductsToOrder(): void {
           productID: productId,
           quantity: quantity,
           productName: product.productName,
-          unitPrice: product.price
+          unitPrice: product.price,
+          // Temporary ID for UI display
+          tempId: Date.now() + productId
         });
       }
     }
   });
 
   if (productsToAdd.length === 0) {
-    alert('Please select at least one product to add');
     return;
   }
 
-  // Add products one by one
-  let completed = 0;
-  productsToAdd.forEach(product => {
-    const payload = {
-      productID: product.productID,
-      quantity: product.quantity,
-      changedByUserId: this.getCurrentUserId()
-    };
-
-    this.http.post(
-      `${this.API_BASE}/order/${this.selectedOrderForEdit.orderID}/add-item?restaurantId=${this.restaurantId}`,
-      payload,
-      this.httpOptions
-    ).subscribe({
-      next: () => {
-        completed++;
-        if (completed === productsToAdd.length) {
-          this.getOrders();
-          this.pushAlert('order', `✅ Added ${productsToAdd.length} items to order`);
-          this.productQuantities.clear();
-          this.showProductList = false;
-          this.showEditOrderModal = false;
-        }
-      },
-      error: (err) => {
-        console.error('Error adding item:', err);
-        alert(`Failed to add ${product.productName}: ${err.error?.message || err.message}`);
-      }
-    });
-  });
+  // Add to pending changes and update UI
+  this.pendingChanges.itemsToAdd.push(...productsToAdd);
+  
+  // Add to UI immediately for better UX
+  this.selectedOrderForEdit.items.push(...productsToAdd);
+  
+  this.pushAlert('order', `✅ Added ${productsToAdd.length} items to order (Pending Save)`);
+  
+  // Clear selection
+  this.productQuantities.clear();
+  this.showProductList = false;
 }
 
 printOrderBill(orderId: number): void {
@@ -1551,16 +1894,61 @@ printOrderBill(orderId: number): void {
   window.open(url, '_blank');
 }
 
+removeOrderItem(item: any): void {
+  console.log('🗑️ Marking item for removal:', item);
+  
+  const orderItemID = item.orderItemID || item.orderItemId || item.id || item.OrderItemID || item.itemId;
+  
+  if (!orderItemID) {
+    console.error('❌ No valid order item ID found for item:', item);
+    return;
+  }
+
+  if (this.isOrderLocked()) {
+    return;
+  }
+
+  if (confirm(`Remove ${item.productName} from order? This change will be saved when you click "Save Changes".`)) {
+    // Mark for removal in pending changes
+    this.pendingChanges.itemsToRemove.push(orderItemID);
+    
+    // Remove from UI immediately for better UX
+    this.selectedOrderForEdit.items = this.selectedOrderForEdit.items.filter((i: any) => 
+      (i.orderItemID || i.orderItemId || i.id || i.OrderItemID || i.itemId) !== orderItemID
+    );
+    
+    this.pushAlert('order', `❌ Marked ${item.productName} for removal (Pending Save)`);
+  }
+}
+
 // Enhanced openEditOrderModal method
 openEditOrderModal(order: any): void {
   this.selectedOrderForEdit = JSON.parse(JSON.stringify(order)); // Deep copy
+  this.originalOrderData = JSON.parse(JSON.stringify(order)); // Store original for comparison
   this.showProductList = false;
   this.productSearch = '';
   this.selectedCategory = '';
   this.productQuantities.clear();
+  this.resetPendingChanges(); // Reset changes when opening modal
   this.loadAvailableProducts();
   this.showEditOrderModal = true;
 }
+// Reset pending changes
+resetPendingChanges(): void {
+  this.pendingChanges = {
+    quantityUpdates: new Map<number, number>(),
+    itemsToRemove: [],
+    itemsToAdd: []
+  };
+}
+
+// Check if there are unsaved changes
+hasUnsavedChanges(): boolean {
+  return this.pendingChanges.quantityUpdates.size > 0 ||
+         this.pendingChanges.itemsToRemove.length > 0 ||
+         this.pendingChanges.itemsToAdd.length > 0;
+}
+
 
 // Enhanced loadAvailableProducts method
 loadAvailableProducts(): void {
@@ -1577,20 +1965,68 @@ loadAvailableProducts(): void {
       }
     });
 }
-serveOrder(orderID: number): void {
-  this.http.put(`${this.API_BASE}/Order/${orderID}/serve?restaurantId=${this.restaurantId}`, null, this.httpOptions)
-    .subscribe({
-      next: () => {
-        // Update local state - order should move from orders to history
-        this.getOrders(); // Refresh to get updated order status
-        
-        // Optional: Show confirmation message
-        this.pushAlert('order', `✅ Order #${orderID} marked as served and moved to history`);
-      },
-      error: err => {
-        console.error('Error serving order:', err);
-        alert('Failed to mark order as served');
-      }
-    });
+shouldShowServeButton(order: Order): boolean {
+  return order.orderStatus !== OrderStatus.Served && 
+         order.orderStatus !== OrderStatus.Completed && 
+         order.orderStatus !== OrderStatus.Cancelled;
 }
+
+
+
+onPaymentCleared(paymentId: number): void {
+  console.log('🔄 Payment cleared for ID:', paymentId);
+  
+  // Simply remove from payment arrays
+  this.pendingPayments = this.pendingPayments.filter(p => 
+    (p.paymentID || p.paymentId || p.id) !== paymentId
+  );
+  this.verifyPayments = this.verifyPayments.filter(p => 
+    (p.paymentID || p.paymentId || p.id) !== paymentId
+  );
+  this.collectPayments = this.collectPayments.filter(p => 
+    (p.paymentID || p.paymentId || p.id) !== paymentId
+  );
+  
+  console.log('✅ Payment cleared - order will move to history on next refresh');
+  // No kitchen status reset needed
+}
+// Also update the finalizeIfPaid method to remove bill download
+async finalizeIfPaid() {
+  if (!this.collectModal.paymentId) {
+    return;
+  }
+  
+  this.busyCollect = true;
+  try {
+    const statusResponse: any = await firstValueFrom(
+      this.http.get(
+        `${this.API_BASE}/order/payments/${this.collectModal.paymentId}/status?restaurantId=${this.restaurantId}`,
+        this.httpOptions
+      )
+    );
+
+    console.log('Payment Status Response:', statusResponse);
+
+    // Handle different possible status values
+    const paidStatuses = ['Paid', 'Completed', 'Success', 'Success'];
+    if (paidStatuses.includes(statusResponse?.status)) {
+      this.onPaymentCleared(this.collectModal.paymentId);
+      this.closeCollectModal();
+      
+      // ❌ REMOVED: Bill download
+      // window.open(`${this.API_BASE}/order/${this.collectModal.orderId}/bill?restaurantId=${this.restaurantId}`, '_blank');
+      
+      this.pushAlert('payment', `✅ UPI payment received for Order #${this.collectModal.orderId}`);
+      
+      // Refresh orders to move to history
+      this.getOrders();
+    } else {
+    }
+  } catch (error: any) {
+    console.error('Error checking payment status:', error);
+  } finally {
+    this.busyCollect = false;
+  }
+}
+
 }   
