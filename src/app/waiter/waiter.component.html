@@ -358,6 +358,20 @@
                       {{selectedOrderForEdit.orderStatus}}
                     </span>
                   </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                <span><strong>Table No:</strong></span>
+                <select class="form-select form-select-sm w-50" 
+                        [(ngModel)]="selectedOrderForEdit.tableNo"
+                        [disabled]="isOrderLocked()"
+                        name="tableSelector">
+                  <option *ngIf="availableTables.length === 0" [value]="originalOrderData?.tableNo">
+                    Loading tables...
+                  </option>
+                  <option *ngFor="let table of availableTables" [value]="table.restaurantTableID">
+                    {{ table.tableName }}
+                  </option>
+                </select>
+              </div>
                   <div class="d-flex justify-content-between mb-2">
                     <span><strong>Kitchen Status:</strong></span>
                     <span class="badge" [class]="getKitchenStatusBadgeClass(selectedOrderForEdit.kitchenStatus)">

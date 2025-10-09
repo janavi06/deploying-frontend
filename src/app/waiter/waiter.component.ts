@@ -110,6 +110,7 @@ lastSeenOrderID: number = Number(localStorage.getItem('lastSeenOrderID') || 0);
 selectedTableNo: number | null = null;
 historyFilter: 'today' | '2days' | 'all' = 'today';
 allHistoryOrders: Order[] = [];  // full copy to preserve
+  availableTables: any[] = []; // ✅ ADD: To store the list of tables
 
 selectedOrderForEdit: any = null;
 showEditOrderModal = false;
@@ -1624,29 +1625,54 @@ closeEditOrderModalWithConfirmation(): void {
   }
 }
 
-// New method to save all changes
 async saveOrderChanges(): Promise<void> {
-  if (this.isSavingChanges) return;
-  
+  if (this.isSavingChanges || !this.hasUnsavedChanges()) {
+    return;
+  }
+
   this.isSavingChanges = true;
-  
+
   try {
     let successCount = 0;
-    const totalChanges = this.pendingChanges.quantityUpdates.size + 
-                        this.pendingChanges.itemsToRemove.length + 
-                        this.pendingChanges.itemsToAdd.length;
+    const tableHasChanged = this.selectedOrderForEdit.tableNo !== this.originalOrderData.tableNo;
+    const totalChanges = this.pendingChanges.quantityUpdates.size +
+                         this.pendingChanges.itemsToRemove.length +
+                         this.pendingChanges.itemsToAdd.length +
+                         (tableHasChanged ? 1 : 0);
 
-    // Process quantity updates
+    // --- 1. Process Table Change First ---
+    if (tableHasChanged) {
+      try {
+        const payload = {
+          // This is the fix: The '+' converts the string value from the dropdown to a number.
+          newTableNo: +this.selectedOrderForEdit.tableNo,
+          changedByUserId: this.getCurrentUserId()
+        };
+
+        await firstValueFrom(
+          this.http.put(
+            `${this.API_BASE}/order/${this.selectedOrderForEdit.orderID}/change-table?restaurantId=${this.restaurantId}`,
+            payload,
+            this.httpOptions
+          )
+        );
+        successCount++;
+      } catch (error: any) {
+        console.error(`Error changing table for order ${this.selectedOrderForEdit.orderID}:`, error);
+        throw new Error(`Failed to change table: ${error.error?.message || 'Server error'}`);
+      }
+    }
+
+    // --- 2. Process Item Quantity Updates ---
     for (const [orderItemID, newQuantity] of this.pendingChanges.quantityUpdates) {
       try {
         const payload = {
           quantity: newQuantity,
           changedByUserId: this.getCurrentUserId()
         };
-
         await firstValueFrom(
           this.http.put(
-            `${this.API_BASE}/order/${this.selectedOrderForEdit.orderID}/update-item/${orderItemID}?restaurantId=${this.restaurantId}`, 
+            `${this.API_BASE}/order/${this.selectedOrderForEdit.orderID}/update-item/${orderItemID}?restaurantId=${this.restaurantId}`,
             payload,
             this.httpOptions
           )
@@ -1658,14 +1684,13 @@ async saveOrderChanges(): Promise<void> {
       }
     }
 
-    // Process item removals
+    // --- 3. Process Item Removals ---
     for (const orderItemID of this.pendingChanges.itemsToRemove) {
       try {
         const payload = {
-          quantity: 0, // This will remove the item
+          quantity: 0, // Setting quantity to 0 removes the item
           changedByUserId: this.getCurrentUserId()
         };
-
         await firstValueFrom(
           this.http.put(
             `${this.API_BASE}/order/${this.selectedOrderForEdit.orderID}/update-item/${orderItemID}?restaurantId=${this.restaurantId}`,
@@ -1680,7 +1705,7 @@ async saveOrderChanges(): Promise<void> {
       }
     }
 
-    // Process new items
+    // --- 4. Process New Items ---
     for (const product of this.pendingChanges.itemsToAdd) {
       try {
         const payload = {
@@ -1688,7 +1713,6 @@ async saveOrderChanges(): Promise<void> {
           quantity: product.quantity,
           changedByUserId: this.getCurrentUserId()
         };
-
         await firstValueFrom(
           this.http.post(
             `${this.API_BASE}/order/${this.selectedOrderForEdit.orderID}/add-item?restaurantId=${this.restaurantId}`,
@@ -1703,7 +1727,7 @@ async saveOrderChanges(): Promise<void> {
       }
     }
 
-    // If all changes were successful
+    // --- Finalization ---
     if (successCount === totalChanges) {
       this.pushAlert('order', `✅ Successfully saved ${successCount} changes to order #${this.selectedOrderForEdit.orderID}`);
       this.resetPendingChanges();
@@ -1715,8 +1739,8 @@ async saveOrderChanges(): Promise<void> {
 
   } catch (error: any) {
     console.error('Error saving order changes:', error);
-    
-    // Refresh data to ensure consistency
+    this.pushAlert('order', `❌ Error saving changes: ${error.message}`);
+    // Refresh data to ensure consistency with the server state
     this.getOrders();
   } finally {
     this.isSavingChanges = false;
@@ -1954,6 +1978,8 @@ openEditOrderModal(order: any): void {
   this.productQuantities.clear();
   this.resetPendingChanges(); // Reset changes when opening modal
   this.loadAvailableProducts();
+      this.loadAvailableTables(); // ✅ ADD THIS LINE
+
   this.showEditOrderModal = true;
 }
 // Reset pending changes
@@ -1964,13 +1990,30 @@ resetPendingChanges(): void {
     itemsToAdd: []
   };
 }
-
+ // ✅ ADD: New method to fetch all available tables for the restaurant
+  loadAvailableTables(): void {
+    if (!this.restaurantId) return;
+    this.http.get<any[]>(`${this.API_BASE}/restauranttables?restaurantId=${this.restaurantId}`)
+      .subscribe({
+        next: (tables) => {
+          this.availableTables = tables.sort((a, b) => a.tableName.localeCompare(b.tableName, undefined, { numeric: true }));
+          console.log('✅ Loaded available tables:', this.availableTables);
+        },
+        error: (err) => {
+          console.error('❌ Error loading available tables:', err);
+          this.availableTables = []; // Reset on error to prevent issues
+        }
+      });
+  }
 // Check if there are unsaved changes
-hasUnsavedChanges(): boolean {
-  return this.pendingChanges.quantityUpdates.size > 0 ||
-         this.pendingChanges.itemsToRemove.length > 0 ||
-         this.pendingChanges.itemsToAdd.length > 0;
-}
+ hasUnsavedChanges(): boolean {
+    const tableChanged = this.selectedOrderForEdit?.tableNo !== this.originalOrderData?.tableNo;
+
+    return this.pendingChanges.quantityUpdates.size > 0 ||
+           this.pendingChanges.itemsToRemove.length > 0 ||
+           this.pendingChanges.itemsToAdd.length > 0 ||
+           tableChanged; // ✅ ADD THIS CHECK
+  }
 
 
 // Enhanced loadAvailableProducts method
