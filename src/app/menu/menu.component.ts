@@ -897,7 +897,7 @@ goToStep(step: OrderStep): void {
     console.log('[Navigation] Current state after transition:', {
       orderID: this.orderID,
       currentStep: this.currentStep,
-      cartItems: this.newCart.length,
+      newCartItems: this.newCart.length,
       confirmedItems: this.confirmedCart?.length || 0
     });
   } else {
@@ -905,37 +905,47 @@ goToStep(step: OrderStep): void {
   }
 
   if (step === OrderStep.MENU) {
-  console.log('[Navigation] Returning to menu. Resetting new cart only.');
-
-  // ✅ Clear only newCart (not confirmedCart)
-  this.newCart = [];
-
-  // ✅ Reset menu quantities to 0 so cart shows empty
-  this.menuItems.forEach(i => {
-    i.quantity = 0;
-    i.price = i.basePrice ?? i.price;
-  });
-}
+    console.log('[Navigation] Returning to menu. Resetting UI quantities to ZERO for fresh ordering.');
+    
+    // ✅ Only clear newCart (pending items), keep confirmedCart intact
+    this.newCart = [];
+    
+    // ✅ Reset UI quantities to ZERO (fresh start for new ordering session)
+    this.syncUIQuantitiesWithConfirmedCart();
+    
+    // ✅ Clear quantity map for UI
+    this.quantityMap = {};
+  }
 
   if (step === OrderStep.ORDER_SUMMARY) {
     console.log('[Navigation] Loading order summary for step 2');
     this.getOrderSummary();
     this.startStatusPolling();
-
-      this.fetchMenuItems(); // Make sure full menuItems is restored
-
+    this.fetchMenuItems(); // Make sure full menuItems is restored
   }
   
   if (step === OrderStep.PAYMENT) {
     console.log('[Navigation] Preparing payment step');
     this.stopStatusPolling();
     this.getOrderSummary();
-
-      this.fetchMenuItems();
-
+    this.fetchMenuItems();
   }
 }
-
+// ✅ FIXED: Reset UI quantities to ZERO when going back to menu
+private syncUIQuantitiesWithConfirmedCart(): void {
+  this.cartItems.forEach(ci => {
+    // ✅ Set UI quantity to ZERO (fresh start for new ordering)
+    ci.quantity = 0;
+    ci.price = ci.basePrice ?? ci.price;
+  });
+  
+  // Also update the main menuItems for consistency
+  this.menuItems.forEach(mi => {
+    // ✅ Set UI quantity to ZERO (fresh start for new ordering)
+    mi.quantity = 0;
+    mi.price = mi.basePrice ?? mi.price;
+  });
+}
 
 private createPendingPayment(method: 'UPI' | 'Cash'): Observable<any> {
   if (!this.orderID) throw new Error('Order ID is required');
@@ -1458,52 +1468,52 @@ loadCategories() {
 
 
 async updateQuantityForNewItems(item: Product, change: number): Promise<void> {
-    clearTimeout(this.quantityDebounceTimer);
+  clearTimeout(this.quantityDebounceTimer);
 
-    // DECREMENT LOGIC (This part is correct)
-    if (change === -1) {
-        item.quantity = Math.max(0, (item.quantity || 0) - 1);
-        this.updateNewCart(item); // Update cart with new quantity
-        return;
-    }
+  // DECREMENT LOGIC
+  if (change === -1) {
+    const newQuantity = Math.max(0, (item.quantity || 0) - 1);
+    item.quantity = newQuantity;
+    this.quantityMap[item.productID] = newQuantity;
+    this.updateNewCart(item);
+    return;
+  }
 
-    // INCREMENT LOGIC
-    const basePrice = item.basePrice ?? item.price;
-    let finalUnitPrice = basePrice;
-    let selectedOption: CustomizationOption | undefined = undefined;
+  // INCREMENT LOGIC
+  const basePrice = item.basePrice ?? item.price;
+  let finalUnitPrice = basePrice;
+  let selectedOption: CustomizationOption | undefined = undefined;
 
-    if (item.customizationOptions && item.customizationOptions.length > 0) {
-        const modalResult: { customizationOptionID: number | null, price: number } | null = await this.openCustomizationModal(item);
-        
-        if (modalResult === null) {
-            return; // User cancelled the modal
-        }
-
-        // Handle the case where user selects "None" (customizationOptionID is null)
-        if (modalResult.customizationOptionID === null) {
-            // Use base price without customization
-            finalUnitPrice = basePrice;
-        } else {
-            // Find the selected option and use its price
-            selectedOption = item.customizationOptions.find(
-                opt => opt.customizationOptionID === modalResult.customizationOptionID
-            );
-
-            if (!selectedOption) {
-                console.error("Selected option not found!");
-                return;
-            }
-
-            // Use the price returned from the modal (which already includes the calculation)
-            finalUnitPrice = modalResult.price;
-        }
-    }
+  if (item.customizationOptions && item.customizationOptions.length > 0) {
+    const modalResult: { customizationOptionID: number | null, price: number } | null = await this.openCustomizationModal(item);
     
-    // Increment the item's quantity in the UI
-    item.quantity = (item.quantity || 0) + 1;
+    if (modalResult === null) {
+      return; // User cancelled the modal
+    }
 
-    // Update the newCart with the correct item details and calculated price
-    this.updateNewCart(item, selectedOption, finalUnitPrice);
+    if (modalResult.customizationOptionID === null) {
+      finalUnitPrice = basePrice;
+    } else {
+      selectedOption = item.customizationOptions.find(
+        opt => opt.customizationOptionID === modalResult.customizationOptionID
+      );
+
+      if (!selectedOption) {
+        console.error("Selected option not found!");
+        return;
+      }
+
+      finalUnitPrice = modalResult.price;
+    }
+  }
+  
+  // Increment the item's quantity in the UI
+  const newQuantity = (item.quantity || 0) + 1;
+  item.quantity = newQuantity;
+  this.quantityMap[item.productID] = newQuantity;
+
+  // Update the newCart with the correct item details and calculated price
+  this.updateNewCart(item, selectedOption, finalUnitPrice);
 }
 
 private updateNewCart(
@@ -1511,15 +1521,15 @@ private updateNewCart(
   selectedOption?: CustomizationOption,
   unitPriceForOrder?: number
 ): void {
-  // Update quantityMap
+  // Update quantityMap with the current UI quantity
   this.quantityMap[item.productID] = item.quantity;
 
   const existingItem = this.newCart.find(ci => ci.productID === item.productID);
   const finalUnitPrice = unitPriceForOrder ?? (item.basePrice ?? item.price);
 
   if (existingItem) {
+    // Update existing item in newCart
     existingItem.quantity = item.quantity;
-  
     
     if (selectedOption) {
       existingItem.customizationOptionIds = [selectedOption.customizationOptionID];
@@ -1528,15 +1538,16 @@ private updateNewCart(
       existingItem.unitPrice = finalUnitPrice;
     }
 
+    // Remove if quantity becomes 0
     if (existingItem.quantity === 0) {
       this.newCart = this.newCart.filter(ci => ci.productID !== item.productID);
     }
   } else if (item.quantity > 0) {
+    // Add new item to newCart with current quantity
     const newItem: OrderItem = {
       productID: item.productID,
-      quantity: item.quantity,
+      quantity: item.quantity, // Current UI quantity
       unitPrice: finalUnitPrice,
-     
       customizationOptionIds: selectedOption
         ? [selectedOption.customizationOptionID]
         : []
@@ -1545,6 +1556,7 @@ private updateNewCart(
   }
 
   this.newCart = [...this.newCart];
+  console.log('🛒 Updated newCart:', this.newCart);
 }
 
 
@@ -1561,7 +1573,7 @@ private openCustomizationModal(product: Product): Promise<{ customizationOptionI
 }
 async submitCartAndProceed(): Promise<any> {
   console.log('[Order Flow] Starting submitCartAndProceed');
-  this.rebuildNewCart(); 
+  this.rebuildNewCart();
 
   const storedTableID = localStorage.getItem('restaurantTableID');
   if (!storedTableID) {
@@ -1571,7 +1583,6 @@ async submitCartAndProceed(): Promise<any> {
 
   const tableID = +storedTableID;
   let newOrder: any = null;
-
 
   try {
     // ✅ STEP 1: CREATE ORDER IF NEEDED
@@ -1587,48 +1598,29 @@ async submitCartAndProceed(): Promise<any> {
         this.orderStatus = newOrder.orderStatus;
         this.orderCreatedAt = new Date(newOrder.createdAt);
       }
-
       console.log('[Order Flow] New order created with ID:', this.orderID);
     } else {
       console.log('[Order Flow] Existing order found, checking status...');
       const statusResp = await firstValueFrom(
-        this.http.get<any>(`${this.API_BASE}/order/status/${this.orderID}`)
+        this.http.get<any>(`${this.API_BASE}/order/status/${this.orderID}?restaurantId=${this.restaurantID}`)
       );
       this.orderStatus = statusResp.status;
       console.log('[Order Flow] Current order status:', this.orderStatus);
     }
 
-    // ✅ STEP 2: ADD CART ITEMS
-    console.log('[Order Flow] Posting cart items to server...');
-    const itemsToSend = this.newCart.map(item => ({
-      productID: item.productID,
-      quantity: item.quantity,
-      unitPrice: item.unitPrice,
-      customizationOptionIds: item.customizationOptionIds || [],
-  
-
-    }));
-
-    if (itemsToSend.length === 0) {
-      console.warn('🚫 No items to send. Aborting order placement.');
-      return null;
-    }
-
-    await firstValueFrom(
-      this.http.post(`${this.API_BASE}/order/${this.orderID}/addItem?restaurantId=${this.restaurantID}`, itemsToSend)
-    );
+    // ✅ STEP 2: ADD/UPDATE CART ITEMS
+    await this.addNewItemsToOrder();
 
     // ✅ STEP 3: CONFIRM ORDER IF NOT ALREADY
-// ✅ STEP 3: CONFIRM ORDER IF NOT ALREADY
-if (this.orderStatus !== 'Confirmed') {
-  await firstValueFrom(
-    this.http.post(`${this.API_BASE}/order/${this.orderID}/confirm?restaurantId=${this.restaurantID}`, {})
-  );
-  this.orderStatus = 'Confirmed';
-}
+    if (this.orderStatus !== 'Confirmed') {
+      await firstValueFrom(
+        this.http.post(`${this.API_BASE}/order/${this.orderID}/confirm?restaurantId=${this.restaurantID}`, {})
+      );
+      this.orderStatus = 'Confirmed';
+    }
 
-
-    // ✅ STEP 4: Move to summary
+    // ✅ STEP 4: Move to summary and refresh - WAIT for getOrderSummary to complete
+    await this.getOrderSummary(); // Wait for this to complete
     this.goToStep(OrderStep.ORDER_SUMMARY);
     this.saveOrderState();
 
@@ -1639,30 +1631,89 @@ if (this.orderStatus !== 'Confirmed') {
     return null;
   }
 }
-
 rebuildNewCart() {
   console.log('🧩 cartItems:', this.cartItems);
   console.log('📦 quantityMap:', this.quantityMap);
+  console.log('✅ confirmedCart:', this.confirmedCart);
 
   this.newCart = [];
 
   this.cartItems.forEach(item => {
-    const quantity = this.quantityMap[item.productID];
-    if (quantity && quantity > 0) {
+    const currentUIQuantity = this.quantityMap[item.productID] || item.quantity || 0;
+    
+    console.log(`🔄 Product ${item.productID}: UI=${currentUIQuantity}`);
+    
+    // ✅ Only add to newCart if current UI quantity is greater than 0
+    if (currentUIQuantity > 0) {
       this.newCart.push({
         productID: item.productID,
-        quantity: quantity,
-        unitPrice: item.price,
-      
+        quantity: currentUIQuantity, // Send the actual quantity user selected
+        unitPrice: item.basePrice ?? item.price,
         customizationOptionIds: item.customizationOptionIds || []
       });
     }
   });
 
   console.log('🧾 Rebuilt newCart:', this.newCart);
+
 }
+private getConfirmedQuantity(productID: number): number {
+  if (!this.confirmedCart || this.confirmedCart.length === 0) return 0;
+  
+  const confirmedItem = this.confirmedCart.find(item => item.productID === productID);
+  return confirmedItem ? confirmedItem.quantity : 0;
+}
+addNewItemsToOrder(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    // Ensure newCart is prepared with proper quantities
+    this.rebuildNewCart();
 
+    if (this.newCart.length === 0) {
+      console.log('No new items to add.');
+      resolve();
+      return;
+    }
 
+    console.log('[Order Flow] Adding new items to existing order:', this.newCart);
+
+    // ✅ FIXED: Send items with proper structure for backend to merge
+    const itemsToSend = this.newCart.map(item => ({
+      productID: item.productID,
+      quantity: item.quantity, // This should ADD to existing quantity
+      unitPrice: item.unitPrice,
+      customizationOptionIds: item.customizationOptionIds || []
+    }));
+
+    console.log('[Order Flow] Sending items to backend:', itemsToSend);
+
+    // Send new items to backend
+    this.http.post(`${this.API_BASE}/order/${this.orderID}/addItem?restaurantId=${this.restaurantID}`, itemsToSend)
+      .subscribe({
+        next: (response: any) => {
+          console.log('[Order Flow] Successfully added items to existing order');
+          
+          // ✅ FIXED: Clear newCart first
+          this.newCart = [];
+          
+          // ✅ FIXED: Refresh the order summary to get updated quantities from backend
+          this.getOrderSummary().then(() => {
+            // ✅ Reset UI quantities to ZERO for next ordering session
+            this.syncUIQuantitiesWithConfirmedCart();
+            
+            // Clear quantity map for UI
+            this.quantityMap = {};
+
+            this.saveOrderState();
+            resolve();
+          });
+        },
+        error: (error) => {
+          console.error("[Order Flow] Error adding new items:", error);
+          reject(error);
+        }
+      });
+  });
+}
 
 
 
@@ -1737,21 +1788,25 @@ async getOrderSummary(): Promise<void> {
       )
     );
 
-    // ✅ Optional: log the response to debug
-    console.log("✅ Summary fetched:", summary);
+    console.log("✅ Summary fetched from backend:", summary);
 
     // Optional status mapping (if you use internal UI mappings)
     summary.orderStatus = this.mapStatus(summary.orderStatus);
 
     this.orderSummaryDetails = summary;
 
-    // ✅ Fill confirmedCart (used for UI display and final confirmation)
-    this.confirmedCart = summary.orderItems.map(item => ({
-      productID: item.productID,
-      quantity: item.quantity,
-      unitPrice: item.unitPrice,
-      customizationOptionIds: item.customizations?.map(c => c.customizationOptionID) || []
-    }));
+    // ✅ FIXED: Clear and rebuild confirmedCart from fresh backend data
+    this.confirmedCart = [];
+    summary.orderItems.forEach(item => {
+      this.confirmedCart.push({
+        productID: item.productID,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        customizationOptionIds: item.customizations?.map(c => c.customizationOptionID) || []
+      });
+    });
+
+    console.log("✅ confirmedCart updated from backend:", this.confirmedCart);
 
     // ✅ Evaluate offers (if your system supports them)
     this.evaluateOffers();
@@ -1762,7 +1817,6 @@ async getOrderSummary(): Promise<void> {
     this.isLoading = false;
   }
 }
-
 
 
 
@@ -1841,43 +1895,6 @@ downloadBill() {
 }
 
 
-addNewItemsToOrder(): void {
-  if (this.newCart.length === 0) return;
 
-this.http.post(`${this.API_BASE}/order/${this.orderID}/addItem?restaurantId=${this.restaurantID}`, this.newCart)
-    .subscribe({
-      next: (response: any) => {
-        // Merge new items into confirmedCart (local copy)
-        this.newCart.forEach(newItem => {
-          const existing = this.confirmedCart.find(item => item.productID === newItem.productID);
-          if (existing) {
-            existing.quantity += newItem.quantity;
-          } else {
-            this.confirmedCart.push({ ...newItem });
-          }
-        });
-
-        // Clear newCart and reset UI
-        this.newCart = [];
-        this.menuItems.forEach(item => {
-          item.quantity = 0;
-          item.price = item.basePrice ?? item.price;
-        });
-
-       // ✅ Update order summary from backend
-this.getOrderSummary().then(() => {
-  this.evaluateOffers(); // ✅ Re-check offers after new items added
-});
-this.sendOrderToKitchen();
-
-
-        // ✅ Save latest state to localStorage
-        this.saveOrderState(); // ← add this
-      },
-      error: (error) => {
-        console.error("Error adding new items:", error);
-      }
-    });
-}
 
 }         
