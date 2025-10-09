@@ -1103,6 +1103,7 @@ async markUpiAsPaid(): Promise<void> {
   
   this.busyCollect = true;
   try {
+    // Simple PUT request to mark payment as complete
     const result: any = await firstValueFrom(
       this.http.put(
         `${this.API_BASE}/order/payments/${this.collectModal.paymentId}/complete?restaurantId=${this.restaurantId}`,
@@ -1111,47 +1112,25 @@ async markUpiAsPaid(): Promise<void> {
       )
     );
 
-    console.log('Payment completion response:', result);
-
-    if (result.success !== false) {
-      this.onPaymentCleared(this.collectModal.paymentId);
-      this.closeCollectModal();
-      
-      this.pushAlert('payment', `✅ UPI payment completed! Order #${this.collectModal.orderId} moved to history`);
-      
-      // Simple refresh - order should now be in history
-      setTimeout(() => {
-        this.fetchPendingPayments();
-        this.getOrders(); // This will move the order from active to history
-      }, 1000);
-      
-    } else {
-      throw new Error(result.message || 'Failed to mark UPI payment as paid');
-    }
+    // Success - close modal and refresh data
+    this.onPaymentCleared(this.collectModal.paymentId);
+    this.closeCollectModal();
+    
+    this.pushAlert('payment', `✅ UPI payment completed! Order #${this.collectModal.orderId} moved to history`);
+    
+    // Refresh data to show order in history
+    setTimeout(() => {
+      this.fetchPendingPayments();
+      this.getOrders();
+    }, 1000);
+    
   } catch (error: any) {
     console.error('Error marking UPI as paid:', error);
-    
-    // Check if this is actually a success
-    if (error.error?.message?.includes('completed successfully') || 
-        error.message?.includes('completed successfully')) {
-      // Process as success
-      this.onPaymentCleared(this.collectModal.paymentId);
-      this.closeCollectModal();
-      
-      this.pushAlert('payment', `✅ UPI payment completed! Order #${this.collectModal.orderId} moved to history`);
-      
-      setTimeout(() => {
-        this.fetchPendingPayments();
-        this.getOrders();
-      }, 1000);
-    } else {
-      alert(`Error: ${error.error?.message || error.message || 'Failed to process UPI payment'}`);
-    }
+    alert(`Error: ${error.error?.message || error.message || 'Failed to process UPI payment'}`);
   } finally {
     this.busyCollect = false;
   }
 }
-
 async markCashReceived() {
   this.busyCollect = true;
   try {
@@ -1972,11 +1951,10 @@ shouldShowServeButton(order: Order): boolean {
 }
 
 
-
 onPaymentCleared(paymentId: number): void {
   console.log('🔄 Payment cleared for ID:', paymentId);
   
-  // Simply remove from payment arrays
+  // Remove from payment arrays
   this.pendingPayments = this.pendingPayments.filter(p => 
     (p.paymentID || p.paymentId || p.id) !== paymentId
   );
@@ -1987,9 +1965,9 @@ onPaymentCleared(paymentId: number): void {
     (p.paymentID || p.paymentId || p.id) !== paymentId
   );
   
-  console.log('✅ Payment cleared - order will move to history on next refresh');
-  // No kitchen status reset needed
+  console.log('✅ Payment cleared - order will move to history');
 }
+
 // Also update the finalizeIfPaid method to remove bill download
 async finalizeIfPaid() {
   if (!this.collectModal.paymentId) {

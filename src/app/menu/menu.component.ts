@@ -1455,56 +1455,47 @@ loadCategories() {
 }
 
 
- async updateQuantityForNewItems(item: Product, change: number): Promise<void> {
-  // if (!this.orderID) return;
-clearTimeout(this.quantityDebounceTimer);
-  this.quantityDebounceTimer = setTimeout(() => {
-    // perform actual quantity update
-  }, 200);
-  // DECREMENT
-  if (change === -1) {
-    item.quantity = Math.max(0, (item.quantity || 0) - 1);
-    if (item.quantity === 0 && item.basePrice != null) {
-      // Reset the displayed price to base so the menu shows original price
-      item.price = item.basePrice;
-    }
-    this.updateNewCart(item);
-    return;
-  }
+async updateQuantityForNewItems(item: Product, change: number): Promise<void> {
+    clearTimeout(this.quantityDebounceTimer);
 
-  // INCREMENT
-  if (item.customizationOptions && item.customizationOptions.length > 0) {
-    // 1) Open customization dialog
-    const selectedOptionId: number | null = await this.openCustomizationModal(item);
-    if (selectedOptionId == null) {
-      // CANCELLED → do nothing
-      return;
+    // DECREMENT LOGIC (This part is correct)
+    if (change === -1) {
+        item.quantity = Math.max(0, (item.quantity || 0) - 1);
+        this.updateNewCart(item); // Update cart with new quantity
+        return;
     }
 
-    // 2) Find the multiplier for the chosen option
-    const selectedOption = item.customizationOptions.find(
-      opt => opt.customizationOptionID === selectedOptionId
-    );
-    if (!selectedOption) return;
+    // INCREMENT LOGIC
+    const basePrice = item.basePrice ?? item.price;
+    let finalUnitPrice = basePrice;
+    let selectedOption: CustomizationOption | undefined = undefined;
 
-    // 3) Increase the quantity in memory
+    if (item.customizationOptions && item.customizationOptions.length > 0) {
+        const selectedOptionId: number | null = await this.openCustomizationModal(item);
+        if (selectedOptionId === null) {
+            return; // User cancelled the modal
+        }
+
+        selectedOption = item.customizationOptions.find(
+            opt => opt.customizationOptionID === selectedOptionId
+        );
+
+        if (!selectedOption) {
+            console.error("Selected option not found!");
+            return;
+        }
+
+        // Calculate the final unit price with customization
+        // This assumes fixedPrice is a multiplier. If it's additive, change the logic.
+        finalUnitPrice = parseFloat((basePrice * selectedOption.fixedPrice).toFixed(2));
+        
+    }
+    
+    // Increment the item's quantity in the UI
     item.quantity = (item.quantity || 0) + 1;
 
-    // 4) Compute *additional* over basePrice, but do NOT overwrite base for display.
-    const base = item.basePrice ?? item.price;
-    // extra = base * (multiplier – 1)
-    const extra = base * (selectedOption.fixedPrice - 1);
-    const unitPriceForOrder =parseFloat((base + extra).toFixed(2));
-
-
-    // 5) Push into newCart with that unitPrice. Menu display remains base.
-this.updateNewCart(item, selectedOption, selectedOption.fixedPrice);
-  } else {
-    // No customization: increment and keep item.price = basePrice
-    item.quantity = (item.quantity || 0) + 1;
-    item.price = item.basePrice ?? item.price;
- this.updateNewCart(item, undefined, item.price);
-  }
+    // Update the newCart with the correct item details and calculated price
+    this.updateNewCart(item, selectedOption, finalUnitPrice);
 }
 
 private updateNewCart(
