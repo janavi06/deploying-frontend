@@ -26,18 +26,5 @@
         ]
       }
     }
-  ],
-  "dataGroups": [
-    {
-      "name": "api-data",
-      "urls": [
-        "/api/**"
-      ],
-      "cacheConfig": {
-        "maxSize": 50,
-        "maxAge": "1h",
-        "strategy": "performance"
-      }
-    }
   ]
 }
