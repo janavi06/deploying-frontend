@@ -72,6 +72,7 @@
       </div>
 
 <!-- In your waiter component HTML - Updated Collect Payment Modal Section -->
+<!-- In your waiter component HTML - Simplified Collect Payment Modal -->
 <div *ngIf="selectedPayTab==='collect'">
   <div class="card mb-2 p-2" *ngFor="let p of collectPayments">
     <div class="d-flex justify-content-between align-items-center">
@@ -113,35 +114,25 @@
               [disabled]="busyCollect">Cash</button>
     </div>
 
-    <!-- UPI Tab - UPDATED -->
+    <!-- UPI Tab - SIMPLIFIED -->
     <div *ngIf="collectModal.tab==='UPI'">
-      <div class="mb-3" *ngIf="!collectModal.upiUri">
-        <button class="btn btn-primary w-100" 
-                [disabled]="busyCollect" 
-                (click)="initiateUpi()">
-          <span *ngIf="busyCollect" class="spinner-border spinner-border-sm me-2"></span>
-          Generate UPI QR Code
-        </button>
+      <div class="mb-3">
+        <div class="alert alert-info">
+          <small>Click "Mark as Paid" when customer completes UPI payment.</small>
+        </div>
       </div>
       
-      <div *ngIf="collectModal.upiUri" class="text-center">
-        <div class="mb-3">
-          <qrcode [qrdata]="collectModal.upiUri" [width]="220" [errorCorrectionLevel]="'M'"></qrcode>
-        </div>
-        <div class="small text-muted mb-3">Scan the QR code to pay</div>
-        <div class="d-grid gap-2">
-          <!-- REMOVED: Open in UPI App button -->
+      <div class="d-grid gap-2">
         <button class="btn btn-success" 
-        [disabled]="busyCollect" 
-        (click)="markUpiAsPaid()">
-  <span *ngIf="busyCollect" class="spinner-border spinner-border-sm me-2"></span>
-  Mark as Paid
-</button>
-        </div>
+                [disabled]="busyCollect" 
+                (click)="markUpiAsPaid()">
+          <span *ngIf="busyCollect" class="spinner-border spinner-border-sm me-2"></span>
+          Mark as Paid
+        </button>
       </div>
     </div>
 
-    <!-- Cash Tab -->
+    <!-- Cash Tab - SIMPLIFIED -->
     <div *ngIf="collectModal.tab==='CASH'">
       <div class="alert alert-info mb-3">
         <small>Confirm that you have received cash payment from the customer.</small>
@@ -180,9 +171,7 @@
         </div>
       </div>
 
-      <h4 *ngIf="selectedTableNo !== null" class="orders-heading">
-        🧾 Orders for Table {{ selectedTableNo }}
-      </h4>
+     
 
       <div class="order-card-grid mt-3" *ngIf="selectedTableNo !== null">
         <ng-container *ngFor="let group of groupedUpcomingOrders">

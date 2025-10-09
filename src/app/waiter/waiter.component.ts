@@ -250,7 +250,7 @@ private initializeDashboard(): void {
   this.checkForReadyNotifications();
   this.setupNotificationPolling();
   this.setupRequestPolling();
-  this.fetchPendingPayments();
+  this.setupPaymentPolling(); // ✅ ADD THIS LINE
 
   // Set up intervals
   setInterval(() => {
@@ -260,7 +260,7 @@ private initializeDashboard(): void {
   }, 15000);
 
   setInterval(() => this.getOrders(), 10000);
-   setInterval(() => this.persistUIState(), 30000); // Every 30 seconds
+  setInterval(() => this.persistUIState(), 30000); // Every 30 seconds
 }
   private showRestaurantError(): void {
     this.error = 'No restaurant specified. Please access via: https://scanui.netlify.app/waiter?restaurantId=YOUR_RESTAURANT_ID';
@@ -366,7 +366,24 @@ switchPayTab(tab: 'verify' | 'collect') {
     }
   }
 
-
+private setupPaymentPolling(): void {
+  // Initial load
+  this.fetchPendingPayments();
+  
+  // Set up intervals for automatic refresh
+  setInterval(() => {
+    if (this.selectedSection === 'pendingPayments') {
+      this.fetchPendingPayments();
+    }
+  }, 10000); // Full refresh every 10 seconds
+  
+  // Check for new payments more frequently
+  setInterval(() => {
+    if (this.selectedSection === 'pendingPayments') {
+      this.checkForNewPendingPayments();
+    }
+  }, 5000); // Check for new payments every 5 seconds
+}
 private loadPendingByTab(): void {
   // If your backend supports ?channel=Customer|Waiter, use the two fetch* methods below.
   // Otherwise, we’ll split on the client (fallback) using common fields.
@@ -727,31 +744,7 @@ acknowledgeNotification(notificationId: number): void {
     return [];
   }
 
-  checkForNewPendingPayments(): void {
-    this.http.get<any[]>(`${this.API_BASE}/order/pending-payments/unnotified?restaurantId=${this.restaurantId}`, this.httpOptions)
-      .subscribe({
-        next: (payments) => {
-          if (payments.length > 0) {
-            this.paymentSound.play().catch(() => {});
-            this.vibrate();
-
-            payments.forEach(p => {
-              const msg = `💰 Payment pending for Table ${p.tableNo}, Order #${p.orderID}`;
-              this.pushAlert('payment', msg);
-
-              this.http.put(
-                `${this.API_BASE}/order/pending-payments/${p.paymentID}/mark-notified`,
-                null,
-                this.httpOptions
-              ).subscribe();
-            });
-
-            this.pendingPayments = [...payments, ...this.pendingPayments];
-          }
-        },
-        error: err => console.error('Error checking pending payments:', err)
-      });
-  }
+ 
 openCollectModal(p: any) {
   this.collectModal.open = true;
   this.collectModal.orderId = p.orderID;
@@ -841,10 +834,7 @@ closeCollectModal() {
 //   }
 // }
 // Helper method to get table number from order
-getTableNoFromOrder(orderId: number): number {
-  const order = this.orders.find(o => o.orderID === orderId);
-  return order?.tableNo || 0;
-}
+
 
 // Fix the markCashReceived method
 // async markCashReceived() {
@@ -900,28 +890,72 @@ getTableNoFromOrder(orderId: number): number {
 
 
 // Enhanced fetchPendingPayments to handle different ID formats
-  fetchPendingPayments(): void {
-    if (!this.restaurantId) return;
-    
-    this.http.get<any[]>(`${this.API_BASE}/order/pending-payments?restaurantId=${this.restaurantId}`, this.httpOptions)
-      .subscribe({
-        next: (payments) => {
-          console.log('📦 Raw payments from API:', payments);
-          
-          this.pendingPayments = (payments || []).map(p => ({
-            ...p,
-            paymentId: p.paymentID || p.paymentId || p.id
-          }));
-          
-          this.splitPending(this.pendingPayments);
-        },
-        error: err => {
-          console.error('❌ Error fetching pending payments:', err);
-          this.error = 'Failed to load pending payments';
-        }
-      });
+fetchPendingPayments(): void {
+  if (!this.restaurantId) {
+    console.log('❌ No restaurant ID available for fetching payments');
+    return;
   }
-
+  
+  console.log('🔄 Fetching pending payments...');
+  
+  this.http.get<any[]>(`${this.API_BASE}/order/pending-payments?restaurantId=${this.restaurantId}`, this.httpOptions)
+    .subscribe({
+      next: (payments) => {
+        console.log('📦 Raw payments from API:', payments);
+        
+        this.pendingPayments = (payments || []).map(p => ({
+          ...p,
+          paymentId: p.paymentID || p.paymentId || p.id
+        }));
+        
+        this.splitPending(this.pendingPayments);
+        console.log('✅ Payments updated:', {
+          total: this.pendingPayments.length,
+          verify: this.verifyPayments.length,
+          collect: this.collectPayments.length
+        });
+      },
+      error: err => {
+        console.error('❌ Error fetching pending payments:', err);
+        this.error = 'Failed to load pending payments';
+      }
+    });
+}
+private checkForNewPendingPayments(): void {
+  if (!this.restaurantId || this.selectedSection !== 'pendingPayments') return;
+  
+  this.http.get<any[]>(`${this.API_BASE}/order/pending-payments/unnotified?restaurantId=${this.restaurantId}`, this.httpOptions)
+    .subscribe({
+      next: (newPayments) => {
+        if (newPayments.length > 0) {
+          console.log('🆕 New pending payments detected:', newPayments.length);
+          
+          // Play sound for new payments
+          this.paymentSound.play().catch(() => {});
+          this.vibrate();
+          
+          // Add new payments to the beginning of the list
+          this.pendingPayments = [...newPayments, ...this.pendingPayments];
+          this.splitPending(this.pendingPayments);
+          
+          // Mark as notified
+          newPayments.forEach(payment => {
+            const paymentId = payment.paymentID || payment.paymentId;
+            if (paymentId) {
+              this.http.put(
+                `${this.API_BASE}/order/pending-payments/${paymentId}/mark-notified?restaurantId=${this.restaurantId}`,
+                null,
+                this.httpOptions
+              ).subscribe();
+            }
+          });
+          
+          this.pushAlert('payment', `💰 ${newPayments.length} new payment(s) pending`);
+        }
+      },
+      error: err => console.error('Error checking new payments:', err)
+    });
+}
 // async markUpiAsPaid(): Promise<void> {
 //   if (!this.collectModal.paymentId) {
 //     alert('No payment ID found. Please generate QR code first.');
@@ -1095,16 +1129,36 @@ async testPaymentEndpoints(): Promise<void> {
   }, 20000); // auto-dismiss after 20s
 }
 
+// Simplified UPI payment method
 async markUpiAsPaid(): Promise<void> {
   if (!this.collectModal.paymentId) {
-    alert('No payment ID found. Please generate QR code first.');
-    return;
+    // If no payment ID exists, create one first
+    try {
+      const started: any = await firstValueFrom(
+        this.http.post(
+          `${this.API_BASE}/order/payments/initiate?orderId=${this.collectModal.orderId}&restaurantId=${this.restaurantId}&channel=Waiter&method=UPI`,
+          {},
+          this.httpOptions
+        )
+      );
+      
+      if (started?.paymentId) {
+        this.collectModal.paymentId = started.paymentId;
+      } else {
+        alert('Failed to create payment record');
+        return;
+      }
+    } catch (error) {
+      console.error('Error creating payment:', error);
+      alert('Failed to create payment record');
+      return;
+    }
   }
   
   this.busyCollect = true;
   try {
-    // Simple PUT request to mark payment as complete
-    const result: any = await firstValueFrom(
+    // Simply mark payment as complete
+    await firstValueFrom(
       this.http.put(
         `${this.API_BASE}/order/payments/${this.collectModal.paymentId}/complete?restaurantId=${this.restaurantId}`,
         {},
@@ -1113,12 +1167,10 @@ async markUpiAsPaid(): Promise<void> {
     );
 
     // Success - close modal and refresh data
-    this.onPaymentCleared(this.collectModal.paymentId);
     this.closeCollectModal();
-    
     this.pushAlert('payment', `✅ UPI payment completed! Order #${this.collectModal.orderId} moved to history`);
     
-    // Refresh data to show order in history
+    // Refresh data
     setTimeout(() => {
       this.fetchPendingPayments();
       this.getOrders();
@@ -1126,15 +1178,17 @@ async markUpiAsPaid(): Promise<void> {
     
   } catch (error: any) {
     console.error('Error marking UPI as paid:', error);
-    alert(`Error: ${error.error?.message || error.message || 'Failed to process UPI payment'}`);
+    alert('Failed to mark payment as paid. Please try again.');
   } finally {
     this.busyCollect = false;
   }
 }
+
+// Simplified Cash payment method
 async markCashReceived() {
   this.busyCollect = true;
   try {
-    // First, initiate payment if not already done
+    // First, create payment record if not exists
     if (!this.collectModal.paymentId) {
       const started: any = await firstValueFrom(
         this.http.post(
@@ -1147,12 +1201,12 @@ async markCashReceived() {
       if (started?.paymentId) {
         this.collectModal.paymentId = started.paymentId;
       } else {
-        throw new Error('Failed to initiate cash payment');
+        throw new Error('Failed to create cash payment record');
       }
     }
 
     // Mark cash payment as completed
-    const result: any = await firstValueFrom(
+    await firstValueFrom(
       this.http.put(
         `${this.API_BASE}/order/payments/${this.collectModal.paymentId}/complete?restaurantId=${this.restaurantId}`,
         {},
@@ -1160,15 +1214,11 @@ async markCashReceived() {
       )
     );
 
-    console.log('Cash payment completion response:', result);
-
-    // Handle success
-    this.onPaymentCleared(this.collectModal.paymentId);
+    // Success
     this.closeCollectModal();
-    
     this.pushAlert('payment', `✅ Cash payment received! Order #${this.collectModal.orderId} moved to history`);
     
-    // Simple refresh
+    // Refresh data
     setTimeout(() => {
       this.fetchPendingPayments();
       this.getOrders();
@@ -1176,22 +1226,21 @@ async markCashReceived() {
     
   } catch (error: any) {
     console.error('Error marking cash received:', error);
-    
-    // Check if payment was actually successful despite error
-    if (error.error?.message?.includes('completed successfully') || 
-        error.message?.includes('completed successfully')) {
-      // Process as success
-      this.onPaymentCleared(this.collectModal.paymentId);
-      this.closeCollectModal();
-      this.pushAlert('payment', `✅ Cash payment completed! Order #${this.collectModal.orderId} moved to history`);
-      this.fetchPendingPayments();
-      this.getOrders();
-    } else {
-      alert(`Error: ${error.error?.message || 'Failed to process cash payment'}`);
-    }
+    alert('Failed to process cash payment. Please try again.');
   } finally {
     this.busyCollect = false;
   }
+}
+
+// Helper method to get table number
+getTableNoFromOrder(orderId: number): number {
+  const order = this.orders.find(o => o.orderID === orderId);
+  return order?.tableNo || 0;
+}
+
+// Set modal tab
+setCollectModalTab(tab: 'UPI' | 'CASH'): void {
+  this.collectModal.tab = tab;
 }
   // ✅ UPDATED: All API calls now include restaurantId
 private getOrders(): void {
@@ -1564,12 +1613,7 @@ getCustomizationsText(customizations: any[] | undefined): string {
   if (!customizations || customizations.length === 0) return '';
   return customizations.map(c => c.optionName).join(', ');
 }
-setCollectModalTab(tab: 'UPI' | 'CASH'): void {
-  if (this.collectModal) {
-    this.collectModal.tab = tab;
-    this.collectModal.upiUri = ''; // Reset UPI URI when switching tabs
-  }
-}
+
 closeEditOrderModalWithConfirmation(): void {
   if (this.hasUnsavedChanges()) {
     if (confirm('You have unsaved changes. Are you sure you want to close without saving?')) {
@@ -1952,22 +1996,17 @@ shouldShowServeButton(order: Order): boolean {
 
 
 onPaymentCleared(paymentId: number): void {
-  console.log('🔄 Payment cleared for ID:', paymentId);
-  
-  // Remove from payment arrays
+  // Simply remove from payment lists
   this.pendingPayments = this.pendingPayments.filter(p => 
-    (p.paymentID || p.paymentId || p.id) !== paymentId
+    (p.paymentID || p.paymentId) !== paymentId
   );
   this.verifyPayments = this.verifyPayments.filter(p => 
-    (p.paymentID || p.paymentId || p.id) !== paymentId
+    (p.paymentID || p.paymentId) !== paymentId
   );
   this.collectPayments = this.collectPayments.filter(p => 
-    (p.paymentID || p.paymentId || p.id) !== paymentId
+    (p.paymentID || p.paymentId) !== paymentId
   );
-  
-  console.log('✅ Payment cleared - order will move to history');
 }
-
 // Also update the finalizeIfPaid method to remove bill download
 async finalizeIfPaid() {
   if (!this.collectModal.paymentId) {

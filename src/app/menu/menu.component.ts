@@ -1,4 +1,6 @@
- import { Component, OnInit} from '@angular/core';
+
+
+  import { Component, OnInit} from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -1471,24 +1473,30 @@ async updateQuantityForNewItems(item: Product, change: number): Promise<void> {
     let selectedOption: CustomizationOption | undefined = undefined;
 
     if (item.customizationOptions && item.customizationOptions.length > 0) {
-        const selectedOptionId: number | null = await this.openCustomizationModal(item);
-        if (selectedOptionId === null) {
+        const modalResult: { customizationOptionID: number | null, price: number } | null = await this.openCustomizationModal(item);
+        
+        if (modalResult === null) {
             return; // User cancelled the modal
         }
 
-        selectedOption = item.customizationOptions.find(
-            opt => opt.customizationOptionID === selectedOptionId
-        );
+        // Handle the case where user selects "None" (customizationOptionID is null)
+        if (modalResult.customizationOptionID === null) {
+            // Use base price without customization
+            finalUnitPrice = basePrice;
+        } else {
+            // Find the selected option and use its price
+            selectedOption = item.customizationOptions.find(
+                opt => opt.customizationOptionID === modalResult.customizationOptionID
+            );
 
-        if (!selectedOption) {
-            console.error("Selected option not found!");
-            return;
+            if (!selectedOption) {
+                console.error("Selected option not found!");
+                return;
+            }
+
+            // Use the price returned from the modal (which already includes the calculation)
+            finalUnitPrice = modalResult.price;
         }
-
-        // Calculate the final unit price with customization
-        // This assumes fixedPrice is a multiplier. If it's additive, change the logic.
-        finalUnitPrice = parseFloat((basePrice * selectedOption.fixedPrice).toFixed(2));
-        
     }
     
     // Increment the item's quantity in the UI
@@ -1540,18 +1548,17 @@ private updateNewCart(
 }
 
 
-  private openCustomizationModal(product: Product): Promise<number | null> {
+private openCustomizationModal(product: Product): Promise<{ customizationOptionID: number | null, price: number } | null> {
     return new Promise((resolve) => {
-      const dialogRef = this.dialog.open(CustomizationModalComponent, {
-        width: '300px',
-        data: { product }
-      });
-      dialogRef.afterClosed().subscribe((result: number | null) => {
-        resolve(result);
-      });
+        const dialogRef = this.dialog.open(CustomizationModalComponent, {
+            width: '300px',
+            data: { product }
+        });
+        dialogRef.afterClosed().subscribe((result: { customizationOptionID: number | null, price: number } | null) => {
+            resolve(result);
+        });
     });
-  }
-
+}
 async submitCartAndProceed(): Promise<any> {
   console.log('[Order Flow] Starting submitCartAndProceed');
   this.rebuildNewCart(); 
@@ -1873,4 +1880,4 @@ this.sendOrderToKitchen();
     });
 }
 
-}       
+}         
