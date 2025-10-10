@@ -1,4 +1,4 @@
-import { Component, Inject } from '@angular/core';
+  import { Component, Inject } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef, MatDialogModule } from '@angular/material/dialog';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -79,4 +79,6 @@ getSelectedPrice(): number {
   return chosen ? chosen.fixedPrice : this.product.price;
 }
 
-}   
+}    
+
+
