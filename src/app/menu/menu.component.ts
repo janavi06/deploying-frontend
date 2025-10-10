@@ -30,8 +30,8 @@ export enum OrderStep {
 interface Product {
   productID: number;
   productName: string;
-  price: number;
-  basePrice?: number;
+  price: number; // Current price (base + customizations)
+  basePrice?: number; // Original price without customizations
   productDescription?: string;
   imagePath?: string;
   categoryID: number;
@@ -40,9 +40,9 @@ interface Product {
   isVeg: boolean;
   isAvailable?: boolean;
   customizationOptions?: CustomizationOption[];
-    customizationOptionIds?: number[]; // ✅ Fix: add this line
-
-   
+  customizationOptionIds?: number[];
+  // Add this to track if price includes customizations
+  hasCustomizations?: boolean;
 }
 interface CartItem extends Product {
   quantity: number;
@@ -1395,10 +1395,17 @@ fetchMenuItems(): void {
         this.menuItems = raw.map((item: Product) => ({
           ...item,
           quantity: 0,
-          basePrice: item.price
+          basePrice: item.price, // Store original price
+          price: item.price, // Current price (may include customizations)
+          customizationOptionIds: [] // Initialize empty
         }));
 
-        this.cartItems = this.menuItems.map(item => ({ ...item })); // ✅ This is critical!
+        // ✅ FIX: Ensure cartItems are proper copies with basePrice
+        this.cartItems = this.menuItems.map(item => ({ 
+          ...item,
+          basePrice: item.price,
+          customizationOptionIds: []
+        }));
 
         this.assignProductsToCategories();
         this.assignProductsToSubCategories();
@@ -1409,7 +1416,6 @@ fetchMenuItems(): void {
       }
     });
 }
-
  assignProductsToCategories(): void {
     if (!this.menuItems.length || !this.categories.length) return;
     const categoryMap = new Map<number, Category>();
@@ -1466,15 +1472,51 @@ loadCategories() {
   });
 }
 
+private updateNewCart(
+  item: Product,
+  unitPriceForOrder?: number,
+  customizationIds?: number[]
+): void {
+  // Use the calculated price or fall back to the item's current price (which includes customizations)
+  const finalUnitPrice = unitPriceForOrder ?? item.price;
+  
+  // Find existing item in the temporary cart
+  const existingItemIndex = this.newCart.findIndex(ci => ci.productID === item.productID);
+
+  if (existingItemIndex > -1) {
+    // If quantity is zero, remove it
+    if (item.quantity === 0) {
+      this.newCart.splice(existingItemIndex, 1);
+    } else {
+      // Otherwise, update the existing item's details
+      const existingItem = this.newCart[existingItemIndex];
+      existingItem.quantity = item.quantity;
+      existingItem.unitPrice = finalUnitPrice; // ✅ Update with the correct price
+      existingItem.customizationOptionIds = customizationIds || item.customizationOptionIds || [];
+    }
+  } else if (item.quantity > 0) {
+    // If it's a new item, add it to the cart
+    this.newCart.push({
+      productID: item.productID,
+      quantity: item.quantity,
+      unitPrice: finalUnitPrice, // ✅ Set the correct price
+      customizationOptionIds: customizationIds || item.customizationOptionIds || []
+    });
+  }
+
+  // Use the quantity map for UI display consistency
+  this.quantityMap[item.productID] = item.quantity;
+  console.log('🛒 Updated newCart:', this.newCart);
+}
+
 
 async updateQuantityForNewItems(item: Product, change: number): Promise<void> {
   clearTimeout(this.quantityDebounceTimer);
 
   // DECREMENT LOGIC
-  if (change === -1) {
+  if (change < 0) {
     const newQuantity = Math.max(0, (item.quantity || 0) - 1);
     item.quantity = newQuantity;
-    this.quantityMap[item.productID] = newQuantity;
     this.updateNewCart(item);
     return;
   }
@@ -1482,83 +1524,58 @@ async updateQuantityForNewItems(item: Product, change: number): Promise<void> {
   // INCREMENT LOGIC
   const basePrice = item.basePrice ?? item.price;
   let finalUnitPrice = basePrice;
-  let selectedOption: CustomizationOption | undefined = undefined;
+  let selectedOption: CustomizationOption | null = null;
+  let customizationOptionIds: number[] = [];
 
+  // 1. Handle Customizations if they exist
   if (item.customizationOptions && item.customizationOptions.length > 0) {
-    const modalResult: { customizationOptionID: number | null, price: number } | null = await this.openCustomizationModal(item);
-    
+    const modalResult = await this.openCustomizationModal(item);
+
     if (modalResult === null) {
-      return; // User cancelled the modal
+      return; // User cancelled
     }
 
-    if (modalResult.customizationOptionID === null) {
-      finalUnitPrice = basePrice;
-    } else {
+    if (modalResult.customizationOptionID) {
       selectedOption = item.customizationOptions.find(
         opt => opt.customizationOptionID === modalResult.customizationOptionID
-      );
+      ) ?? null;
 
-      if (!selectedOption) {
-        console.error("Selected option not found!");
-        return;
+      if (selectedOption) {
+        // ✅ CORE FIX: Correctly add customization price to base price
+        finalUnitPrice = basePrice + selectedOption.fixedPrice;
+        customizationOptionIds = [selectedOption.customizationOptionID];
+        
+        // ✅ CRITICAL FIX: Update both the main menu item AND the cart item
+        item.price = finalUnitPrice;
+        item.customizationOptionIds = customizationOptionIds;
+        
+        // ✅ ALSO update the corresponding item in cartItems
+        const cartItem = this.cartItems.find(ci => ci.productID === item.productID);
+        if (cartItem) {
+          cartItem.price = finalUnitPrice;
+          cartItem.customizationOptionIds = customizationOptionIds;
+        }
+        
+        console.log(`💰 Price calc: ${basePrice} (base) + ${selectedOption.fixedPrice} (custom) = ${finalUnitPrice}`);
       }
-
-      finalUnitPrice = modalResult.price;
-    }
-  }
-  
-  // Increment the item's quantity in the UI
-  const newQuantity = (item.quantity || 0) + 1;
-  item.quantity = newQuantity;
-  this.quantityMap[item.productID] = newQuantity;
-
-  // Update the newCart with the correct item details and calculated price
-  this.updateNewCart(item, selectedOption, finalUnitPrice);
-}
-
-private updateNewCart(
-  item: Product,
-  selectedOption?: CustomizationOption,
-  unitPriceForOrder?: number
-): void {
-  // Update quantityMap with the current UI quantity
-  this.quantityMap[item.productID] = item.quantity;
-
-  const existingItem = this.newCart.find(ci => ci.productID === item.productID);
-  const finalUnitPrice = unitPriceForOrder ?? (item.basePrice ?? item.price);
-
-  if (existingItem) {
-    // Update existing item in newCart
-    existingItem.quantity = item.quantity;
-    
-    if (selectedOption) {
-      existingItem.customizationOptionIds = [selectedOption.customizationOptionID];
-      existingItem.unitPrice = finalUnitPrice;
     } else {
-      existingItem.unitPrice = finalUnitPrice;
+      // User selected "None" - reset to base price
+      item.price = basePrice;
+      item.customizationOptionIds = [];
+      
+      // Also update cart item
+      const cartItem = this.cartItems.find(ci => ci.productID === item.productID);
+      if (cartItem) {
+        cartItem.price = basePrice;
+        cartItem.customizationOptionIds = [];
+      }
     }
-
-    // Remove if quantity becomes 0
-    if (existingItem.quantity === 0) {
-      this.newCart = this.newCart.filter(ci => ci.productID !== item.productID);
-    }
-  } else if (item.quantity > 0) {
-    // Add new item to newCart with current quantity
-    const newItem: OrderItem = {
-      productID: item.productID,
-      quantity: item.quantity, // Current UI quantity
-      unitPrice: finalUnitPrice,
-      customizationOptionIds: selectedOption
-        ? [selectedOption.customizationOptionID]
-        : []
-    };
-    this.newCart.push(newItem);
   }
 
-  this.newCart = [...this.newCart];
-  console.log('🛒 Updated newCart:', this.newCart);
+  // 2. Update UI and Cart
+  item.quantity = (item.quantity || 0) + 1;
+  this.updateNewCart(item, finalUnitPrice, customizationOptionIds);
 }
-
 
 private openCustomizationModal(product: Product): Promise<{ customizationOptionID: number | null, price: number } | null> {
     return new Promise((resolve) => {
@@ -1641,21 +1658,26 @@ rebuildNewCart() {
   this.cartItems.forEach(item => {
     const currentUIQuantity = this.quantityMap[item.productID] || item.quantity || 0;
     
-    console.log(`🔄 Product ${item.productID}: UI=${currentUIQuantity}`);
+    console.log(`🔄 Product ${item.productID}: UI=${currentUIQuantity}, Price=${item.price}, Customizations=${item.customizationOptionIds}`);
     
     // ✅ Only add to newCart if current UI quantity is greater than 0
     if (currentUIQuantity > 0) {
+      // ✅ CRITICAL FIX: Use the item's current price (which includes customizations)
+      // and check if we have a more recent price in the main menuItems
+      const mainMenuItem = this.menuItems.find(mi => mi.productID === item.productID);
+      const finalPrice = mainMenuItem?.price || item.price;
+      const finalCustomizations = mainMenuItem?.customizationOptionIds || item.customizationOptionIds || [];
+      
       this.newCart.push({
         productID: item.productID,
-        quantity: currentUIQuantity, // Send the actual quantity user selected
-        unitPrice: item.basePrice ?? item.price,
-        customizationOptionIds: item.customizationOptionIds || []
+        quantity: currentUIQuantity,
+        unitPrice: finalPrice, // ✅ Use the price that includes customizations
+        customizationOptionIds: finalCustomizations
       });
     }
   });
 
   console.log('🧾 Rebuilt newCart:', this.newCart);
-
 }
 private getConfirmedQuantity(productID: number): number {
   if (!this.confirmedCart || this.confirmedCart.length === 0) return 0;
@@ -1676,10 +1698,9 @@ addNewItemsToOrder(): Promise<void> {
 
     console.log('[Order Flow] Adding new items to existing order:', this.newCart);
 
-    // ✅ FIXED: Send items with proper structure for backend to merge
     const itemsToSend = this.newCart.map(item => ({
       productID: item.productID,
-      quantity: item.quantity, // This should ADD to existing quantity
+      quantity: item.quantity,
       unitPrice: item.unitPrice,
       customizationOptionIds: item.customizationOptionIds || []
     }));
@@ -1692,20 +1713,20 @@ addNewItemsToOrder(): Promise<void> {
         next: (response: any) => {
           console.log('[Order Flow] Successfully added items to existing order');
           
-          // ✅ FIXED: Clear newCart first
+          // Clear newCart
           this.newCart = [];
           
-          // ✅ FIXED: Refresh the order summary to get updated quantities from backend
-          this.getOrderSummary().then(() => {
-            // ✅ Reset UI quantities to ZERO for next ordering session
-            this.syncUIQuantitiesWithConfirmedCart();
-            
-            // Clear quantity map for UI
-            this.quantityMap = {};
+          // Refresh order summary (don't wait for it)
+          this.getOrderSummary();
+          
+          // Reset UI quantities to ZERO for next ordering session
+          this.syncUIQuantitiesWithConfirmedCart();
+          
+          // Clear quantity map for UI
+          this.quantityMap = {};
 
-            this.saveOrderState();
-            resolve();
-          });
+          this.saveOrderState();
+          resolve();
         },
         error: (error) => {
           console.error("[Order Flow] Error adding new items:", error);
@@ -1714,8 +1735,6 @@ addNewItemsToOrder(): Promise<void> {
       });
   });
 }
-
-
 
 private async createOrderID(): Promise<void> {
   const url = `${this.API_BASE}/order/generate?tableNo=${this.restaurantTableID}`;
@@ -1772,50 +1791,63 @@ private async postCartItems(): Promise<void> {
 }
 
 
+// In your order summary component, ensure customizations are displayed
 async getOrderSummary(): Promise<void> {
-  if (!this.orderID || !this.restaurantID) {
-    console.warn('⚠️ Missing orderID or restaurantID to fetch summary');
-    return;
-  }
+  return new Promise<void>(async (resolve, reject) => {
+    if (!this.orderID || !this.restaurantID) {
+      console.warn('⚠️ Missing orderID or restaurantID to fetch summary');
+      reject('Missing orderID or restaurantID');
+      return;
+    }
 
-  this.isLoading = true;
+    this.isLoading = true;
 
-  try {
-    const timestamp = new Date().getTime(); // Prevents cache
-    const summary = await firstValueFrom(
-      this.http.get<OrderSummary>(
-        `${this.API_BASE}/order/${this.orderID}/summary?restaurantId=${this.restaurantID}&timestamp=${timestamp}`
-      )
-    );
+    try {
+      const timestamp = new Date().getTime(); // Prevents cache
+      const summary = await firstValueFrom(
+        this.http.get<OrderSummary>(
+          `${this.API_BASE}/order/${this.orderID}/summary?restaurantId=${this.restaurantID}&timestamp=${timestamp}`
+        )
+      );
 
-    console.log("✅ Summary fetched from backend:", summary);
+      console.log("✅ Summary fetched from backend:", summary);
 
-    // Optional status mapping (if you use internal UI mappings)
-    summary.orderStatus = this.mapStatus(summary.orderStatus);
+      // Optional status mapping (if you use internal UI mappings)
+      summary.orderStatus = this.mapStatus(summary.orderStatus);
 
-    this.orderSummaryDetails = summary;
+      this.orderSummaryDetails = summary;
 
-    // ✅ FIXED: Clear and rebuild confirmedCart from fresh backend data
-    this.confirmedCart = [];
-    summary.orderItems.forEach(item => {
-      this.confirmedCart.push({
-        productID: item.productID,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        customizationOptionIds: item.customizations?.map(c => c.customizationOptionID) || []
+      // ✅ FIXED: Clear and rebuild confirmedCart from fresh backend data
+      this.confirmedCart = [];
+      summary.orderItems.forEach(item => {
+        this.confirmedCart.push({
+          productID: item.productID,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          customizationOptionIds: item.customizations?.map(c => c.customizationOptionID) || []
+        });
       });
-    });
 
-    console.log("✅ confirmedCart updated from backend:", this.confirmedCart);
+      console.log("✅ confirmedCart updated from backend:", this.confirmedCart);
 
-    // ✅ Evaluate offers (if your system supports them)
-    this.evaluateOffers();
+      // ✅ Evaluate offers (if your system supports them)
+      this.evaluateOffers();
 
-  } catch (error) {
-    console.error('❌ Error fetching order summary:', error);
-  } finally {
-    this.isLoading = false;
-  }
+      resolve(); // Resolve the promise when done
+
+    } catch (error) {
+      console.error('❌ Error fetching order summary:', error);
+      reject(error); // Reject the promise on error
+    } finally {
+      this.isLoading = false;
+    }
+  });
+}
+
+// Helper method to get base price without customizations
+getProductBasePrice(productID: number): number {
+  const product = this.menuItems.find(p => p.productID === productID);
+  return product?.basePrice || product?.price || 0;
 }
 
 

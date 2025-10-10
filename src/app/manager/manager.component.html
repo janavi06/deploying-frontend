@@ -1049,6 +1049,7 @@
     </section>
 
     <!-- ORDER HISTORY -->
+<!-- ORDER HISTORY SECTION -->
 <section *ngIf="selectedSection==='history'" class="history-section">
   <div class="dashboard-toolbar mb-4">
     <div class="row g-3">
@@ -1078,18 +1079,9 @@
         </div>
       </div>
 
-      <!-- Status Filter -->
-      <div class="col-md-2">
-        <label class="form-label">Status</label>
-        <select class="form-select" [(ngModel)]="filterStatus" (change)="applyFilters()">
-          <option value="">All Status</option>
-          <option *ngFor="let status of orderStatuses" [value]="status">{{status}}</option>
-        </select>
-      </div>
-
       <!-- Payment Method Filter -->
       <div class="col-md-2">
-        <label class="form-label">Payment</label>
+        <label class="form-label">Payment Method</label>
         <select class="form-select" [(ngModel)]="filterPaymentMethod" (change)="applyFilters()">
           <option value="">All Methods</option>
           <option value="Cash">Cash</option>
@@ -1127,15 +1119,12 @@
           <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
         </button>
         <div class="btn-group">
-
-     <div class="btn-group">
-  <button class="btn btn-danger" (click)="exportToPDF()">
-    <i class="bi bi-file-earmark-pdf me-1"></i> PDF
-  </button>
-  <button class="btn btn-dark" (click)="exportToCSV()">
-    <i class="bi bi-file-earmark-text me-1"></i> CSV
-  </button>
-</div>
+          <button class="btn btn-danger" (click)="exportToPDF()">
+            <i class="bi bi-file-earmark-pdf me-1"></i> PDF Report
+          </button>
+          <button class="btn btn-dark" (click)="exportToCSV()">
+            <i class="bi bi-file-earmark-text me-1"></i> CSV Export
+          </button>
         </div>
       </div>
     </div>
@@ -1170,8 +1159,8 @@
     <div class="col-md-3">
       <div class="card summary-card">
         <div class="card-body">
-          <h6 class="card-subtitle mb-2 text-muted">Cancellation Rate</h6>
-          <h3 class="card-title">{{calculateCancellationRate() | percent}}</h3>
+          <h6 class="card-subtitle mb-2 text-muted">Success Rate</h6>
+          <h3 class="card-title">{{calculateSuccessRate() | percent}}</h3>
         </div>
       </div>
     </div>
@@ -1193,13 +1182,11 @@
                 'bi-arrow-up': sortColumn === 'createdAt' && sortDirection === 'desc'}"></i>
               </th>
               <th>Table</th>
-              <!-- <th>Customer</th> -->
               <th>Items</th>
               <th (click)="sortOrders('totalAmount')">
                 Amount <i class="bi" [ngClass]="{'bi-arrow-down': sortColumn === 'totalAmount' && sortDirection === 'asc', 
                 'bi-arrow-up': sortColumn === 'totalAmount' && sortDirection === 'desc'}"></i>
               </th>
-              <th>Status</th>
               <th>Payment</th>
               <th>Actions</th>
             </tr>
@@ -1211,7 +1198,6 @@
               </td>
               <td>{{order.createdAt | date:'medium'}}</td>
               <td>{{order.tableNo || 'Takeaway'}}</td>
-              <!-- <td>{{order.customerName || 'Guest'}}</td> -->
               <td>
                 <span class="badge bg-primary">{{order.items.length}}</span>
                 <button class="btn btn-sm btn-link" (click)="toggleItems(order)">
@@ -1220,27 +1206,23 @@
               </td>
               <td>{{calculateOrderTotal(order) | currency:'INR'}}</td>
               <td>
-                <span class="badge" [ngClass]="getStatusBadgeClass(order.status)">
-                  {{order.status}}
+                <span class="badge" [ngClass]="getPaymentBadgeClass(order.paymentMethod)">
+                  {{order.paymentMethod || 'Pending'}}
                 </span>
               </td>
               <td>
-                <span class="badge bg-secondary">{{order.paymentMethod || 'Pending'}}</span>
-              </td>
-              <td>
-<div class="btn-group btn-group-sm">
-  <button class="btn btn-outline-primary" (click)="viewBill(order.orderID)" title="View Bill">
-    <i class="bi bi-eye"></i>
-  </button>
-  <button class="btn btn-outline-success" (click)="downloadBill(order.orderID)" title="Download Bill">
-    <i class="bi bi-download"></i>
-  </button>
-</div>
-
+                <div class="btn-group btn-group-sm">
+                  <button class="btn btn-outline-primary" (click)="viewBill(order.orderID)" title="View Bill">
+                    <i class="bi bi-eye"></i>
+                  </button>
+                  <button class="btn btn-outline-success" (click)="downloadBill(order.orderID)" title="Download Bill">
+                    <i class="bi bi-download"></i>
+                  </button>
+                </div>
               </td>
             </tr>
             <tr *ngIf="filteredOrders.length === 0">
-              <td colspan="9" class="text-center py-4 text-muted">
+              <td colspan="7" class="text-center py-4 text-muted">
                 No orders found matching your criteria.
               </td>
             </tr>

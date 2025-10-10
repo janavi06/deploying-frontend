@@ -633,15 +633,7 @@ getTableCountByStatus(status: string): number {
     this.updatePagination();
   }
 
-  resetFilters(): void {
-    this.filterDateOption = 'last7';
-    this.filterTableNo = null;
-    this.filterStatus = '';
-    this.filterPaymentMethod = '';
-    this.searchText = '';
-    this.onDateOptionChange();
-    this.applyFilters();
-  }
+
 
   sortOrders(column: string): void {
     if (this.sortColumn === column) {
@@ -761,6 +753,27 @@ loadReportData(): void {
     }
   });
 }
+
+calculateSuccessRate(): number {
+  const total = this.filteredOrders.length;
+  const successful = this.filteredOrders.filter(o => o.status !== 'Cancelled').length;
+  return total > 0 ? successful / total : 0;
+}
+
+// Get payment badge class
+getPaymentBadgeClass(paymentMethod: string): string {
+  switch (paymentMethod?.toLowerCase()) {
+    case 'cash':
+      return 'bg-success';
+    case 'card':
+      return 'bg-primary';
+    case 'upi':
+      return 'bg-info';
+    default:
+      return 'bg-secondary';
+  }
+}
+
 getPaymentMethodPercentage(methodAmount: number): string {
   if (!this.reportData.totalRevenue || this.reportData.totalRevenue <= 0) {
     return '0%';
@@ -789,35 +802,120 @@ safeNumber(value: any, defaultValue: number = 0): number {
   }
 exportToCSV() {
   const headers = [
-    'Order ID', 'Date/Time', 'Table', 'Status', 'Payment Method', 
-    'Items Count', 'Subtotal', 'Discount', 'Tax', 'Service Charge', 'Total'
+    'Order ID', 'Date', 'Time', 'Table Number', 'Customer Name', 
+    'Total Items', 'Subtotal', 'Discount', 'CGST', 'SGST', 
+    'Service Charge', 'Total Amount', 'Payment Method', 'Payment Status',
+    'Order Duration', 'Item Details'
   ];
 
   const csvRows = this.filteredOrders.map((order: any) => {
-    const items = order.items.map((i: any) => 
-      `${i.productName} x${i.quantity}` + 
-      (i.customizations?.length ? ` (${i.customizations.map((c: any) => c.optionName).join(', ')})` : '')
+    const itemDetails = order.items.map((item: any) => 
+      `${item.productName} x${item.quantity} @ ₹${item.unitPrice}`
     ).join('; ');
 
+    const orderDate = new Date(order.createdAt);
+    
     return [
       order.orderID,
-      order.createdAt.toISOString(),
+      orderDate.toLocaleDateString(),
+      orderDate.toLocaleTimeString(),
       order.tableNo || 'Takeaway',
-      order.status,
-      order.paymentMethod || 'Pending',
+      order.customerName || 'Guest',
       order.items.length,
-      this.calculateSubtotal(order),
-      order.discountAmount || 0,
-      (order.cgst || 0) + (order.sgst || 0),
-      order.serviceCharge || 0,
-      this.calculateOrderTotal(order)
+      this.calculateSubtotal(order).toFixed(2),
+      order.discountAmount || '0.00',
+      order.cgst || '0.00',
+      order.sgst || '0.00',
+      order.serviceCharge || '0.00',
+      this.calculateOrderTotal(order).toFixed(2),
+      order.paymentMethod || 'Pending',
+      order.status,
+      this.getOrderDuration(order),
+      `"${itemDetails}"`
     ].map(field => `"${String(field).replace(/"/g, '""')}"`).join(',');
   });
 
-  const csvContent = [headers.join(','), ...csvRows].join('\n');
-  this.downloadFile(csvContent, 'text/csv', `orders_${new Date().toISOString().slice(0,10)}.csv`);
+  // Add summary section
+  const summary = [
+    [],
+    ['SUMMARY'],
+    ['Total Orders:', this.filteredOrders.length],
+    ['Total Revenue:', `₹${this.calculateTotalRevenue().toFixed(2)}`],
+    ['Average Order Value:', `₹${this.calculateAverageOrderValue().toFixed(2)}`],
+    ['Success Rate:', `${(this.calculateSuccessRate() * 100).toFixed(1)}%`],
+    ['Report Period:', this.getFormattedDateRange()],
+    ['Generated On:', new Date().toLocaleString()],
+    []
+  ];
+
+  const summaryCsv = summary.map(row => row.map(field => `"${field}"`).join(','));
+  const csvContent = [headers.join(','), ...csvRows, ...summaryCsv].join('\n');
+  
+  this.downloadFile(csvContent, 'text/csv', 
+    `Order_History_${this.getRestaurantName()}_${new Date().toISOString().slice(0,10)}.csv`);
 }
 
+// Helper Methods
+getPaymentMethodBreakdown() {
+  const methods: any = {};
+  this.filteredOrders.forEach(order => {
+    const method = order.paymentMethod || 'Pending';
+    if (!methods[method]) {
+      methods[method] = { count: 0, amount: 0 };
+    }
+    methods[method].count++;
+    methods[method].amount += this.calculateOrderTotal(order);
+  });
+
+  const totalAmount = this.calculateTotalRevenue();
+  return Object.keys(methods).map(method => ({
+    method,
+    count: methods[method].count,
+    amount: methods[method].amount,
+    percentage: totalAmount > 0 ? ((methods[method].amount / totalAmount) * 100).toFixed(1) : '0.0'
+  }));
+}
+
+getOrderDuration(order: any): string {
+  if (!order.closedAt) return 'Ongoing';
+  
+  const created = new Date(order.createdAt);
+  const closed = new Date(order.closedAt);
+  const durationMs = closed.getTime() - created.getTime();
+  const durationMins = Math.round(durationMs / (1000 * 60));
+  
+  if (durationMins < 60) return `${durationMins} mins`;
+  const hours = Math.floor(durationMins / 60);
+  const mins = durationMins % 60;
+  return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+}
+
+getRestaurantName(): string {
+  // You can get this from your restaurant service or use a default
+  // For now, using a default name - you can enhance this by fetching actual restaurant data
+  return 'Restaurant';
+}
+
+getFormattedDateRange(): string {
+  if (this.filterDateOption === 'custom' && this.customStartDate && this.customEndDate) {
+    const start = new Date(this.customStartDate);
+    const end = new Date(this.customEndDate);
+    return `${start.toLocaleDateString()} - ${end.toLocaleDateString()}`;
+  }
+  return this.filterDateOption.charAt(0).toUpperCase() + this.filterDateOption.slice(1);
+}
+
+
+
+// Update resetFilters to remove status filter
+resetFilters(): void {
+  this.filterDateOption = 'last7';
+  this.filterTableNo = null;
+  this.filterPaymentMethod = '';
+  this.searchText = '';
+  this.onDateOptionChange();
+  this.applyFilters();
+}
 private downloadFile(data: string, type: string, filename: string) {
   const blob = new Blob([data], { type });
   const url = window.URL.createObjectURL(blob);
@@ -830,61 +928,110 @@ private downloadFile(data: string, type: string, filename: string) {
 
 exportToPDF() {
   const doc = new jsPDF();
-
-  // Add title
-  doc.setFontSize(18);
-  doc.text('Order History Report', 14, 22);
-
-  // Add date range
+  
+  // Restaurant Header
+  doc.setFontSize(20);
+  doc.setTextColor(40, 40, 40);
+  doc.text('ORDER HISTORY REPORT', 105, 20, { align: 'center' });
+  
+  // Report Details
   doc.setFontSize(10);
-  doc.text(`Date Range: ${this.getFormattedDateRange()}`, 14, 30);
+  doc.setTextColor(100, 100, 100);
+  doc.text(`Restaurant: ${this.getRestaurantName()}`, 20, 35);
+  doc.text(`Period: ${this.getFormattedDateRange()}`, 20, 42);
+  doc.text(`Generated: ${new Date().toLocaleDateString()}`, 20, 49);
+  doc.text(`Total Orders: ${this.filteredOrders.length}`, 140, 35);
+  doc.text(`Total Revenue: ₹${this.calculateTotalRevenue().toLocaleString('en-IN')}`, 140, 42);
+  doc.text(`Success Rate: ${(this.calculateSuccessRate() * 100).toFixed(1)}%`, 140, 49);
 
-  const headers = [
-    'Order ID', 
-    'Date', 
-    'Table', 
-    'Status', 
-    'Payment', 
-    'Items', 
-    'Amount'
+  // Summary Section
+  doc.setFontSize(12);
+  doc.setTextColor(40, 40, 40);
+  doc.text('SUMMARY OVERVIEW', 20, 65);
+  
+  doc.setFontSize(10);
+  const summaryData = [
+    ['Metric', 'Value'],
+    ['Total Orders', this.filteredOrders.length.toString()],
+    ['Completed Orders', this.filteredOrders.filter(o => o.status === 'Completed').length.toString()],
+    ['Cancelled Orders', this.filteredOrders.filter(o => o.status === 'Cancelled').length.toString()],
+    ['Total Revenue', `₹${this.calculateTotalRevenue().toLocaleString('en-IN')}`],
+    ['Average Order Value', `₹${this.calculateAverageOrderValue().toLocaleString('en-IN')}`],
+    ['Success Rate', `${(this.calculateSuccessRate() * 100).toFixed(1)}%`]
   ];
 
-  const data = this.filteredOrders.map(order => [
-    order.orderID,
+  autoTable(doc, {
+    head: [summaryData[0]],
+    body: summaryData.slice(1),
+    startY: 70,
+    theme: 'grid',
+    headStyles: { fillColor: [41, 128, 185] },
+    styles: { fontSize: 9, cellPadding: 3 }
+  });
+
+  // Detailed Orders Table
+  const finalY = (doc as any).lastAutoTable.finalY + 15;
+  doc.setFontSize(12);
+  doc.text('DETAILED ORDER BREAKDOWN', 20, finalY);
+
+  const orderData = this.filteredOrders.map(order => [
+    order.orderID.toString(),
     order.createdAt.toLocaleDateString(),
     order.tableNo || 'Takeaway',
-    order.status,
+    order.items.length.toString(),
+    `₹${this.calculateOrderTotal(order).toLocaleString('en-IN')}`,
     order.paymentMethod || 'Pending',
-    order.items.length,
-    this.calculateOrderTotal(order).toFixed(2)
+    this.getOrderDuration(order)
   ]);
 
-  // ✅ Correct call
   autoTable(doc, {
-    head: [headers],
-    body: data,
-    startY: 35,
-    styles: {
-      fontSize: 8,
-      cellPadding: 2
-    },
-    headStyles: {
-      fillColor: [41, 128, 185],
-      textColor: 255,
-      fontStyle: 'bold'
+    head: [['Order ID', 'Date', 'Table', 'Items', 'Amount', 'Payment', 'Duration']],
+    body: orderData,
+    startY: finalY + 5,
+    theme: 'grid',
+    headStyles: { fillColor: [52, 152, 219] },
+    styles: { fontSize: 8, cellPadding: 2 },
+    columnStyles: {
+      0: { cellWidth: 25 },
+      1: { cellWidth: 30 },
+      2: { cellWidth: 20 },
+      3: { cellWidth: 15 },
+      4: { cellWidth: 25 },
+      5: { cellWidth: 20 },
+      6: { cellWidth: 25 }
     }
   });
 
-  doc.save(`orders_${new Date().toISOString().slice(0, 10)}.pdf`);
-}
+  // Payment Method Breakdown
+  const paymentSummaryY = (doc as any).lastAutoTable.finalY + 15;
+  doc.setFontSize(12);
+  doc.text('PAYMENT METHOD ANALYSIS', 20, paymentSummaryY);
 
+  const paymentMethods = this.getPaymentMethodBreakdown();
+  const paymentData = paymentMethods.map(p => [p.method, p.count.toString(), `₹${p.amount.toLocaleString('en-IN')}`, `${p.percentage}%`]);
 
-private getFormattedDateRange(): string {
-  if (this.filterDateOption === 'custom' && this.customStartDate && this.customEndDate) {
-    return `${new Date(this.customStartDate).toLocaleDateString()} - ${new Date(this.customEndDate).toLocaleDateString()}`;
+  autoTable(doc, {
+    head: [['Payment Method', 'Orders', 'Amount', '% of Total']],
+    body: paymentData,
+    startY: paymentSummaryY + 5,
+    theme: 'grid',
+    headStyles: { fillColor: [39, 174, 96] },
+    styles: { fontSize: 9, cellPadding: 3 }
+  });
+
+  // Footer
+  const pageCount = doc.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFontSize(8);
+    doc.setTextColor(150, 150, 150);
+    doc.text(`Page ${i} of ${pageCount}`, 105, 290, { align: 'center' });
+    doc.text(`Generated by Restaurant Management System`, 105, 295, { align: 'center' });
   }
-  return this.filterDateOption.charAt(0).toUpperCase() + this.filterDateOption.slice(1);
+
+  doc.save(`Order_Report_${this.getRestaurantName()}_${new Date().toISOString().slice(0,10)}.pdf`);
 }
+
 
 
   downloadOrderHistoryCSV() {
