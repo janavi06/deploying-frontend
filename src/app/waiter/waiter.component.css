@@ -3055,3 +3055,50 @@ qrcode canvas {
   background-color: #d1edff !important;
   border-left: 4px solid #0d6efd !important;
 }
+
+/* Order items styling */
+.order-items {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.order-items li {
+  padding: 4px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.item-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.item-price {
+  font-weight: bold;
+  color: #28a745;
+}
+
+.customizations-list {
+  margin-left: 16px;
+  margin-top: 2px;
+}
+
+.customization-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85em;
+  color: #6c757d;
+  padding: 1px 0;
+}
+
+.customization-price {
+  color: #ff6b35;
+  font-weight: 500;
+}
+
+/* For edit modal */
+.customization-line {
+  line-height: 1.2;
+  margin-bottom: 2px;
+}

@@ -138,25 +138,32 @@
       </div>
     </div>
 
-    <div class="cart-list">
-      <div class="cart-row" *ngFor="let c of cart; let i = index">
-        <div class="meta">
-          <div class="title">{{ c.productName }}</div>
-          <div class="chips" *ngIf="c.customisations.length">
-            <span class="chip xs" *ngFor="let chip of c.customisations">{{ chip }}</span>
-          </div>
+<div class="cart-list">
+  <div class="cart-row" *ngFor="let c of cart; let i = index">
+    <div class="meta">
+      <div class="title">{{ c.productName }}</div>
+      <div class="chips" *ngIf="c.customisations.length">
+        <span class="chip xs" *ngFor="let chip of c.customisations">{{ chip }}</span>
+      </div>
+      
+      <div class="price-breakdown text-muted small" *ngIf="c.customisations.length">
+        <div>
+          Base: ₹{{ getProductBasePrice(c.productID) | number:'1.2-2' }} 
+          + Customizations: ₹{{ getCustomizationPrice(c) | number:'1.2-2' }}
         </div>
-
-        <div class="qty">
-          <button class="qbtn sm" (click)="dec(c)">−</button>
-          <span>{{ c.quantity }}</span>
-          <button class="qbtn sm" (click)="inc(c)">＋</button>
-        </div>
-
-        <div class="amt">₹{{ c.unitPrice * c.quantity | number:'1.2-2' }}</div>
-        <button class="del" (click)="remove(i)">✕</button>
       </div>
     </div>
+
+    <div class="qty">
+      <button class="qbtn sm" (click)="dec(c)">−</button>
+      <span>{{ c.quantity }}</span>
+      <button class="qbtn sm" (click)="inc(c)">＋</button>
+    </div>
+
+    <div class="amt">₹{{ c.unitPrice * c.quantity | number:'1.2-2' }}</div>
+    <button class="del" (click)="remove(i)">✕</button>
+  </div>
+</div>
 
 <div class="cart-actions">
   <button class="btn ghost" (click)="goBack()">Back</button>

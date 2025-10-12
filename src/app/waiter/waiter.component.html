@@ -114,36 +114,40 @@
               [disabled]="busyCollect">Cash</button>
     </div>
 
-    <!-- UPI Tab - SIMPLIFIED -->
-    <div *ngIf="collectModal.tab==='UPI'">
-      <div class="mb-3">
-        <div class="alert alert-info">
-          <small>Click "Mark as Paid" when customer completes UPI payment.</small>
-        </div>
-      </div>
-      
-      <div class="d-grid gap-2">
-        <button class="btn btn-success" 
-                [disabled]="busyCollect" 
-                (click)="markUpiAsPaid()">
-          <span *ngIf="busyCollect" class="spinner-border spinner-border-sm me-2"></span>
-          Mark as Paid
-        </button>
-      </div>
+<!-- UPI Tab -->
+<div *ngIf="collectModal.tab==='UPI'">
+  <div class="mb-3">
+    <div class="alert alert-info">
+      <i class="bi bi-printer me-2"></i>
+      <small>Click "Mark as Paid" when customer completes UPI payment.  bill will print automatically.</small>
     </div>
+  </div>
+  
+  <div class="d-grid gap-2">
+    <button class="btn btn-success" 
+            [disabled]="busyCollect" 
+            (click)="markUpiAsPaid()">
+      <span *ngIf="busyCollect" class="spinner-border spinner-border-sm me-2"></span>
+      <i class="bi bi-check-lg me-1"></i>
+      Mark as Paid & Print  Bill
+    </button>
+  </div>
+</div>
 
-    <!-- Cash Tab - SIMPLIFIED -->
-    <div *ngIf="collectModal.tab==='CASH'">
-      <div class="alert alert-info mb-3">
-        <small>Confirm that you have received cash payment from the customer.</small>
-      </div>
-      <button class="btn btn-success w-100" 
-              [disabled]="busyCollect" 
-              (click)="markCashReceived()">
-        <span *ngIf="busyCollect" class="spinner-border spinner-border-sm me-2"></span>
-        Confirm Cash Received
-      </button>
-    </div>
+<!-- Cash Tab -->
+<div *ngIf="collectModal.tab==='CASH'">
+  <div class="alert alert-info mb-3">
+    <i class="bi bi-printer me-2"></i>
+    <small>Confirm that you have received cash payment.  bill will print automatically.</small>
+  </div>
+  <button class="btn btn-success w-100" 
+          [disabled]="busyCollect" 
+          (click)="markCashReceived()">
+    <span *ngIf="busyCollect" class="spinner-border spinner-border-sm me-2"></span>
+    <i class="bi bi-cash-coin me-1"></i>
+    Confirm Cash Received & Print  Bill
+  </button>
+</div>
   </div>
   <div class="payment-backdrop" (click)="closeCollectModal()"></div>
 </div>
@@ -183,14 +187,23 @@
                 <div class="order-time">{{ getElapsedTime(order.createdAt) }}</div>
               </div>
 
-              <ul class="order-items">
-                <li *ngFor="let item of order.items">
-                  {{ item.productName || ('Item ' + item.productID) }} × {{ item.quantity }}
-                  <span *ngIf="item.customizations?.length" class="text-muted small">
-                    ({{ getCustomizationsText(item.customizations) }})
-                  </span>
-                </li>
-              </ul>
+<div class="order-items">
+  <li *ngFor="let item of order.items">
+    <div class="item-main">
+  {{ item.productName || ('Item ' + item.productID) }} × {{ item.quantity }}
+  <span class="item-price">
+    ₹{{ (getItemBasePrice(item) * item.quantity) | number:'1.2-2' }}
+  </span>
+</div>
+    
+    <!-- Show customizations without prices -->
+    <div *ngIf="item.customizations?.length" class="customizations-list">
+      <div *ngFor="let custom of item.customizations" class="customization-item">
+        + {{ custom.optionName }}
+      </div>
+    </div>
+  </li>
+</div>
 <div class="order-payment-info border-top pt-2 mt-2">
   <div *ngIf="order.latestPayment; else pendingPayment">
     <div class="d-flex justify-content-between align-items-center">
@@ -205,14 +218,14 @@
       </div>
     </div>
   </div>
-  <ng-template #pendingPayment>
-    <div class="d-flex justify-content-between align-items-center">
-      <span class="text-muted small">Payment Due</span>
-      <span class="fw-bold text-primary">
-        ₹{{ calculateOrderTotal(order) | number:'1.2-2' }}
-      </span>
-    </div>
-  </ng-template>
+<ng-template #pendingPayment>
+  <div class="d-flex justify-content-between align-items-center">
+    <span class="text-muted small">Payment Due</span>
+    <span class="fw-bold text-primary">
+      ₹{{ order.totalAmount | number:'1.2-2' }}
+    </span>
+  </div>
+</ng-template>
 </div>
 
 <div class="order-actions mt-2 d-flex justify-content-end gap-1 flex-wrap">
@@ -294,11 +307,19 @@
               <td>{{ order.tableNo }}</td>
               <td>{{ order.orderID }}</td>
               <td>
-                <ul class="list-unstyled mb-0">
-                  <li *ngFor="let item of order.items">
-                    {{ item.productName || ('Product ' + item.productID) }} × {{ item.quantity }}
-                  </li>
-                </ul>
+             <ul class="list-unstyled mb-0">
+  <li *ngFor="let item of order.items" class="mb-1">
+    <div class="d-flex justify-content-between">
+      <span>{{ item.productName || ('Product ' + item.productID) }} × {{ item.quantity }}</span>
+     <span class="text-success">₹{{ (getItemBasePrice(item) * item.quantity) | number:'1.2-2' }}</span>
+    </div>
+    <div *ngIf="item.customizations?.length" class="ms-2">
+      <div *ngFor="let custom of item.customizations" class="small text-muted">
+        + {{ custom.optionName }} (₹{{ custom.fixedPrice | number:'1.2-2' }})
+      </div>
+    </div>
+  </li>
+</ul>
               </td>
               <td>{{ order.latestPayment?.method || 'N/A' }}</td>
               <td>
@@ -445,13 +466,17 @@
                       </div>
                       <small class="text-muted">ID: {{item.productID}}</small>
                     </td>
-                    <td>
-                      <small *ngIf="item.customizations?.length" class="text-muted">
-                        {{ getCustomizationsText(item.customizations) }}
-                      </small>
-                      <span *ngIf="!item.customizations?.length" class="text-muted">-</span>
-                    </td>
-                    <td class="text-center">₹{{item.unitPrice | number:'1.2-2'}}</td>
+<td>
+  <div *ngIf="item.customizations?.length; else noCustomizations">
+    <div *ngFor="let custom of item.customizations" class="customization-line">
+      <small class="text-muted">+ {{ custom.optionName }} (₹{{ custom.fixedPrice | number:'1.2-2' }})</small>
+    </div>
+  </div>
+  <ng-template #noCustomizations>
+    <span class="text-muted">-</span>
+  </ng-template>
+</td>
+                    <td class="text-center">₹{{getItemBasePrice(item) | number:'1.2-2'}}</td>
                     <td class="text-center">
                       <div class="d-flex align-items-center justify-content-center gap-2">
                         <button class="btn btn-sm btn-outline-danger" 

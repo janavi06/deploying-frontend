@@ -210,6 +210,7 @@ reportData: any = {
 
 ngOnInit(): void {
       this.restaurantId = Number(localStorage.getItem('restaurantId') || '0');
+  this.getRestaurantIdFromUrl();
 
   this.loadSubCategories();
   this.loadCategories();
@@ -254,9 +255,27 @@ viewOrderDetails(orderID: number) {
   // Implement order details viewing logic
   console.log('Viewing details for order:', orderID);
 }
-
+private getRestaurantIdFromUrl(): void {
+  // Method 1: Get from URL query parameters
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlRestaurantId = urlParams.get('restaurantId');
+  
+  // Method 2: Get from localStorage as fallback
+  const storedRestaurantId = localStorage.getItem('restaurantId');
+  
+  // Method 3: Default fallback
+  this.restaurantId = Number(urlRestaurantId || storedRestaurantId || '0');
+  
+  console.log('Current Restaurant ID:', this.restaurantId);
+  
+  if (this.restaurantId === 0) {
+    console.warn('No restaurantId found! Some features may not work properly.');
+  }
+}
 // ✨ MODIFIED: loadDashboardData to include new data points
 loadDashboardData(): void {
+    if (this.restaurantId === 0) return;
+  
     this.http.get<any>(`${this.ORDER_API}/dashboard/active-orders?restaurantId=${this.restaurantId}`).subscribe({
       next: (res) => {
         this.activeOrders = res.data.orders.map((o: any) => ({
@@ -521,31 +540,47 @@ Math = Math;
   }
 
   // Order History Methods
-  loadAllOrders() {
-    this.http.get<{ message: string; orders: any[] }>(`${this.ORDER_API}/with-waiter?restaurantId=${this.restaurantId}`).subscribe({
-      next: res => {
-        this.allOrders = res.orders.map(o => ({
-          orderID: o.orderID,
-          createdAt: new Date(o.createdAt),
-          tableNo: o.tableNo,
-          status: o.orderStatus,
-          items: o.items,
-          showItems: false,
-          subtotal: o.subtotal || 0,
-          discountAmount: o.discountAmount || 0,
-          cgst: o.cgst || 0,
-          sgst: o.sgst || 0,
-          serviceCharge: o.serviceCharge || 0,
-          totalAmount: o.totalAmount || 0,
-          paymentMethod: o.latestPayment?.method || 'Pending',
-          customerName: o.customerName || 'Guest'
-        }));
-
-        this.applyFilters();
-      },
-      error: err => console.error('Error loading orders:', err)
-    });
+loadAllOrders() {
+  if (this.restaurantId === 0) {
+    console.error('Cannot load orders: restaurantId is 0');
+    return;
   }
+
+  this.http.get<{ message: string; orders: any[] }>(
+    `${this.ORDER_API}/with-waiter?restaurantId=${this.restaurantId}`
+  ).subscribe({
+    next: res => {
+      this.allOrders = res.orders.map(o => ({
+        orderID: o.orderID,
+        createdAt: new Date(o.createdAt),
+        tableNo: o.tableNo,
+        status: o.orderStatus,
+        items: o.items,
+        showItems: false,
+        subtotal: o.subtotal || 0,
+        discountAmount: o.discountAmount || 0,
+        cgst: o.cgst || 0,
+        sgst: o.sgst || 0,
+        serviceCharge: o.serviceCharge || 0,
+        totalAmount: o.totalAmount || 0,
+        paymentMethod: o.latestPayment?.method || 'Pending',
+        customerName: o.customerName || 'Guest',
+        waiterName: o.waiterName || 'N/A' // Add waiter name
+      }));
+
+      this.applyFilters();
+    },
+    error: err => {
+      console.error('Error loading orders:', err);
+      // Show user-friendly error message
+      if (err.status === 404) {
+        console.log('No orders found for this restaurant');
+        this.allOrders = [];
+        this.applyFilters();
+      }
+    }
+  });
+}
   onDateOptionChange(): void {
     const today = new Date();
     
@@ -692,6 +727,9 @@ getTableCountByStatus(status: string): number {
   // Reports Methods
 // Update the loadReportData method to handle the API response properly
 loadReportData(): void {
+
+    if (this.restaurantId === 0) return;
+
   const params: any = {
     restaurantId: this.restaurantId,
     reportType: this.selectedReport,
@@ -1569,6 +1607,8 @@ addCustomer(): void {
   }
 
   loadProducts() {
+      if (this.restaurantId === 0) return;
+
     this.http.get<any[]>(`${this.PRODUCT_URL}?restaurantId=${this.restaurantId}`).subscribe({
       next: products => {
         this.products = products;

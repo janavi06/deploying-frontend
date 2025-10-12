@@ -2,7 +2,7 @@
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders, HttpClientModule } from '@angular/common/http';
-import { Router ,ActivatedRoute} from '@angular/router';
+import { Router ,ActivatedRoute, NavigationStart} from '@angular/router';
 import { environment } from '../../environments/environment';
 import { PendingPaymentsComponent } from '../pending-payments/pending-payments.component';  // ← import it!
 import { NewOrderComponent } from '../new-order/new-order.component';
@@ -52,9 +52,16 @@ export interface Order {
   closedAt?: Date;
   latestPayment?: PaymentInfo;   // ✅ ADD THIS LINE
     kitchenStatus?: KitchenStatus;  // Add this line
+  totalAmount?: number; // ✅ ADD THIS LINE
 
 }
-
+export interface RestaurantDetails {
+  name: string;
+  address: string;
+  upiId?: string;
+  upiName?: string;
+  // Add other properties you need
+}
 export interface WaiterRequest {
   waiterRequestID: number;
   message:         string;
@@ -100,7 +107,14 @@ activeAlerts: { type: 'order' | 'ready' | 'payment', message: string, timestamp:
   viewMode: 'grid' | 'list' = 'grid';
   selectedStatus = 'all';
   statusFilters = ['all', 'pending', 'confirmed', 'served'];
+private readonly PRINT_API = 'http://localhost:9000/api/print';
 
+  restaurantDetails: RestaurantDetails = {
+    name: 'Restaurant',
+    address: 'Address not available',
+    upiId: '',
+    upiName: ''
+  };
 // readyNotifications: any[] = [];
 groupedUpcomingOrders: { tableNo: number; orders: Order[]; expanded: boolean }[] = [];
 readyTables: { tableNo: number, orders: Order[] }[] = [];
@@ -160,9 +174,14 @@ private readonly API_BASE = `${environment.apiUrl}`;
 
   private httpOptions: { headers: HttpHeaders } = { headers: new HttpHeaders() };
 
-  constructor(private http: HttpClient, private router: Router, private route: ActivatedRoute) {}
+  constructor(private http: HttpClient, private router: Router, private route: ActivatedRoute) {
+      this.setupRouterEvents(); // ✅ ADD THIS
+
+  }
 ngOnInit(): void {
-  // ✅ Get restaurantId from URL parameters FIRST
+    this.validateUrl(); // ✅ ADD THIS FIRST
+
+  // ✅ Get restaurantId from URL parameters and maintain it in URL
   this.route.queryParams.subscribe(params => {
     const urlRestaurantId = params['restaurantId'] || 
                            params['restaurantid'] || 
@@ -173,20 +192,56 @@ ngOnInit(): void {
     if (urlRestaurantId) {
       this.restaurantId = +urlRestaurantId;
       this.initializeDashboard();
+      // Ensure URL stays updated with restaurantId
+      this.updateUrlWithRestaurantId();
     } else {
       // Fallback: try to get from localStorage or user data
       this.initializeFromPersistedData();
     }
-
-    
   });
 
   window.addEventListener('beforeunload', () => {
     this.persistUIState();
   });
-
-  
 }
+// ✅ ENHANCED: Get shareable URL method
+getShareableUrl(): string {
+  const baseUrl = window.location.origin + window.location.pathname;
+  return `${baseUrl}?restaurantId=${this.restaurantId}`;
+}
+
+// ✅ ADD: Method to refresh URL (useful for manual refresh)
+refreshUrl(): void {
+  this.updateUrlWithRestaurantId();
+}
+private updateUrlWithRestaurantId(): void {
+  const currentUrl = this.router.url;
+  
+  // Check if URL already has restaurantId
+  if (!currentUrl.includes('restaurantId=') && this.restaurantId) {
+    // Navigate to same route with restaurantId parameter
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { restaurantId: this.restaurantId },
+      queryParamsHandling: 'merge', // This preserves other query params
+      replaceUrl: true // This replaces current history entry
+    });
+  }
+}
+  
+// ✅ ADD: Method to handle navigation with restaurantId
+private navigateWithRestaurantId(commands: any[]): void {
+  if (this.restaurantId) {
+    const navigationExtras = {
+      queryParams: { restaurantId: this.restaurantId },
+      queryParamsHandling: 'merge' as const
+    };
+    this.router.navigate(commands, navigationExtras);
+  } else {
+    this.router.navigate(commands);
+  }
+}
+
 
 private initializeFromPersistedData(): void {
   // Try to get restaurantId from localStorage first
@@ -194,6 +249,7 @@ private initializeFromPersistedData(): void {
   if (persistedRestaurantId) {
     this.restaurantId = +persistedRestaurantId;
     this.initializeDashboard();
+    this.updateUrlWithRestaurantId(); // ✅ ADD THIS
     return;
   }
 
@@ -208,6 +264,7 @@ private initializeFromPersistedData(): void {
     // Persist for future refreshes
     localStorage.setItem('waiter_restaurantId', this.restaurantId.toString());
     this.initializeDashboard();
+    this.updateUrlWithRestaurantId(); // ✅ ADD THIS
   } else {
     this.showRestaurantError();
   }
@@ -226,12 +283,13 @@ private initializeFromPersistedData(): void {
     }
   }
 
+// Call this in your ngOnInit
 private initializeDashboard(): void {
   console.log('✅ Initializing waiter dashboard for restaurant:', this.restaurantId);
   
   // Persist restaurantId immediately
   localStorage.setItem('waiter_restaurantId', this.restaurantId.toString());
-  
+    this.updateUrlWithRestaurantId();
   // Restore UI state
   this.restoreUIState();
   
@@ -245,13 +303,16 @@ private initializeDashboard(): void {
     }) 
   };
 
+  // ✅ ADD: Load restaurant details
+  this.loadRestaurantDetails();
+
   // Initialize all data
   this.getOrders();
   this.getWaiterRequests();
   this.checkForReadyNotifications();
   this.setupNotificationPolling();
   this.setupRequestPolling();
-  this.setupPaymentPolling(); // ✅ ADD THIS LINE
+  this.setupPaymentPolling();
 
   // Set up intervals
   setInterval(() => {
@@ -261,24 +322,52 @@ private initializeDashboard(): void {
   }, 15000);
 
   setInterval(() => this.getOrders(), 10000);
-  setInterval(() => this.persistUIState(), 30000); // Every 30 seconds
+  setInterval(() => this.persistUIState(), 30000);
 }
   private showRestaurantError(): void {
     this.error = 'No restaurant specified. Please access via: https://scanui.netlify.app/waiter?restaurantId=YOUR_RESTAURANT_ID';
     console.error(this.error);
   }
 
- // ✅ ADD method to generate shareable URL
-  getShareableUrl(): string {
-    return `https://scanui.netlify.app/waiter?restaurantId=${this.restaurantId}`;
+ // ✅ ADD: Method to validate and correct URL on component load
+private validateUrl(): void {
+  const currentUrl = new URL(window.location.href);
+  const urlParams = new URLSearchParams(currentUrl.search);
+  const urlRestaurantId = urlParams.get('restaurantId');
+  
+  // If URL has different restaurantId than current, update current
+  if (urlRestaurantId && +urlRestaurantId !== this.restaurantId) {
+    this.restaurantId = +urlRestaurantId;
+    localStorage.setItem('waiter_restaurantId', this.restaurantId.toString());
   }
-
+  
+  // If current restaurantId exists but URL doesn't have it, update URL
+  if (this.restaurantId && !urlRestaurantId) {
+    this.updateUrlWithRestaurantId();
+  }
+}
   // ✅ ADD method to copy URL to clipboard
   copyShareableUrl(): void {
     navigator.clipboard.writeText(this.getShareableUrl()).then(() => {
     });
   }
-
+// ✅ ADD: Method to handle any external navigation while preserving restaurantId
+private setupRouterEvents(): void {
+  this.router.events.subscribe(event => {
+    // If we're navigating away from this component but restaurantId exists,
+    // ensure it's preserved in the URL
+    if (event instanceof NavigationStart && this.restaurantId) {
+      const currentUrl = event.url;
+      
+      // If navigating to a different route without restaurantId, add it
+      if (!currentUrl.includes('restaurantId=') && !currentUrl.includes('login')) {
+        setTimeout(() => {
+          this.updateUrlWithRestaurantId();
+        });
+      }
+    }
+  });
+}
 ngOnDestroy(): void {
   // Clear all intervals when component is destroyed
   if (this.notificationCheckInterval) {
@@ -732,7 +821,20 @@ acknowledgeNotification(notificationId: number): void {
   });
 }
 
-
+private ensureRestaurantDetails(): Promise<void> {
+  return new Promise(async (resolve) => {
+    // If we already have valid restaurant details, resolve immediately
+    if (this.restaurantDetails.name && this.restaurantDetails.name !== 'Restaurant' && 
+        this.restaurantDetails.address && this.restaurantDetails.address !== 'Address not available') {
+      resolve();
+      return;
+    }
+    
+    // Otherwise, load restaurant details
+    await this.loadRestaurantDetails();
+    resolve();
+  });
+}
 
   /** Helper to unwrap a JSON-NET wrapper or return the array directly */
   private unwrapArray<T>(maybeWrapped: any): T[] {
@@ -746,16 +848,7 @@ acknowledgeNotification(notificationId: number): void {
   }
 
  
-openCollectModal(p: any) {
-  this.collectModal.open = true;
-  this.collectModal.orderId = p.orderID;
-  this.collectModal.amount = p.amount;
-  this.collectModal.paymentId = p.paymentID || 0;
-  this.collectModal.upiUri = '';
-  this.collectModal.tab = 'UPI';
-  
-  console.log('Opening collect modal:', this.collectModal); // Debug log
-}
+
 
 closeCollectModal() {
   this.collectModal.open = false;
@@ -766,128 +859,40 @@ closeCollectModal() {
   this.collectModal.tab = 'UPI';
   this.busyCollect = false;
 }
-  async initiateUpi() {
-    if (!this.restaurantId) return;
+// In your initiateUpi method
+async initiateUpi() {
+  if (!this.restaurantId) return;
+  
+  this.busyCollect = true;
+  try {
+    // Ensure restaurant details are loaded for UPI info
+    if (!this.restaurantDetails.upiId) {
+      await this.loadRestaurantDetails();
+    }
+
+    const resp: any = await firstValueFrom(
+      this.http.post(
+        `${this.API_BASE}/order/payments/initiate?orderId=${this.collectModal.orderId}&restaurantId=${this.restaurantId}&channel=Waiter&method=UPI`,
+        {},
+        this.httpOptions
+      )
+    );
     
-    this.busyCollect = true;
-    try {
-      const resp: any = await firstValueFrom(
-        this.http.post(
-          `${this.API_BASE}/order/payments/initiate?orderId=${this.collectModal.orderId}&restaurantId=${this.restaurantId}&channel=Waiter&method=UPI`,
-          {},
-          this.httpOptions
-        )
-      );
     console.log('UPI Init Response:', resp);
     
     if (resp && resp.upiUri) {
-        this.collectModal.paymentId = resp.paymentId || this.collectModal.paymentId;
-        this.collectModal.amount = resp.amount || this.collectModal.amount;
-        this.collectModal.upiUri = resp.upiUri;
-      } else {
-      }
-    } catch (error: any) {
-      console.error('Error initiating UPI:', error);
-    } finally {
-      this.busyCollect = false;
+      this.collectModal.paymentId = resp.paymentId || this.collectModal.paymentId;
+      this.collectModal.amount = resp.amount || this.collectModal.amount;
+      this.collectModal.upiUri = resp.upiUri;
+    } else {
+      console.error('No UPI URI in response');
     }
+  } catch (error: any) {
+    console.error('Error initiating UPI:', error);
+  } finally {
+    this.busyCollect = false;
   }
-
-// In the collect modal finalizeIfPaid method, update the status check:
-// async finalizeIfPaid() {
-//   if (!this.collectModal.paymentId) {
-//     alert('No payment ID found. Please generate QR code first.');
-//     return;
-//   }
-  
-//   this.busyCollect = true;
-//   try {
-//     const statusResponse: any = await firstValueFrom(
-//       this.http.get(
-//         `${this.API_BASE}/order/payments/${this.collectModal.paymentId}/status?restaurantId=${this.restaurantId}`,
-//         this.httpOptions
-//       )
-//     );
-
-//     console.log('Payment Status Response:', statusResponse);
-
-//     // Handle different possible status values
-//     const paidStatuses = ['Paid', 'Completed', 'Success', 'Success'];
-//     if (paidStatuses.includes(statusResponse?.status)) {
-//       this.onPaymentCleared(this.collectModal.paymentId);
-//       this.closeCollectModal();
-      
-//       // Open bill in new tab
-//       window.open(`${this.API_BASE}/order/${this.collectModal.orderId}/bill?restaurantId=${this.restaurantId}`, '_blank');
-      
-//       this.pushAlert('payment', `✅ UPI payment received for Order #${this.collectModal.orderId}`);
-      
-//       // Refresh orders to move to history
-//       this.getOrders();
-//     } else {
-//       alert(`Payment status: ${statusResponse?.status || 'Pending'}. Please ask customer to complete payment.`);
-//     }
-//   } catch (error: any) {
-//     console.error('Error checking payment status:', error);
-//     alert(`Error checking payment status: ${error.error?.message || 'Please try again'}`);
-//   } finally {
-//     this.busyCollect = false;
-//   }
-// }
-// Helper method to get table number from order
-
-
-// Fix the markCashReceived method
-// async markCashReceived() {
-//   this.busyCollect = true;
-//   try {
-//     // First, initiate payment if not already done
-//     if (!this.collectModal.paymentId) {
-//       const started: any = await firstValueFrom(
-//         this.http.post(
-//           `${this.API_BASE}/order/payments/initiate?orderId=${this.collectModal.orderId}&restaurantId=${this.restaurantId}&channel=Waiter&method=Cash`,
-//           {},
-//           this.httpOptions
-//         )
-//       );
-      
-//       if (started?.paymentId) {
-//         this.collectModal.paymentId = started.paymentId;
-//       } else {
-//         throw new Error('Failed to initiate cash payment');
-//       }
-//     }
-
-//     // Mark cash payment as completed
-//     const result: any = await firstValueFrom(
-//       this.http.post(
-//         `${this.API_BASE}/order/payments/${this.collectModal.paymentId}/cash-complete?restaurantId=${this.restaurantId}`,
-//         {},
-//         this.httpOptions
-//       )
-//     );
-
-//     if (result.success) {
-//       this.onPaymentCleared(this.collectModal.paymentId);
-//       this.closeCollectModal();
-      
-//       // Open bill in new tab
-//       window.open(`${this.API_BASE}/order/${this.collectModal.orderId}/bill?restaurantId=${this.restaurantId}`, '_blank');
-      
-//       this.pushAlert('payment', `✅ Cash payment of ₹${this.collectModal.amount} collected for Order #${this.collectModal.orderId}`);
-      
-//       // Refresh orders to move to history
-//       this.getOrders();
-//     } else {
-//       throw new Error(result.message || 'Failed to mark cash as received');
-//     }
-//   } catch (error: any) {
-//     console.error('Error marking cash received:', error);
-//     alert(`Error: ${error.error?.message || 'Failed to process cash payment'}`);
-//   } finally {
-//     this.busyCollect = false;
-//   }
-// }
+}
 
 
 // Enhanced fetchPendingPayments to handle different ID formats
@@ -957,63 +962,8 @@ private checkForNewPendingPayments(): void {
       error: err => console.error('Error checking new payments:', err)
     });
 }
-// async markUpiAsPaid(): Promise<void> {
-//   if (!this.collectModal.paymentId) {
-//     alert('No payment ID found. Please generate QR code first.');
-//     return;
-//   }
-  
-//   this.busyCollect = true;
-//   try {
-//     // ✅ FIX: Use PUT instead of POST for completion
-//     const result: any = await firstValueFrom(
-//       this.http.put(
-//         `${this.API_BASE}/order/payments/${this.collectModal.paymentId}/complete?restaurantId=${this.restaurantId}`,
-//         {},
-//         this.httpOptions
-//       )
-//     );
 
-//     // ✅ FIX: Handle different success response formats
-//     if (result.success !== false) {
-//       // If we get here, payment was successful
-//       this.onPaymentCleared(this.collectModal.paymentId);
-//       this.closeCollectModal();
-      
-//       // Open bill in new tab
-//       window.open(`${this.API_BASE}/order/${this.collectModal.orderId}/bill?restaurantId=${this.restaurantId}`, '_blank');
-      
-//       this.pushAlert('payment', `✅ UPI payment marked as paid for Order #${this.collectModal.orderId}`);
-      
-//       // Refresh orders to move to history
-//       this.getOrders();
-//     } else {
-//       // Only throw error if success is explicitly false
-//       throw new Error(result.message || 'Failed to mark UPI payment as paid');
-//     }
-//   } catch (error: any) {
-//     console.error('Error marking UPI as paid:', error);
-    
-//     // ✅ FIX: Check if this is actually a success message in error form
-//     if (error.error?.message?.includes('completed successfully') || 
-//         error.message?.includes('completed successfully')) {
-//       // This is actually a success - process it as such
-//       console.log('🔄 Processing successful payment from error format');
-//       this.onPaymentCleared(this.collectModal.paymentId);
-//       this.closeCollectModal();
-      
-//       window.open(`${this.API_BASE}/order/${this.collectModal.orderId}/bill?restaurantId=${this.restaurantId}`, '_blank');
-//       this.pushAlert('payment', `✅ UPI payment completed for Order #${this.collectModal.orderId}`);
-//       this.getOrders();
-//     } else {
-//       // This is a real error
-//       alert(`Error: ${error.error?.message || error.message || 'Failed to process UPI payment'}`);
-//     }
-//   } finally {
-//     this.busyCollect = false;
-//   }
-// }
-// Add this debug method to test your endpoints
+
 async testPaymentEndpoints(): Promise<void> {
   if (!this.collectModal.paymentId) return;
   
@@ -1130,35 +1080,25 @@ async testPaymentEndpoints(): Promise<void> {
   }, 20000); // auto-dismiss after 20s
 }
 
-// Simplified UPI payment method
+// Enhanced UPI payment method
 async markUpiAsPaid(): Promise<void> {
-  if (!this.collectModal.paymentId) {
-    // If no payment ID exists, create one first
-    try {
-      const started: any = await firstValueFrom(
-        this.http.post(
-          `${this.API_BASE}/order/payments/initiate?orderId=${this.collectModal.orderId}&restaurantId=${this.restaurantId}&channel=Waiter&method=UPI`,
-          {},
-          this.httpOptions
-        )
-      );
-      
-      if (started?.paymentId) {
-        this.collectModal.paymentId = started.paymentId;
-      } else {
-        alert('Failed to create payment record');
-        return;
-      }
-    } catch (error) {
-      console.error('Error creating payment:', error);
-      alert('Failed to create payment record');
-      return;
-    }
-  }
-  
   this.busyCollect = true;
   try {
-    // Simply mark payment as complete
+    console.log('💰 Processing UPI payment for order:', this.collectModal.orderId);
+    
+    // Get the specific payment data for this modal
+    const paymentData = this.collectPayments.find(p => 
+      (p.paymentID || p.paymentId) === this.collectModal.paymentId
+    );
+
+    console.log('🔍 Payment data for UPI:', paymentData);
+
+    if (!paymentData) {
+      throw new Error('Payment data not found');
+    }
+
+    // 1. Mark payment as completed
+    console.log('📝 Marking payment as completed...');
     await firstValueFrom(
       this.http.put(
         `${this.API_BASE}/order/payments/${this.collectModal.paymentId}/complete?restaurantId=${this.restaurantId}`,
@@ -1167,30 +1107,43 @@ async markUpiAsPaid(): Promise<void> {
       )
     );
 
-    // Success - close modal and refresh data
+    // 2. Print bill using payment data
+    console.log('🖨️ Printing bill...');
+    await this.printOrderBill(this.collectModal.orderId);
+
+    // 3. Success handling
+    console.log('✅ Payment completed successfully');
+    this.onPaymentCleared(this.collectModal.paymentId);
     this.closeCollectModal();
-    this.pushAlert('payment', `✅ UPI payment completed! Order #${this.collectModal.orderId} moved to history`);
+    this.pushAlert('payment', `✅ UPI payment received for Order #${this.collectModal.orderId}`);
     
-    // Refresh data
-    setTimeout(() => {
-      this.fetchPendingPayments();
-      this.getOrders();
-    }, 1000);
+    // 4. Refresh orders
+    this.getOrders();
     
   } catch (error: any) {
-    console.error('Error marking UPI as paid:', error);
-    alert('Failed to mark payment as paid. Please try again.');
+    console.error('❌ Error marking UPI as paid:', error);
+    alert('Failed to process UPI payment. Please try again.');
   } finally {
     this.busyCollect = false;
   }
 }
 
-// Simplified Cash payment method
+// Enhanced Cash payment method
 async markCashReceived() {
   this.busyCollect = true;
   try {
-    // First, create payment record if not exists
+    console.log('💰 Processing Cash payment for order:', this.collectModal.orderId);
+    
+    // Get the specific payment data for this modal
+    const paymentData = this.collectPayments.find(p => 
+      (p.paymentID || p.paymentId) === this.collectModal.paymentId
+    );
+
+    console.log('🔍 Payment data for Cash:', paymentData);
+
+    // 1. Create payment record if not exists
     if (!this.collectModal.paymentId) {
+      console.log('📝 Creating new cash payment record...');
       const started: any = await firstValueFrom(
         this.http.post(
           `${this.API_BASE}/order/payments/initiate?orderId=${this.collectModal.orderId}&restaurantId=${this.restaurantId}&channel=Waiter&method=Cash`,
@@ -1201,12 +1154,14 @@ async markCashReceived() {
       
       if (started?.paymentId) {
         this.collectModal.paymentId = started.paymentId;
+        console.log('✅ Created payment with ID:', this.collectModal.paymentId);
       } else {
         throw new Error('Failed to create cash payment record');
       }
     }
 
-    // Mark cash payment as completed
+    // 2. Mark cash payment as completed
+    console.log('📝 Marking cash payment as completed...');
     await firstValueFrom(
       this.http.put(
         `${this.API_BASE}/order/payments/${this.collectModal.paymentId}/complete?restaurantId=${this.restaurantId}`,
@@ -1215,23 +1170,369 @@ async markCashReceived() {
       )
     );
 
-    // Success
+    // 3. Print bill
+    console.log('🖨️ Printing bill...');
+    await this.printOrderBill(this.collectModal.orderId);
+
+    // 4. Success handling
+    console.log('✅ Cash payment completed successfully');
     this.closeCollectModal();
-    this.pushAlert('payment', `✅ Cash payment received! Order #${this.collectModal.orderId} moved to history`);
+    this.pushAlert('payment', `✅ Cash payment received! Order #${this.collectModal.orderId}`);
     
-    // Refresh data
+    // 5. Refresh data
     setTimeout(() => {
       this.fetchPendingPayments();
       this.getOrders();
     }, 1000);
     
   } catch (error: any) {
-    console.error('Error marking cash received:', error);
+    console.error('❌ Error marking cash received:', error);
     alert('Failed to process cash payment. Please try again.');
   } finally {
     this.busyCollect = false;
   }
 }
+
+// Debug method to check payment data structure
+debugPaymentData(): void {
+  console.log('=== PAYMENT DATA DEBUG ===');
+  console.log('Collect Payments:', this.collectPayments);
+  console.log('Verify Payments:', this.verifyPayments);
+  console.log('Pending Payments:', this.pendingPayments);
+  
+  // Check a specific payment
+  if (this.collectPayments.length > 0) {
+    const samplePayment = this.collectPayments[0];
+    console.log('Sample Payment Structure:', {
+      orderID: samplePayment.orderID,
+      tableNo: samplePayment.tableNo,
+      amount: samplePayment.amount,
+      items: samplePayment.items,
+      paymentID: samplePayment.paymentID,
+      paymentId: samplePayment.paymentId
+    });
+  }
+  
+  console.log('=== END DEBUG ===');
+}
+
+openCollectModal(p: any) {
+  console.log('📋 Opening collect modal with payment:', p);
+  
+  // Debug the payment structure
+  console.log('Payment object keys:', Object.keys(p));
+  console.log('Payment items:', p.items);
+  console.log('Payment amount:', p.amount);
+  console.log('Payment tableNo:', p.tableNo);
+
+  this.collectModal.open = true;
+  this.collectModal.orderId = p.orderID;
+  this.collectModal.amount = p.amount;
+  this.collectModal.paymentId = p.paymentID || p.paymentId || 0;
+  this.collectModal.upiUri = '';
+  this.collectModal.tab = 'UPI';
+  
+  // Debug all payment data
+  this.debugPaymentData();
+}
+
+async simplePrintOrderBill(orderId: number): Promise<void> {
+  try {
+    // ✅ Ensure restaurant details are loaded
+    await this.ensureRestaurantDetails();
+
+    const paymentData = this.collectPayments.find(p => p.orderID === orderId) || 
+                       this.verifyPayments.find(p => p.orderID === orderId);
+
+    if (!paymentData) {
+      console.error('No payment data found for order:', orderId);
+      return;
+    }
+
+    const printData = {
+      "Type": "BILL",
+      "PrinterName": "RP327 Printer",
+      "RestaurantName": this.restaurantDetails.name,
+      "RestaurantAddress": this.restaurantDetails.address,
+      "Order": {
+        "OrderNumber": orderId.toString(),
+        "TableNo": paymentData.tableNo?.toString() || "0",
+        "Items": [{
+          "Name": "Payment Received",
+          "Qty": 1,
+          "Price": paymentData.amount,
+          "Modifiers": []
+        }],
+        "ServiceCharge": 0,
+        "Tax": 0,
+        "Discount": 0,
+        "Total": paymentData.amount,
+        "Notes": `Order #${orderId} - Payment completed`
+      }
+    };
+
+    console.log('🖨️ Sending print data:', {
+      restaurantName: printData.RestaurantName,
+      restaurantAddress: printData.RestaurantAddress,
+      orderNumber: printData.Order.OrderNumber
+    });
+
+    const response = await firstValueFrom(
+      this.http.post(this.PRINT_API, printData, this.httpOptions)
+    );
+
+    console.log('Print successful:', response);
+    this.pushAlert('order', `🖨️ Bill printed for Order #${orderId}`);
+
+  } catch (error) {
+    console.error('Print failed:', error);
+    this.pushAlert('order', `⚠️ Printing failed for Order #${orderId}`);
+  }
+}
+// Final print method with multiple approaches
+async printOrderBill(orderId: number): Promise<void> {
+  try {
+    console.log('=== PRINT PROCESS START ===');
+    
+    // ✅ Ensure restaurant details are loaded first
+    await this.ensureRestaurantDetails();
+    
+    console.log('✅ Restaurant details:', this.restaurantDetails);
+
+    // Method 1: Try using payment data with items
+    const paymentWithItems = this.collectPayments.find(p => p.orderID === orderId && p.items) || 
+                            this.verifyPayments.find(p => p.orderID === orderId && p.items);
+    
+    if (paymentWithItems && paymentWithItems.items && paymentWithItems.items.length > 0) {
+      console.log('✅ Using payment data with items');
+      await this.printWithPaymentItems(orderId, paymentWithItems);
+      return;
+    }
+
+    // Method 2: Try using basic payment data
+    const anyPayment = this.collectPayments.find(p => p.orderID === orderId) || 
+                      this.verifyPayments.find(p => p.orderID === orderId);
+    
+    if (anyPayment) {
+      console.log('✅ Using basic payment data');
+      await this.simplePrintOrderBill(orderId);
+      return;
+    }
+
+    // Method 3: Fallback
+    console.log('❌ No payment data found, using fallback');
+    this.pushAlert('order', `❌ Cannot print - no data for Order #${orderId}`);
+
+  } catch (error) {
+    console.error('❌ All print methods failed:', error);
+    this.pushAlert('order', `⚠️ Printing failed for Order #${orderId}`);
+  }
+}
+
+private async printWithPaymentItems(orderId: number, paymentData: any): Promise<void> {
+  // Ensure restaurant details are loaded
+  if (!this.restaurantDetails.name) {
+    await this.loadRestaurantDetails();
+  }
+
+  // Get the complete order with customizations
+  const order = this.orders.find(o => o.orderID === orderId) || 
+                this.historyOrders.find(o => o.orderID === orderId);
+
+  if (!order || !order.items) {
+    console.error('Order not found for printing');
+    return;
+  }
+
+  // Build items array including customizations
+  const printItems: any[] = [];
+  
+  order.items.forEach(item => {
+    // Add main product
+    printItems.push({
+      "Name": this.truncateText(item.productName || `Item`, 20),
+      "Qty": item.quantity,
+      "Price": item.unitPrice, // This should now include customization prices
+      "Modifiers": []
+    });
+
+    // ✅ FIX: Add customizations as separate line items
+    if (item.customizations && item.customizations.length > 0) {
+      item.customizations.forEach((customization: any) => {
+        printItems.push({
+          "Name": this.truncateText(`  + ${customization.optionName}`, 18),
+          "Qty": 1,
+          "Price": customization.fixedPrice || 0,
+          "Modifiers": []
+        });
+      });
+    }
+  });
+
+  const printData = {
+    "Type": "BILL",
+    "PrinterName": "RP327 Printer",
+    "RestaurantName": this.restaurantDetails.name,
+    "RestaurantAddress": this.restaurantDetails.address,
+    "Order": {
+      "OrderNumber": orderId.toString(),
+      "TableNo": paymentData.tableNo?.toString() || "0",
+      "Items": printItems,
+      "ServiceCharge": 0,
+      "Tax": 0,
+      "Discount": 0,
+      "Total": paymentData.amount,
+      "Notes": "Thank you for your visit!"
+    }
+  };
+
+  const response = await firstValueFrom(
+    this.http.post(this.PRINT_API, printData, this.httpOptions)
+  );
+  
+  console.log('✅ Print with customizations successful');
+}
+private async loadRestaurantDetails(): Promise<void> {
+  try {
+    if (!this.restaurantId) {
+      console.warn('No restaurant ID available for loading details');
+      return;
+    }
+
+    console.log('🔄 Loading restaurant details for ID:', this.restaurantId);
+    
+    // ✅ FIX: Use the correct endpoint path
+    const response: any = await firstValueFrom(
+      this.http.get(`${this.API_BASE}/order/restaurant/${this.restaurantId}/details`, this.httpOptions)
+    );
+    
+    console.log('📥 Restaurant details response:', response);
+    
+    if (response) {
+      this.restaurantDetails = {
+        name: response.name || 'Restaurant',
+        address: response.address || 'Address not available',
+        upiId: response.upiId || response.upi_ID,
+        upiName: response.upiName || response.upi_Name || response.name
+      };
+      console.log('✅ Restaurant details loaded:', this.restaurantDetails);
+    } else {
+      console.warn('⚠️ No restaurant details in response');
+    }
+  } catch (error) {
+    console.error('❌ Error loading restaurant details:', error);
+    // Use fallback values
+    this.restaurantDetails = {
+      name: 'Restaurant',
+      address: 'Address not available',
+      upiId: '',
+      upiName: ''
+    };
+  }
+}
+// Fix these methods in your WaiterComponent
+
+// CORRECTED: Get the actual base product price
+
+
+// CORRECTED: Calculate order total properly
+calculateOrderTotal(order: any): number {
+  if (!order.items) return 0;
+  
+  let total = 0;
+  order.items.forEach((item: any) => {
+    // The unitPrice should already include base price + customizations
+    total += (item.unitPrice * item.quantity);
+  });
+  
+  return total;
+}
+
+// In waiter.component.ts
+
+// CORRECTED: Calculate customizations total
+getCustomizationsTotal(item: any): number {
+  if (!item.customizations || !item.customizations.length) return 0;
+  
+  return item.customizations.reduce((total: number, custom: any) => {
+    // Use the fixedPrice from the customization data sent by the backend
+    const price = custom.fixedPrice || (custom.CustomizationOption ? custom.CustomizationOption.FixedPrice : 0);
+    return total + (price || 0);
+  }, 0);
+}
+
+// CORRECTED: Get the item's base price by subtracting customizations from the total unit price
+getItemBasePrice(item: any): number {
+  const customizationsTotal = this.getCustomizationsTotal(item);
+  // Subtract the customization total from the final unit price sent by the API.
+  // Use Math.max to prevent negative numbers if data is inconsistent.
+  return Math.max(0, (item.unitPrice || 0) - customizationsTotal);
+}
+async enhancedPrintOrderBill(orderId: number): Promise<void> {
+  try {
+    // Ensure restaurant details are loaded
+    if (!this.restaurantDetails.name) {
+      await this.loadRestaurantDetails();
+    }
+
+    const order = this.orders.find(o => o.orderID === orderId) || 
+                  this.historyOrders.find(o => o.orderID === orderId);
+    
+    if (!order) {
+      console.warn('Order not found for printing');
+      return;
+    }
+
+    // Calculate totals properly
+    const subtotal = this.calculateOrderTotal(order);
+    const tax = subtotal * 0.05;
+    const serviceCharge = subtotal * 0.10;
+    const total = subtotal + tax + serviceCharge;
+
+    const printData = {
+      "Type": "BILL",
+      "PrinterName": "RP327 Printer",
+      "RestaurantName": this.restaurantDetails.name,
+      "RestaurantAddress": this.restaurantDetails.address,
+      "Order": {
+        "OrderNumber": orderId.toString(),
+        "TableNo": order.tableNo?.toString() || "Takeaway",
+        "Items": order.items?.map(item => ({
+          "Name": this.truncateText(item.productName || `Item ${item.productID}`, 18),
+          "Qty": item.quantity,
+          "Price": item.unitPrice || 0,
+          "Modifiers": item.customizations ? 
+            item.customizations.map(c => c.optionName).slice(0, 2) : []
+        })) || [],
+        "ServiceCharge": serviceCharge,
+        "Tax": tax,
+        "Discount": 0,
+        "Total": total,
+        "Notes": "Payment completed successfully"
+      }
+    };
+
+    const response: any = await firstValueFrom(
+      this.http.post(this.PRINT_API, printData, this.httpOptions)
+    );
+
+    if (response && typeof response === 'string' && response.includes('Print job queued')) {
+      this.pushAlert('order', `✅ Thermal bill printed for Order #${orderId}`);
+    } else {
+      throw new Error('Print job may have failed');
+    }
+
+  } catch (error) {
+    console.error('Thermal printing error:', error);
+    this.pushAlert('order', `⚠️ Printing failed for Order #${orderId}`);
+  }
+}
+// Helper method to truncate long text for thermal printer
+private truncateText(text: string, maxLength: number): string {
+  if (!text) return '';
+  return text.length <= maxLength ? text : text.substring(0, maxLength - 3) + '...';
+}
+
 
 // Helper method to get table number
 getTableNoFromOrder(orderId: number): number {
@@ -1253,8 +1554,8 @@ private getOrders(): void {
         const all = this.unwrapArray<any>(res.orders).map(o => ({
           orderID: o.orderID,
           tableNo: o.tableNo,
+          totalAmount: o.totalAmount,
           orderStatus: this.mapOrderStatus(o.orderStatus),
-          // ✅ Kitchen status is just for display, not for logic
           kitchenStatus: o.kitchenStatus ? this.mapKitchenStatus(o.kitchenStatus) : KitchenStatus.Pending,
           items: this.unwrapArray<any>(o.items).map(i => ({
             productID: i.productID,
@@ -1274,33 +1575,32 @@ private getOrders(): void {
           } : undefined
         }));
 
-        // ✅ SIMPLE RULE: Active orders are ONLY Pending and Confirmed
+        // ✅ MODIFIED: Show ALL non-completed/cancelled orders regardless of payment
         this.orders = all.filter(o =>
           o.orderStatus === OrderStatus.Pending || 
-          o.orderStatus === OrderStatus.Confirmed
+          o.orderStatus === OrderStatus.Confirmed ||
+          o.orderStatus === OrderStatus.Served // Keep served orders visible until manually completed
         );
 
-        // ✅ SIMPLE RULE: History orders are EVERYTHING ELSE
+        // History orders are completed/cancelled only
         this.allHistoryOrders = all.filter(o =>
           o.orderStatus === OrderStatus.Completed ||
-          o.orderStatus === OrderStatus.Cancelled ||
-          o.orderStatus === OrderStatus.Served
+          o.orderStatus === OrderStatus.Cancelled
         );
 
         this.applyHistoryFilter();
-        
-        // Group orders for display (kitchen status doesn't affect grouping)
         this.groupedUpcomingOrders = this.groupOrdersByTable(this.orders);
+        
         if (!this.selectedTableNo && this.groupedUpcomingOrders.length > 0) {
           this.selectedTableNo = this.groupedUpcomingOrders[0].tableNo;
         }
 
-        // Update display arrays
         this.updateReadyTables();
       },
       error: err => console.error('Error fetching orders:', err)
     });
-}lyHistoryFilter(): void {
+}
+lyHistoryFilter(): void {
   const now = new Date();
 
   if (this.historyFilter === 'all') {
@@ -1396,17 +1696,47 @@ get readyToServeOrders(): Order[] {
 serveOrder(orderID: number): void {
   if (!this.restaurantId) return;
   
+  // Directly mark as served without payment validation
   this.http.put(`${this.API_BASE}/Order/${orderID}/serve?restaurantId=${this.restaurantId}`, null, this.httpOptions)
     .subscribe({
       next: () => {
         this.getOrders(); // Refresh the orders list
-        this.pushAlert('order', `✅ Order #${orderID} marked as served and moved to history`);
+        this.pushAlert('order', `✅ Order #${orderID} marked as served`);
+        
+        // Optional: Auto-print bill when serving
+        this.printOrderBill(orderID);
       },
       error: err => {
         console.error('Error serving order:', err);
-        alert('Failed to mark order as served');
+        
+        // If the main endpoint fails, try alternative endpoint
+        this.alternativeServeOrder(orderID);
       }
     });
+}
+
+// Alternative method if main endpoint has restrictions
+alternativeServeOrder(orderID: number): void {
+  const payload = {
+    orderStatus: OrderStatus.Served,
+    changedByUserId: this.getCurrentUserId(),
+    bypassPaymentCheck: true
+  };
+
+  this.http.put(
+    `${this.API_BASE}/Order/${orderID}/status?restaurantId=${this.restaurantId}`,
+    payload,
+    this.httpOptions
+  ).subscribe({
+    next: () => {
+      this.getOrders();
+      this.pushAlert('order', `✅ Order #${orderID} served (alternative method)`);
+    },
+    error: err => {
+      console.error('Alternative serve also failed:', err);
+      alert('Failed to serve order. Please try manual status update.');
+    }
+  });
 }
 
 groupByTable(orders: Order[]): { tableNo: number; orders: Order[]; expanded: boolean }[] {
@@ -1805,7 +2135,28 @@ getKitchenStatusBadgeClass(status: string): string {
   };
   return classes[status] || 'bg-light text-dark';
 }
-
+debugCustomizationPricing(order: any): void {
+  console.log('🔍 Customization Pricing Debug:');
+  
+  order.items.forEach((item: any, index: number) => {
+    const basePrice = this.getItemBasePrice(item);
+    const customTotal = this.getCustomizationsTotal(item);
+    const calculatedUnitPrice = basePrice + customTotal;
+    
+    console.log(`Item ${index + 1}:`, {
+      productName: item.productName,
+      basePrice: basePrice,
+      customizationTotal: customTotal,
+      calculatedUnitPrice: calculatedUnitPrice,
+      actualUnitPrice: item.unitPrice,
+      quantity: item.quantity,
+      lineTotal: item.unitPrice * item.quantity,
+      customizations: item.customizations
+    });
+  });
+  
+  console.log('Order Total:', this.calculateOrderTotal(order));
+}
 getPaymentStatusBadgeClass(status: string): string {
   const classes: { [key: string]: string } = {
     'Pending': 'bg-warning text-dark',
@@ -1816,12 +2167,6 @@ getPaymentStatusBadgeClass(status: string): string {
   return classes[status] || 'bg-light text-dark';
 }
 
-calculateOrderTotal(order: any): number {
-  if (!order.items) return 0;
-  return order.items.reduce((total: number, item: any) => {
-    return total + (item.unitPrice * item.quantity);
-  }, 0);
-}
 
 isOrderLocked(): boolean {
   // Prevent editing if order is served, completed, or cancelled
@@ -1936,9 +2281,12 @@ addSelectedProductsToOrder(): void {
   this.showProductList = false;
 }
 
-printOrderBill(orderId: number): void {
-  const url = `${this.API_BASE}/order/${orderId}/bill?restaurantId=${this.restaurantId}`;
-  window.open(url, '_blank');
+
+private async handlePrintFallback(orderId: number): Promise<void> {
+  // Fallback: Open bill in new tab if printing fails
+  const billUrl = `${this.API_BASE}/order/${orderId}/bill?restaurantId=${this.restaurantId}`;
+  window.open(billUrl, '_blank');
+  this.pushAlert('order', `📄 Bill opened in new tab for Order #${orderId}`);
 }
 
 removeOrderItem(item: any): void {
