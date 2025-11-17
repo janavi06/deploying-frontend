@@ -1,14 +1,13 @@
 <form (ngSubmit)="login()" #f="ngForm">
-    <h2>Login</h2>
-    <label>
-      Email
-      <input name="email" [(ngModel)]="email" required />
-    </label>
-    <label>
-      Password
-      <input type="password" name="password" [(ngModel)]="password" required />
-    </label>
-    <button type="submit" [disabled]="!f.valid">Sign In</button>
-    <p><a routerLink="/register">Register</a> if you don’t have an account.</p>
-  </form>
-  
+  <h2>Login</h2>
+  <label>
+    Email
+    <input name="email" [(ngModel)]="email" required />
+  </label>
+  <label>
+    Password
+    <input type="password" name="password" [(ngModel)]="password" required />
+  </label>
+  <button type="submit" [disabled]="!f.valid">Sign In</button>
+  <p>Contact your manager if you don't have an account.</p>
+</form>

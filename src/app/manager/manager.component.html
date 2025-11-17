@@ -16,9 +16,9 @@
       <li (click)="selectSection('reports')" [class.active]="selectedSection === 'reports'">
         <i class="bi bi-bar-chart-line-fill"></i> Reports
       </li>
-      <li (click)="selectSection('staff')" [class.active]="selectedSection === 'staff'">
+      <!-- <li (click)="selectSection('staff')" [class.active]="selectedSection === 'staff'">
   <i class="bi bi-people-fill"></i> Staff Management
-</li>
+</li> -->
 
 <li (click)="selectSection('offers')" [class.active]="selectedSection === 'offers'">
   <i class="bi bi-tag-fill"></i> Offers & Discounts
@@ -957,13 +957,14 @@
               <h5 class="card-title-icon"><i class="bi bi-stopwatch-fill me-2"></i>OLDEST PENDING ORDER</h5>
             </div>
             <div class="card-body">
-              <div *ngIf="oldestPendingOrder">
-                <p class="h4 mb-1">Order #{{ oldestPendingOrder.orderID }}</p>
-                <p class="text-muted mb-2">Table {{ oldestPendingOrder.tableNo || 'Takeaway' }}</p>
-                <p class="time-elapsed">
-                  <i class="bi bi-hourglass-split"></i> {{ getTimeInStatus(oldestPendingOrder.createdAt) }}
-                </p>
-              </div>
+<div *ngIf="oldestPendingOrder">
+  <p class="h4 mb-1">Order #{{ oldestPendingOrder.orderNumber }}</p> <!-- Changed from orderID -->
+  <p class="text-muted mb-2">Table {{ oldestPendingOrder.tableNo || 'Takeaway' }}</p>
+  <p class="time-elapsed">
+    <i class="bi bi-hourglass-split"></i> {{ getTimeInStatus(oldestPendingOrder.createdAt) }}
+  </p>
+</div>
+
               <div *ngIf="!oldestPendingOrder" class="text-center text-muted p-3">
                 <i class="bi bi-check-circle-fill text-success h2"></i>
                 <p class="mt-2 mb-0">No unconfirmed orders!</p>
@@ -1011,6 +1012,7 @@
             <table class="table modern-table">
               <thead>
                 <tr>
+                        <th>Order Number</th> 
                   <th>Order ID</th>
                   <th>Table</th>
                   <th>Status</th>
@@ -1024,7 +1026,7 @@
                 <tr *ngFor="let order of activeOrders" 
                     [class.highlight-warning]="order.status === 'Pending' && isOverdue(order.createdAt, 10)"
                     [class.highlight-info]="order.status === 'Awaiting Service' && isOverdue(order.lastUpdated, 5)">
-                  <td><strong>#{{ order.orderID }}</strong></td>
+      <td><strong>#{{ order.orderNumber }}</strong></td> <!-- Changed from orderID -->
                   <td>{{ order.tableNo || 'Takeaway' }}</td>
                   <td><span class="badge" [ngClass]="getStatusBadgeClass(order.status)">{{ order.status }}</span></td>
                   <td class="item-list-cell">
@@ -1173,10 +1175,10 @@
         <table class="table table-hover">
           <thead class="table-light">
             <tr>
-              <th (click)="sortOrders('orderID')">
-                Order ID <i class="bi" [ngClass]="{'bi-arrow-down': sortColumn === 'orderID' && sortDirection === 'asc', 
-                'bi-arrow-up': sortColumn === 'orderID' && sortDirection === 'desc'}"></i>
-              </th>
+  <th (click)="sortOrders('orderNumber')"> <!-- Changed from 'orderID' -->
+      Order Number <i class="bi" [ngClass]="{'bi-arrow-down': sortColumn === 'orderNumber' && sortDirection === 'asc', 
+      'bi-arrow-up': sortColumn === 'orderNumber' && sortDirection === 'desc'}"></i>
+    </th>
               <th (click)="sortOrders('createdAt')">
                 Date/Time <i class="bi" [ngClass]="{'bi-arrow-down': sortColumn === 'createdAt' && sortDirection === 'asc', 
                 'bi-arrow-up': sortColumn === 'createdAt' && sortDirection === 'desc'}"></i>
@@ -1193,9 +1195,9 @@
           </thead>
           <tbody>
             <tr *ngFor="let order of paginatedOrders">
-              <td>
-                <a href="javascript:void(0)" (click)="viewOrderDetails(order.orderID)">#{{order.orderID}}</a>
-              </td>
+                 <td>
+      <a href="javascript:void(0)" (click)="viewOrderDetails(order.orderID)">#{{ order.orderNumber }}</a> <!-- Changed from orderID -->
+    </td>
               <td>{{order.createdAt | date:'medium'}}</td>
               <td>{{order.tableNo || 'Takeaway'}}</td>
               <td>
@@ -1234,7 +1236,7 @@
       <div *ngFor="let order of paginatedOrders" class="item-details" [class.show]="order.showItems">
         <div class="card mb-3">
           <div class="card-header">
-            <h6 class="mb-0">Order #{{order.orderID}} Items</h6>
+      <h6 class="mb-0">Order #{{ order.orderNumber }} Items</h6> <!-- Changed from orderID -->
           </div>
           <div class="card-body">
             <table class="table table-sm">
@@ -1835,71 +1837,239 @@
 </section>
 
 
-  <section *ngIf="selectedSection==='editMenu'" class="edit-menu-section">
+  <!-- Add this section to your existing manager.component.html -->
+<section *ngIf="selectedSection === 'editMenu'" class="edit-menu-section">
   <div class="container-fluid">
-    <div class="row align-items-center justify-content-between mb-3">
-      <!-- Add Button -->
-      <div class="col-12 col-md-auto mb-2">
-        <button class="btn btn-primary w-100 w-md-auto" (click)="openAddModal()">
-          <i class="bi bi-plus-lg me-2"></i>Add New Item
-        </button>
+    
+    <!-- Tabs for Menu Items, Categories, and Subcategories -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <ul class="nav nav-tabs" id="menuManagementTabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="items-tab" data-bs-toggle="tab" 
+                    data-bs-target="#items" type="button" role="tab" 
+                    (click)="activeMenuTab = 'items'"
+                    [class.active]="activeMenuTab === 'items'">
+              Menu Items
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="categories-tab" data-bs-toggle="tab" 
+                    data-bs-target="#categories" type="button" role="tab"
+                    (click)="activeMenuTab = 'categories'"
+                    [class.active]="activeMenuTab === 'categories'">
+              Categories
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="subcategories-tab" data-bs-toggle="tab" 
+                    data-bs-target="#subcategories" type="button" role="tab"
+                    (click)="activeMenuTab = 'subcategories'"
+                    [class.active]="activeMenuTab === 'subcategories'">
+              Subcategories
+            </button>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="tab-content" id="menuManagementTabsContent">
+      
+      <!-- Menu Items Tab -->
+      <div class="tab-pane fade show" 
+           [class.show]="activeMenuTab === 'items'" 
+           [class.active]="activeMenuTab === 'items'"
+           id="items" role="tabpanel">
+        
+        <div class="row align-items-center justify-content-between mb-3">
+          <div class="col-12 col-md-auto mb-2">
+            <button class="btn btn-primary w-100 w-md-auto" (click)="openAddModal()">
+              <i class="bi bi-plus-lg me-2"></i>Add New Item
+            </button>
+          </div>
+
+          <div class="col-12 col-md flex-grow-1">
+            <div class="search-wrapper w-100">
+              <input type="text" 
+                     class="form-control"
+                     placeholder="Search items by name"
+                     [(ngModel)]="searchText"
+                     (ngModelChange)="onSearchChange()">
+            </div>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-hover align-middle">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Category</th>
+                <th>Subcategory</th>
+                <th>Price</th>
+                <th>Available</th>
+                <th class="text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let p of filteredProducts">
+                <td>{{ p.productName }}</td>
+                <td>{{ getCategoryName(p.categoryID) }}</td>
+                <td>{{ getSubcategoryName(p.subCategoryID) }}</td>
+                <td>₹{{ p.price }}</td>
+                <td>
+                  <label class="toggle-switch">
+                    <input type="checkbox" [checked]="p.isAvailable" (change)="toggleAvailability(p)" />
+                    <span class="toggle-slider"></span>
+                  </label>
+                </td>
+                <td class="text-end">
+                  <button class="btn btn-sm edit-btn me-1" (click)="openEditModal(p)">
+                    <i class="bi bi-pencil"></i>
+                  </button>
+                  <button class="btn btn-sm delete-btn" (click)="deleteProduct(p.productID)">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </td>
+              </tr>
+              <tr *ngIf="filteredProducts.length === 0">
+                <td colspan="6" class="text-center py-4">
+                  No items match your search.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      <!-- Search Bar -->
-      <div class="col-12 col-md flex-grow-1">
-        <div class="search-wrapper w-100">
-          <input type="text" 
-                 class="form-control"
-                 placeholder="Search items by name"
-                 [(ngModel)]="searchText"
-                 (ngModelChange)="onSearchChange()">
+      <!-- Categories Tab -->
+      <div class="tab-pane fade" 
+           [class.show]="activeMenuTab === 'categories'" 
+           [class.active]="activeMenuTab === 'categories'"
+           id="categories" role="tabpanel">
+        
+        <div class="row align-items-center justify-content-between mb-3">
+          <div class="col-12 col-md-auto mb-2">
+            <button class="btn btn-primary w-100 w-md-auto" (click)="openAddCategoryModal()">
+              <i class="bi bi-plus-lg me-2"></i>Add Category
+            </button>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-hover align-middle">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Description</th>
+                <th>Items Count</th>
+                <th>Available</th>
+                <th class="text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let category of categories">
+                <td>{{ category.categoryName }}</td>
+                <td class="truncate-cell text-truncate">{{ category.categoryDescription || '—' }}</td>
+                <td>
+                  <span class="badge bg-primary">
+                    {{ getCategoryItemCount(category.categoryID) }}
+                  </span>
+                </td>
+                <td>
+                  <label class="toggle-switch">
+                    <input type="checkbox" [checked]="category.isAvailable" 
+                           (change)="toggleCategoryAvailability(category)" />
+                    <span class="toggle-slider"></span>
+                  </label>
+                </td>
+                <td class="text-end">
+                  <button class="btn btn-sm edit-btn me-1" (click)="openEditCategoryModal(category)">
+                    <i class="bi bi-pencil"></i>
+                  </button>
+                  <button class="btn btn-sm delete-btn" 
+                          (click)="deleteCategory(category.categoryID)"
+                          [disabled]="getCategoryItemCount(category.categoryID) > 0">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </td>
+              </tr>
+              <tr *ngIf="categories.length === 0">
+                <td colspan="5" class="text-center py-4">
+                  No categories found. Add your first category!
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Subcategories Tab -->
+      <div class="tab-pane fade" 
+           [class.show]="activeMenuTab === 'subcategories'" 
+           [class.active]="activeMenuTab === 'subcategories'"
+           id="subcategories" role="tabpanel">
+        
+        <div class="row align-items-center justify-content-between mb-3">
+          <div class="col-12 col-md-auto mb-2">
+            <button class="btn btn-primary w-100 w-md-auto" (click)="openAddSubcategoryModal()">
+              <i class="bi bi-plus-lg me-2"></i>Add Subcategory
+            </button>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-hover align-middle">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Category</th>
+                <th>Description</th>
+                <th>Items Count</th>
+                <th>Available</th>
+                <th class="text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let subcategory of subcategories">
+                <td>{{ subcategory.subCategoryName }}</td>
+                <td>{{ getCategoryName(subcategory.categoryID) }}</td>
+                <td class="truncate-cell text-truncate">{{ subcategory.subCategoryDescription || '—' }}</td>
+                <td>
+                  <span class="badge bg-primary">
+                    {{ getSubcategoryItemCount(subcategory.subCategoryID) }}
+                  </span>
+                </td>
+                <td>
+                  <label class="toggle-switch">
+                    <input type="checkbox" [checked]="subcategory.isAvailable" 
+                           (change)="toggleSubcategoryAvailability(subcategory)" />
+                    <span class="toggle-slider"></span>
+                  </label>
+                </td>
+                <td class="text-end">
+                  <button class="btn btn-sm edit-btn me-1" (click)="openEditSubcategoryModal(subcategory)">
+                    <i class="bi bi-pencil"></i>
+                  </button>
+                  <button class="btn btn-sm delete-btn" 
+                          (click)="deleteSubcategory(subcategory.subCategoryID)"
+                          [disabled]="getSubcategoryItemCount(subcategory.subCategoryID) > 0">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </td>
+              </tr>
+              <tr *ngIf="subcategories.length === 0">
+                <td colspan="6" class="text-center py-4">
+                  No subcategories found. Add your first subcategory!
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
-
-    <!-- Table -->
-    <div class="table-responsive">
-      <table class="table table-hover align-middle">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Description</th>
-            <th>Price</th>
-            <th>Available</th>
-            <th class="text-end">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let p of filteredProducts">
-            <td>{{ p.productName }}</td>
-            <td class="truncate-cell text-truncate">{{ p.productDescription || '—' }}</td>
-            <td>₹{{ p.price }}</td>
-            <td>
-              <label class="toggle-switch">
-                <input type="checkbox" [checked]="p.isAvailable" (change)="toggleAvailability(p)" />
-                <span class="toggle-slider"></span>
-              </label>
-            </td>
-            <td class="text-end">
-              <button class="btn btn-sm edit-btn me-1" (click)="openEditModal(p)">
-                <i class="bi bi-pencil"></i>
-              </button>
-              <button class="btn btn-sm delete-btn" (click)="deleteProduct(p.productID)">
-                <i class="bi bi-trash"></i>
-              </button>
-            </td>
-          </tr>
-          <tr *ngIf="filteredProducts.length === 0">
-            <td colspan="5" class="text-center py-4">
-              No items match your search.
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
   </div>
 </section>
-
 
     <!-- SETTINGS -->
     <section *ngIf="selectedSection==='settings'">
@@ -1908,7 +2078,96 @@
     </section> 
   </main>
 
+<!-- Category Modal -->
+<div class="modal-overlay" *ngIf="showCategoryModal" (click)="closeCategoryModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h5 class="modal-title">{{ isEditCategoryMode ? 'Edit Category' : 'Add New Category' }}</h5>
+      <button type="button" class="btn-close" (click)="closeCategoryModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <form #categoryForm="ngForm">
+        <div class="mb-3">
+          <label class="form-label">Category Name <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" 
+                 [(ngModel)]="modalCategory.categoryName" 
+                 name="categoryName" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Description</label>
+          <textarea class="form-control" rows="3"
+                    [(ngModel)]="modalCategory.categoryDescription" 
+                    name="categoryDescription"></textarea>
+        </div>
+        <div class="mb-3 form-check">
+          <input type="checkbox" class="form-check-input" 
+                 [(ngModel)]="modalCategory.isAvailable" 
+                 name="isAvailable">
+          <label class="form-check-label">Available</label>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" (click)="closeCategoryModal()">Cancel</button>
+      <button type="button" class="btn btn-primary" 
+              (click)="isEditCategoryMode ? updateCategory() : addCategory()"
+              [disabled]="!categoryForm.form.valid || !modalCategory.categoryName">
+        {{ isEditCategoryMode ? 'Save Changes' : 'Add Category' }}
+      </button>
+    </div>
+  </div>
+</div>
 
+<!-- Subcategory Modal -->
+<div class="modal-overlay" *ngIf="showSubcategoryModal" (click)="closeSubcategoryModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h5 class="modal-title">{{ isEditSubcategoryMode ? 'Edit Subcategory' : 'Add New Subcategory' }}</h5>
+      <button type="button" class="btn-close" (click)="closeSubcategoryModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <form #subcategoryForm="ngForm">
+        <div class="mb-3">
+          <label class="form-label">Subcategory Name <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" 
+                 [(ngModel)]="modalSubcategory.subCategoryName" 
+                 name="subCategoryName" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Category <span class="text-danger">*</span></label>
+          <select class="form-select" 
+                  [(ngModel)]="modalSubcategory.categoryID" 
+                  name="categoryID" required>
+            <option [ngValue]="null" disabled>Select a Category</option>
+            <option *ngFor="let cat of categories" [ngValue]="cat.categoryID">
+              {{ cat.categoryName }}
+            </option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Description</label>
+          <textarea class="form-control" rows="3"
+                    [(ngModel)]="modalSubcategory.subCategoryDescription" 
+                    name="subCategoryDescription"></textarea>
+        </div>
+        <div class="mb-3 form-check">
+          <input type="checkbox" class="form-check-input" 
+                 [(ngModel)]="modalSubcategory.isAvailable" 
+                 name="isAvailable">
+          <label class="form-check-label">Available</label>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" (click)="closeSubcategoryModal()">Cancel</button>
+      <button type="button" class="btn btn-primary" 
+              (click)="isEditSubcategoryMode ? updateSubcategory() : addSubcategory()"
+              [disabled]="!subcategoryForm.form.valid || !modalSubcategory.subCategoryName || !modalSubcategory.categoryID">
+        {{ isEditSubcategoryMode ? 'Save Changes' : 'Add Subcategory' }}
+      </button>
+    </div>
+  </div>
+</div>
 
 <!-- ADD / EDIT MODAL -->
 <div class="modal fade" [class.show]="isModalOpen" [style.display]="isModalOpen ? 'block' : 'none'">

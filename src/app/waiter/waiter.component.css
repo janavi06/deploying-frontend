@@ -3102,3 +3102,194 @@ qrcode canvas {
   line-height: 1.2;
   margin-bottom: 2px;
 }
+/* Improved Order Card Layout */
+.order-mini-card {
+  background: white;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  border: 1px solid #e0e0e0;
+}
+
+.order-header {
+  margin-bottom: 8px;
+}
+
+.order-id {
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.order-time {
+  font-size: 12px;
+  color: #666;
+}
+
+.order-items {
+  margin: 8px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.order-items li {
+  margin-bottom: 6px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.item-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.item-price {
+  font-weight: bold;
+  color: #28a745;
+}
+
+.customizations-list {
+  margin-top: 4px;
+  padding-left: 12px;
+}
+
+.customization-item {
+  font-size: 11px;
+  color: #666;
+}
+
+.order-payment-info {
+  font-size: 12px;
+}
+
+.order-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.action-row {
+  width: 100%;
+}
+
+.action-row .d-flex {
+  gap: 4px;
+}
+
+.action-row .btn,
+.action-row .badge {
+  min-width: 0;
+  flex: 1;
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Payment Modal Improvements */
+.payment-modal .btn-group .btn {
+  font-size: 14px;
+  padding: 8px 16px;
+}
+
+.payment-modal .modal-body {
+  font-size: 14px;
+}
+
+.payment-modal .fs-5 {
+  font-size: 1.5rem !important;
+}
+
+/* Make order cards more compact */
+.order-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 768px) {
+  .order-card-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .action-row .btn,
+  .action-row .badge {
+    font-size: 10px;
+    padding: 4px 6px;
+  }
+}
+
+.payment-option-card {
+  border: 2px solid #dee2e6;
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: white;
+}
+
+.payment-option-card:hover {
+  border-color: #ffc107;
+  background: #fffdf6;
+}
+
+.payment-option-card.selected {
+  border-color: #ffc107;
+  background: #fff9e6;
+  box-shadow: 0 0 0 2px rgba(255, 193, 7, 0.25);
+}
+
+.payment-icon {
+  margin-bottom: 10px;
+  color: #6c757d;
+}
+
+.payment-option-card.selected .payment-icon {
+  color: #ffc107;
+}
+
+.payment-option-card {
+  border: 2px solid #dee2e6;
+  border-radius: 8px;
+  padding: 1rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: white;
+}
+
+.payment-option-card:hover {
+  border-color: #6c757d;
+  transform: translateY(-2px);
+}
+
+.payment-option-card.selected {
+  border-color: #198754;
+  background-color: #f8fff9;
+  box-shadow: 0 4px 8px rgba(25, 135, 84, 0.2);
+}
+
+.payment-icon {
+  margin-bottom: 0.5rem;
+  color: #6c757d;
+}
+
+.payment-option-card.selected .payment-icon {
+  color: #198754;
+}
+
+.payment-label {
+  margin-bottom: 0.25rem;
+}
+
+/* Ensure modal backdrops stack properly */
+.modal-backdrop {
+  z-index: 1050;
+}
+
+.modal {
+  z-index: 1060;
+}
+

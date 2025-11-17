@@ -1062,3 +1062,301 @@ body.modal-open {
   background-color: #5c636a;
   border-color: #565e64;
 }
+
+/* Tab styling */
+.nav-tabs .nav-link {
+  color: #6c757d;
+  border: none;
+  padding: 0.75rem 1.5rem;
+}
+
+.nav-tabs .nav-link.active {
+  color: #0d6efd;
+  border-bottom: 2px solid #0d6efd;
+  background: transparent;
+}
+
+.nav-tabs .nav-link:hover {
+  border-color: transparent;
+  color: #0d6efd;
+}
+
+/* Modal overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1050;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 0.5rem;
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+/* Toggle switch */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 24px;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+  border-radius: 24px;
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+
+input:checked + .toggle-slider {
+  background-color: #198754;
+}
+
+input:checked + .toggle-slider:before {
+  transform: translateX(26px);
+}
+
+/* Table responsive */
+.truncate-cell {
+  max-width: 200px;
+}
+
+/* Button styles */
+.edit-btn {
+  color: #0d6efd;
+  border: 1px solid #0d6efd;
+}
+
+.edit-btn:hover {
+  background: #0d6efd;
+  color: white;
+}
+
+.delete-btn {
+  color: #dc3545;
+  border: 1px solid #dc3545;
+}
+
+.delete-btn:hover:not(:disabled) {
+  background: #dc3545;
+  color: white;
+}
+
+.delete-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/*
+ * 1. ROOT VARIABLES
+ * Defines the sidebar width and transition speed.
+ */
+:root {
+  --sidebar-width: 260px;
+  --sidebar-transition: transform 0.3s ease-in-out, margin-left 0.3s ease-in-out;
+}
+
+/*
+ * 2. MOBILE-FIRST STYLES (Default)
+ * These apply to all screen sizes, starting with mobile.
+ */
+.manager-wrapper {
+  position: relative;
+  overflow-x: hidden; /* Prevents horizontal scrolling */
+}
+
+/* * SIDEBAR (Mobile Default: Hidden)
+ * - position: fixed -> Makes it an overlay.
+ * - transform: translateX(-100%) -> Hides it off-screen to the left.
+ */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh; /* Full viewport height */
+  width: var(--sidebar-width);
+  background: #ffffff; /* Clean white background */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateX(-100%);
+  transition: var(--sidebar-transition);
+  z-index: 1050; /* High z-index to appear over content */
+  overflow-y: auto; /* Allow sidebar to scroll if items are many */
+}
+
+/* * SIDEBAR (Mobile Toggled: Visible)
+ * - The .open class is added by your Angular [class.open].
+ * - transform: translateX(0) -> Slides it into view.
+ */
+.sidebar.open {
+  transform: translateX(0);
+}
+
+/* * MAIN CONTENT (Mobile Default: Full Width)
+ * - It takes up 100% width.
+ * - The sidebar will slide OVER this content.
+ */
+.main-content {
+  width: 100%;
+  padding: 1rem;
+  transition: var(--sidebar-transition);
+  /* Add padding-top to account for the fixed header */
+  padding-top: 80px; /* Adjust as needed based on your header's height */
+}
+
+/*
+ * HEADER
+ * - Make the header fixed on mobile so the toggle is always visible.
+ */
+.dashboard-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  background: #ffffff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  z-index: 1040;
+}
+
+/* Adjust main content padding to account for fixed header */
+.main-content {
+  margin-top: 60px; /* Or the exact height of your header */
+  padding: 1.5rem;
+}
+
+.sidebar-toggle {
+  z-index: 1041; /* Ensure toggle is above header */
+}
+
+/*
+ * 3. DESKTOP STYLES (Large Screens)
+ * This media query applies to screens 992px wide and up.
+ */
+@media (min-width: 992px) {
+  /*
+   * HEADER (Desktop)
+   * - Un-fix the header and put it inside the main content flow.
+   */
+  .dashboard-header {
+    position: static;
+    box-shadow: none;
+    background: transparent;
+    padding: 0 0 1.5rem 0; /* Reset padding */
+  }
+
+  /*
+   * SIDEBAR (Desktop: Visible by default)
+   * - It's still `fixed` but now it's ON-screen by default.
+   */
+  .sidebar {
+    transform: translateX(0);
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.05);
+  }
+
+  /* * MAIN CONTENT (Desktop: Pushed over)
+   * - Your [class.sidebar-open] is the key.
+   * - By default, it has a margin to make space for the sidebar.
+   */
+  .main-content {
+    margin-left: var(--sidebar-width);
+    margin-top: 0; /* Reset mobile margin */
+    width: calc(100% - var(--sidebar-width));
+  }
+
+  /* * CLOSED STATE (Desktop: Toggled)
+   * - When .open is NOT present (toggled off)...
+   */
+  .sidebar:not(.open) {
+    transform: translateX(-100%); /* Slide the sidebar away */
+  }
+
+  .main-content:not(.sidebar-open) {
+    margin-left: 0; /* The content slides back to fill the screen */
+    width: 100%;
+  }
+}
+
+/*
+ * 4. GENERAL RESPONSIVE FIXES
+ * Helps with your "BIG AND NOT GOOD" content.
+ */
+
+/* Make all images responsive */
+img,
+.floor-plan-container {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Allow your filter toolbar to wrap on small screens */
+.dashboard-toolbar .row {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+/* Make inputs and buttons full-width on small screens for forms */
+.modal-body .form-control,
+.modal-body .btn {
+  width: 100%;
+}
+
+/* Ensure filter inputs stack cleanly */
+@media (max-width: 767px) {
+  .dashboard-toolbar .col-md-2,
+  .dashboard-toolbar .col-md-3 {
+    flex: 1 1 100%; /* Make all filters full-width */
+  }
+}
+
+/* Make KPI cards readable */
+.kpi-card .card-title {
+  font-size: 1rem;
+}
+.kpi-card .card-text {
+  font-size: 1.75rem;
+  font-weight: 600;
+}
+
+/* Allow floor plan to scroll horizontally if it's too wide */
+.floor-plan-container {
+  overflow-x: auto;
+  padding: 1rem;
+  border: 1px solid #eee;
+  background: #f9f9f9;
+}

@@ -24,6 +24,7 @@ export class KitchenComponent implements OnInit, OnDestroy {
   private debounceTimer: any; // ✅ debounce for SignalR-triggered refresh
 private speechQueue: SpeechSynthesisUtterance[] = [];
 private isSpeaking = false;
+  orderNumberMap: { [orderID: number]: number } = {}; // ✅ ADD THIS PROPERTY
 
   // Variable to track which section is selected from the sidebar
   selectedSection: string = 'overview';
@@ -141,118 +142,127 @@ if (storedId) this.restaurantId = +storedId;
     });
 }
 getHistoryOrders(): void {
-this.http.get<{ orders: any[] }>(`${this.apiUrl}/kitchen/history-orders?restaurantId=${this.restaurantId}`)
-    .subscribe({
-      next: (res) => {
-        this.orderHistory = res.orders.map(order => ({
-          ...order,
-          orderDate: new Date(order.createdAt)
-        }));
-        this.filterHistoryOrders();
-      },
-      error: (err) => console.error('❌ Failed to fetch order history:', err)
-    });
-}
+    this.http.get<{ orders: any[] }>(`${this.apiUrl}/kitchen/history-orders?restaurantId=${this.restaurantId}`)
+      .subscribe({
+        next: (res) => {
+          this.orderHistory = res.orders.map(order => ({
+            ...order,
+            orderNumber: order.orderNumber || order.orderID, // ✅ ADD ORDER NUMBER (fallback to orderID)
+            orderDate: new Date(order.createdAt)
+          }));
+          this.filterHistoryOrders();
+        },
+        error: (err) => console.error('❌ Failed to fetch order history:', err)
+      });
+  }
 
-getOrders(): void {
-  this.http.get<{ message: string; orders: any[] }>(`${this.apiUrl}/kitchen/pending-orders?restaurantId=${this.restaurantId}`)
-    .subscribe({
-      next: (response) => {
-        // reset current pending list (we will re-build)
-        this.pendingOrders = [];
 
-        if (!response?.orders) {
-          console.warn('No orders in response');
-          return;
-        }
+  getOrders(): void {
+    this.http.get<{ message: string; orders: any[] }>(`${this.apiUrl}/kitchen/pending-orders?restaurantId=${this.restaurantId}`)
+      .subscribe({
+        next: (response) => {
+          // reset current pending list (we will re-build)
+          this.pendingOrders = [];
 
-        const statusMap: Record<KitchenStatus, number> = {
-          'Pending': 0,
-          'Preparing': 1,
-          'Ready': 2
-        };
-
-        response.orders.forEach(batch => {
-          // only include items that are not prepared
-          const unpreparedItems = (batch.items || []).filter((item: any) => !item.isPrepared);
-          if (unpreparedItems.length === 0) return;
-
-          // push normalized batch item to pendingOrders
-          this.pendingOrders.push({
-            orderID: batch.orderID,
-            batchID: batch.batchID,
-            restaurantTableID: batch.restaurantTableID,
-            kitchenStatus: batch.kitchenStatus,
-            playSound: batch.playSound,
-            orderDate: new Date(batch.createdAt),
-            items: unpreparedItems,
-            createdAt: new Date(batch.createdAt),
-          });
-
-          // ensure batchStatusMap exists for this order
-          if (!this.batchStatusMap[batch.orderID]) {
-            this.batchStatusMap[batch.orderID] = {};
+          if (!response?.orders) {
+            console.warn('No orders in response');
+            return;
           }
 
-          // initialize status mapping if undefined
-          if (this.batchStatusMap[batch.orderID][batch.batchID] === undefined) {
-            this.batchStatusMap[batch.orderID][batch.batchID] =
-              statusMap[batch.kitchenStatus as KitchenStatus] ?? 0;
-          }
+          const statusMap: Record<KitchenStatus, number> = {
+            'Pending': 0,
+            'Preparing': 1,
+            'Ready': 2
+          };
 
-          // --- TIMER: start per-batch timer if not already started ---
-          if (!this.batchStartTimes[batch.orderID]) {
-            this.batchStartTimes[batch.orderID] = {};
-          }
+          response.orders.forEach(batch => {
+            // only include items that are not prepared
+            const unpreparedItems = (batch.items || []).filter((item: any) => !item.isPrepared);
+            if (unpreparedItems.length === 0) return;
 
-          if (this.batchStartTimes[batch.orderID][batch.batchID] === undefined) {
-            // prefer server-provided start timestamp if available
-            const startTs = batch.kitchenStartedAt ? new Date(batch.kitchenStartedAt).getTime() : Date.now();
-            this.batchStartTimes[batch.orderID][batch.batchID] = startTs;
-            this.startBatchInterval(batch.orderID, batch.batchID);
-          }
+            // ✅ STORE ORDER NUMBER MAPPING
+            if (batch.orderNumber) {
+              this.orderNumberMap[batch.orderID] = batch.orderNumber;
+            }
 
-          // --- SPEECH: speak per-batch once (and mark as played server-side) ---
-          const batchKey = `${batch.orderID}-${batch.batchID}`;
-          if (batch.playSound && this.settings.enableSpeech && !this.spokenBatches.has(batchKey)) {
-            this.readOrderAloud({
+            // push normalized batch item to pendingOrders
+            this.pendingOrders.push({
               orderID: batch.orderID,
+              orderNumber: batch.orderNumber || batch.orderID, // ✅ ADD ORDER NUMBER (fallback to orderID)
+              batchID: batch.batchID,
               restaurantTableID: batch.restaurantTableID,
-              items: unpreparedItems
+              kitchenStatus: batch.kitchenStatus,
+              playSound: batch.playSound,
+              orderDate: new Date(batch.createdAt),
+              items: unpreparedItems,
+              createdAt: new Date(batch.createdAt),
             });
 
-            // Mark played and avoid double-speaking across polls
-            this.markSoundPlayed(batch.orderID)
-              .then(() => {
-                this.spokenBatches.add(batchKey);
-              })
-              .catch(err => {
-                console.error('Failed to mark sound played for order', batch.orderID, err);
+            // ensure batchStatusMap exists for this order
+            if (!this.batchStatusMap[batch.orderID]) {
+              this.batchStatusMap[batch.orderID] = {};
+            }
+
+            // initialize status mapping if undefined
+            if (this.batchStatusMap[batch.orderID][batch.batchID] === undefined) {
+              this.batchStatusMap[batch.orderID][batch.batchID] =
+                statusMap[batch.kitchenStatus as KitchenStatus] ?? 0;
+            }
+
+            // --- TIMER: start per-batch timer if not already started ---
+            if (!this.batchStartTimes[batch.orderID]) {
+              this.batchStartTimes[batch.orderID] = {};
+            }
+
+            if (this.batchStartTimes[batch.orderID][batch.batchID] === undefined) {
+              // prefer server-provided start timestamp if available
+              const startTs = batch.kitchenStartedAt ? new Date(batch.kitchenStartedAt).getTime() : Date.now();
+              this.batchStartTimes[batch.orderID][batch.batchID] = startTs;
+              this.startBatchInterval(batch.orderID, batch.batchID);
+            }
+
+            // --- SPEECH: speak per-batch once (and mark as played server-side) ---
+            const batchKey = `${batch.orderID}-${batch.batchID}`;
+            if (batch.playSound && this.settings.enableSpeech && !this.spokenBatches.has(batchKey)) {
+              this.readOrderAloud({
+                orderID: batch.orderID,
+                orderNumber: batch.orderNumber || batch.orderID, // ✅ INCLUDE ORDER NUMBER IN SPEECH
+                restaurantTableID: batch.restaurantTableID,
+                items: unpreparedItems
               });
-          }
-        });
 
-        // play initial sounds for the first load (if you keep that flow)
-        if (!this.hasLoadedOnce) {
-          // playNewOrderSounds may be async; call it and log errors if any
-          try {
-            // If playNewOrderSounds returns a Promise:
-            const p = (this as any).playNewOrderSounds?.();
-            if (p && typeof p.then === 'function') p.catch((e: any) => console.error('playNewOrderSounds error', e));
-          } catch (e) {
-            console.warn('playNewOrderSounds invocation failed or is not present', e);
+              // Mark played and avoid double-speaking across polls
+              this.markSoundPlayed(batch.orderID)
+                .then(() => {
+                  this.spokenBatches.add(batchKey);
+                })
+                .catch(err => {
+                  console.error('Failed to mark sound played for order', batch.orderID, err);
+                });
+            }
+          });
+
+          // play initial sounds for the first load (if you keep that flow)
+          if (!this.hasLoadedOnce) {
+            // playNewOrderSounds may be async; call it and log errors if any
+            try {
+              // If playNewOrderSounds returns a Promise:
+              const p = (this as any).playNewOrderSounds?.();
+              if (p && typeof p.then === 'function') p.catch((e: any) => console.error('playNewOrderSounds error', e));
+            } catch (e) {
+              console.warn('playNewOrderSounds invocation failed or is not present', e);
+            }
           }
+
+          console.log('Updated pendingOrders:', this.pendingOrders);
+          console.log('Updated batchStatusMap:', this.batchStatusMap);
+        },
+        error: (err) => {
+          console.error('Error fetching orders:', err);
+          this.snackbar.open('Error fetching orders', 'Dismiss', { duration: 1000 });
         }
-
-        console.log('Updated pendingOrders:', this.pendingOrders);
-        console.log('Updated batchStatusMap:', this.batchStatusMap);
-      },
-      error: (err) => {
-        console.error('Error fetching orders:', err);
-        this.snackbar.open('Error fetching orders', 'Dismiss', { duration: 1000 });
-      }
-    });
-}
+      });
+  }
 
 
 fetchTables(): void {
@@ -311,37 +321,35 @@ private async playNewOrderSounds(): Promise<void> {
 }
 
 
-// In kitchen.component.ts
-advanceOrder(order: any, newStatus: number): void {
-  let statusString: string;
-  switch (newStatus) {
-    case 1: // Preparing
-      statusString = "Preparing";
-      break;
-    case 2: // Ready
-      statusString = "Ready";
-      break;
-    default:
-      statusString = "Pending";
+  advanceOrder(order: any, newStatus: number): void {
+    let statusString: string;
+    switch (newStatus) {
+      case 1: // Preparing
+        statusString = "Preparing";
+        break;
+      case 2: // Ready
+        statusString = "Ready";
+        break;
+      default:
+        statusString = "Pending";
+    }
+
+    this.http
+      .put(
+        `${this.apiUrl}/kitchen/update-status/${order.orderID}?restaurantId=${this.restaurantId}`,
+        JSON.stringify(statusString),
+        { headers: { 'Content-Type': 'application/json' } }
+      )
+      .subscribe({
+        next: () => {
+          this.getOrders(); // Refresh orders
+          if (newStatus === 2) { // If marked as ready
+            this.notifyWaiter(order.orderID, order.restaurantTableID);
+          }
+        },
+        error: (err) => console.error('Error updating status:', err)
+      });
   }
-
-  this.http
-    .put(
-      `${this.apiUrl}/kitchen/update-status/${order.orderID}`,
-      JSON.stringify(statusString),
-      { headers: { 'Content-Type': 'application/json' } }
-    )
-    .subscribe({
-      next: () => {
-        this.getOrders(); // Refresh orders
-        if (newStatus === 2) { // If marked as ready
-          this.notifyWaiter(order.orderID, order.restaurantTableID);
-        }
-      },
-      error: (err) => console.error('Error updating status:', err)
-    });
-}
-
 
 // Update this method to handle status changes properly
 advanceBatch(orderID: number, batchID: number, newStatus: 'Preparing' | 'Ready'): void {
@@ -385,16 +393,18 @@ advanceBatch(orderID: number, batchID: number, newStatus: 'Preparing' | 'Ready')
       }
     });
 }
-notifyWaiter(orderId: number, tableNo: number): void {
-this.http.post(`${this.apiUrl}/waiter/notifications?restaurantId=${this.restaurantId}`, {
-    orderId,
-    tableNo,
-    message: `Order #${orderId} for Table ${tableNo} is ready to serve`
-  }).subscribe({
-    next: () => console.log('Waiter notified'),
-    error: err => console.error('Error notifying waiter:', err)
-  });
-}
+  notifyWaiter(orderId: number, tableNo: number): void {
+    const orderNumber = this.orderNumberMap[orderId] || orderId;
+    
+    this.http.post(`${this.apiUrl}/waiter/notifications?restaurantId=${this.restaurantId}`, {
+      orderId,
+      tableNo,
+      message: `Order #${orderNumber} for Table ${tableNo} is ready to serve` // ✅ USE ORDER NUMBER
+    }).subscribe({
+      next: () => console.log('Waiter notified'),
+      error: err => console.error('Error notifying waiter:', err)
+    });
+  }
 
 // Helper: generate key
 private getBatchKey(orderID: number, batchID: number) {
@@ -478,62 +488,65 @@ formatSecondsToPresent(sec?: number | null): string {
   return `${s} sec`;
 }
 
-updateBatchStatus(orderID: number, batchID: number, newStatus: number): void {
-  console.log('Updating status:', { orderID, batchID, newStatus });
+  updateBatchStatus(orderID: number, batchID: number, newStatus: number): void {
+    console.log('Updating status:', { orderID, batchID, newStatus });
 
-  const statusMap = ['Pending', 'Preparing', 'Ready'];
-  const statusString = statusMap[newStatus];
+    const statusMap = ['Pending', 'Preparing', 'Ready'];
+    const statusString = statusMap[newStatus];
 
-  this.http.put(
-  `${this.apiUrl}/kitchen/update-batch-status/${orderID}?restaurantId=${this.restaurantId}`,
-    { status: statusString, batchID },
-    { headers: { 'Content-Type': 'application/json' } }
-  ).subscribe({
-    next: () => {
-      // ✅ Update local batch status
-      if (!this.batchStatusMap[orderID]) {
-        this.batchStatusMap[orderID] = {};
-      }
-      this.batchStatusMap[orderID][batchID] = newStatus;
+    this.http.put(
+      `${this.apiUrl}/kitchen/update-batch-status/${orderID}?restaurantId=${this.restaurantId}`,
+      { status: statusString, batchID },
+      { headers: { 'Content-Type': 'application/json' } }
+    ).subscribe({
+      next: () => {
+        // ✅ Update local batch status
+        if (!this.batchStatusMap[orderID]) {
+          this.batchStatusMap[orderID] = {};
+        }
+        this.batchStatusMap[orderID][batchID] = newStatus;
 
-      console.log('✅ Local batchStatusMap updated:', this.batchStatusMap);
+        console.log('✅ Local batchStatusMap updated:', this.batchStatusMap);
 
-      // ✅ Optional: Update kitchenStatus text in UI
-      const batchIndex = this.pendingOrders.findIndex(b =>
-        b.orderID === orderID && b.batchID === batchID
-      );
-      if (batchIndex !== -1) {
-        this.pendingOrders[batchIndex].kitchenStatus = statusString;
-      }
-
-      // ✅ If marked as Ready
-      if (newStatus === 2) {
-        const order = this.pendingOrders.find(b =>
+        // ✅ Optional: Update kitchenStatus text in UI
+        const batchIndex = this.pendingOrders.findIndex(b =>
           b.orderID === orderID && b.batchID === batchID
         );
-        if (order) {
-          this.notifyWaiter(orderID, order.restaurantTableID);
+        if (batchIndex !== -1) {
+          this.pendingOrders[batchIndex].kitchenStatus = statusString;
         }
 
-        // ✅ Remove batch from pendingOrders
-        this.pendingOrders = this.pendingOrders.filter(b =>
-          !(b.orderID === orderID && b.batchID === batchID)
-        );
+        // ✅ If marked as Ready
+        if (newStatus === 2) {
+          const order = this.pendingOrders.find(b =>
+            b.orderID === orderID && b.batchID === batchID
+          );
+          if (order) {
+            this.notifyWaiter(orderID, order.restaurantTableID);
+          }
 
-        // ✅ Refresh history orders to include this batch
-        this.getHistoryOrders();
+          // ✅ Remove batch from pendingOrders
+          this.pendingOrders = this.pendingOrders.filter(b =>
+            !(b.orderID === orderID && b.batchID === batchID)
+          );
+
+          // ✅ Refresh history orders to include this batch
+          this.getHistoryOrders();
+        }
+
+        // ✅ Refresh pending orders (good for UI sync)
+        this.getOrders();
+      },
+      error: err => {
+        console.error('❌ Failed to update status:', err);
+        this.snackbar.open('Failed to update order status', 'Dismiss', { duration: 3000 });
       }
+    });
+  }
 
-      // ✅ Refresh pending orders (good for UI sync)
-      this.getOrders();
-    },
-    error: err => {
-      console.error('❌ Failed to update status:', err);
-      this.snackbar.open('Failed to update order status', 'Dismiss', { duration: 3000 });
-    }
-  });
-}
-
+ getDisplayOrderNumber(orderID: number): number {
+    return this.orderNumberMap[orderID] || orderID;
+  }
 
 getCustomizationText(customizations: any[]): string {
   return customizations.map(c => {
@@ -557,42 +570,46 @@ getCustomizationText(customizations: any[]): string {
 }
 
 
-readOrderAloud(order: any): void {
-  const items = order.items || [];
+  readOrderAloud(order: any): void {
+    const items = order.items || [];
+    
+    // ✅ USE ORDER NUMBER IN SPEECH
+    const orderReference = order.orderNumber ? `order number ${order.orderNumber}` : `order ${order.orderID}`;
 
-  const itemList = items.map((i: any) => {
-    const customizationText = i.customizations?.length
-      ? ` (${this.getCustomizationText(i.customizations)})`
-      : '';
-    return this.settings.language === 'hi'
-      ? `${i.name}${customizationText} की मात्रा ${i.quantity}`
-      : `${i.name}${customizationText}, quantity ${i.quantity}`;
-  }).join(', ');
+    const itemList = items.map((i: any) => {
+      const customizationText = i.customizations?.length
+        ? ` (${this.getCustomizationText(i.customizations)})`
+        : '';
+      return this.settings.language === 'hi'
+        ? `${i.name}${customizationText} की मात्रा ${i.quantity}`
+        : `${i.name}${customizationText}, quantity ${i.quantity}`;
+    }).join(', ');
 
-  const message = this.settings.language === 'hi'
-    ? `नया ऑर्डर नंबर ${order.orderID}, टेबल नंबर ${order.restaurantTableID} पर आया है। आइटम्स हैं: ${itemList}। कृपया तैयारी शुरू करें।`
-    : `New order number ${order.orderID} at table ${order.restaurantTableID}. Items are: ${itemList}. Please start preparing.`;
+    const message = this.settings.language === 'hi'
+      ? `नया ऑर्डर ${orderReference}, टेबल नंबर ${order.restaurantTableID} पर आया है। आइटम्स हैं: ${itemList}। कृपया तैयारी शुरू करें।`
+      : `New ${orderReference} at table ${order.restaurantTableID}. Items are: ${itemList}. Please start preparing.`;
 
-  const utterance = new SpeechSynthesisUtterance(message);
-  utterance.lang = this.settings.language === 'hi' ? 'hi-IN' : 'en-IN';
-  utterance.rate = 0.7;
-  utterance.pitch = 1;
-  utterance.volume = 1;
+    const utterance = new SpeechSynthesisUtterance(message);
+    utterance.lang = this.settings.language === 'hi' ? 'hi-IN' : 'en-IN';
+    utterance.rate = 0.7;
+    utterance.pitch = 1;
+    utterance.volume = 1;
 
-  // Get voice
-  const voices = speechSynthesis.getVoices();
-  const selectedVoice = voices.find(v => v.lang === utterance.lang)
-    || voices.find(v => v.lang.startsWith('en'));
-  if (selectedVoice) utterance.voice = selectedVoice;
+    // Get voice
+    const voices = speechSynthesis.getVoices();
+    const selectedVoice = voices.find(v => v.lang === utterance.lang)
+      || voices.find(v => v.lang.startsWith('en'));
+    if (selectedVoice) utterance.voice = selectedVoice;
 
-  // Add to queue
-  this.speechQueue.push(utterance);
+    // Add to queue
+    this.speechQueue.push(utterance);
 
-  // Start if not already speaking
-  if (!this.isSpeaking) {
-    this.playNextSpeech();
+    // Start if not already speaking
+    if (!this.isSpeaking) {
+      this.playNextSpeech();
+    }
   }
-}
+
 
 private playNextSpeech(): void {
   if (this.speechQueue.length === 0) {

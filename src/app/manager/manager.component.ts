@@ -3,6 +3,8 @@ import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { environment } from '../../environments/environment';
+import { ActivatedRoute, Router } from '@angular/router'; // ADD THIS
+import { AuthService } from '../services/auth.service'; // ADD THIS IMPORT
 
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -39,7 +41,8 @@ readonly OFFER_API = `${environment.apiUrl}/offer`;
   staffShifts: any[] = [];
   staffPerformance: any[] = [];
   staffLeaderboard: any[] = [];
-  
+  activeMenuTab: 'items' | 'categories' | 'subcategories' = 'items';
+
   // NEW: Table Management
   tableStatus: any[] = [];
   reservations: any[] = [];
@@ -179,7 +182,25 @@ newCustomer: any = {
   isVIP: false
 };
 
+// Category and Subcategory modals
+showCategoryModal: boolean = false;
+showSubcategoryModal: boolean = false;
+isEditCategoryMode: boolean = false;
+isEditSubcategoryMode: boolean = false;
 
+// Modal data models
+modalCategory: any = {
+  categoryName: '',
+  categoryDescription: '',
+  isAvailable: true
+};
+
+modalSubcategory: any = {
+  subCategoryName: '',
+  subCategoryDescription: '',
+  categoryID: null,
+  isAvailable: true
+};
 
   // Report data
 reportData: any = {
@@ -200,7 +221,7 @@ reportData: any = {
   hourlyData: [],
   totalCancellations: 0
 };
-  constructor(private http: HttpClient) {
+  constructor(private http: HttpClient, private route: ActivatedRoute,private router: Router,  private authService: AuthService ) {
     const today = new Date();
     this.customStartDate = this.formatDate(new Date(today.setDate(today.getDate() - 6)))
     this.customEndDate = this.formatDate(new Date());
@@ -208,108 +229,110 @@ reportData: any = {
     this.customReportEndDate = this.customEndDate;
   }
 
-ngOnInit(): void {
-      this.restaurantId = Number(localStorage.getItem('restaurantId') || '0');
-  this.getRestaurantIdFromUrl();
+  ngOnInit(): void {
+    // ✅ FIXED: Get restaurantId from route parameter instead of URL query
+    this.route.params.subscribe(params => {
+      this.restaurantId = +params['restaurantId']; // Convert to number
+      
+      if (this.restaurantId && this.restaurantId > 0) {
+        console.log('✅ Manager Component: Restaurant ID from route:', this.restaurantId);
+        this.initializeComponent();
+      } else {
+        console.error('❌ Invalid restaurantId from route');
+        this.redirectToLogin();
+      }
+    });
+  }
 
-  this.loadSubCategories();
-  this.loadCategories();
-  this.loadProducts();
-  this.loadAllOrders();
-  this.loadReportData();
+private initializeComponent(): void {
+  // Save to localStorage for consistency
+  localStorage.setItem('restaurantId', this.restaurantId.toString());
+  localStorage.setItem('userRole', this.authService.role || '');
+  
+  console.log('✅ Manager Component: Initializing for restaurant:', this.restaurantId);
+  console.log('✅ Manager Component: User role:', this.authService.role);
+    
+    // Load all data
+    this.loadSubCategories();
+    this.loadCategories();
+    this.loadProducts();
+    this.loadAllOrders();
+    this.loadReportData();
 
-   // NEW: Load additional features
+    // Load additional features
     this.loadStaffData();
     this.loadTableData();
     this.loadExpenseData();
     this.loadCustomerData();
     this.loadAdvancedAnalytics();
-  this.loadOffersData();
+    this.loadOffersData();
 
-  // Auto-refresh intervals
+    // Auto-refresh intervals
     setInterval(() => {
       this.loadDashboardData();
-      this.loadTableData(); // Refresh table status
+      this.loadTableData();
     }, 15000);
- 
 
-
-   // 👇 START THE DASHBOARD REFRESHER 👇
+    // Dashboard refresher
     this.loadDashboardData();
     setInterval(() => {
       this.loadDashboardData();
-    }, 15000); // refresh every 15 seconds
-  
+    }, 15000);
 
-  // Auto-refresh every 60 seconds
-  setInterval(() => {
-    if (this.selectedSection === 'history') {
-      this.loadAllOrders(); // refresh only in history section
-    }
-  }, 60000); // every 60 seconds
-}
+    // Auto-refresh orders
+    setInterval(() => {
+      if (this.selectedSection === 'history') {
+        this.loadAllOrders();
+      }
+    }, 60000);
+  }
 
-  // Add these methods to your ManagerComponent class
+  private redirectToLogin(): void {
+    console.warn('Redirecting to login due to invalid restaurant context');
+    this.router.navigate(['/login']);
+  }
 
 viewOrderDetails(orderID: number) {
   // Implement order details viewing logic
   console.log('Viewing details for order:', orderID);
 }
-private getRestaurantIdFromUrl(): void {
-  // Method 1: Get from URL query parameters
-  const urlParams = new URLSearchParams(window.location.search);
-  const urlRestaurantId = urlParams.get('restaurantId');
-  
-  // Method 2: Get from localStorage as fallback
-  const storedRestaurantId = localStorage.getItem('restaurantId');
-  
-  // Method 3: Default fallback
-  this.restaurantId = Number(urlRestaurantId || storedRestaurantId || '0');
-  
-  console.log('Current Restaurant ID:', this.restaurantId);
-  
-  if (this.restaurantId === 0) {
-    console.warn('No restaurantId found! Some features may not work properly.');
-  }
-}
-// ✨ MODIFIED: loadDashboardData to include new data points
+
+// Update dashboard data loading
 loadDashboardData(): void {
-    if (this.restaurantId === 0) return;
-  
-    this.http.get<any>(`${this.ORDER_API}/dashboard/active-orders?restaurantId=${this.restaurantId}`).subscribe({
-      next: (res) => {
-        this.activeOrders = res.data.orders.map((o: any) => ({
-          ...o,
-          lastUpdated: new Date(o.lastUpdated),
-          timeInStatus: this.getTimeInStatus(new Date(o.createdAt)) // Simplified initial timer logic
-        })).sort((a: any, b: any) => {
-          return b.lastUpdated.getTime() - a.lastUpdated.getTime();
-        });
+  if (this.restaurantId === 0) return;
 
-        // Categorize orders for summary cards
-        this.inProgressOrders = this.activeOrders.filter(o => o.status === 'In Progress' || o.status === 'Confirmed');
-        this.awaitingServiceOrders = this.activeOrders.filter(o => o.status === 'Awaiting Service');
-        this.pendingPaymentOrders = this.activeOrders.filter(o => o.status === 'Pending Payment' || o.status === 'Served');
+  this.http.get<any>(`${this.ORDER_API}/dashboard/active-orders?restaurantId=${this.restaurantId}`).subscribe({
+    next: (res) => {
+      this.activeOrders = res.data.orders.map((o: any) => ({
+        ...o,
+        orderNumber: o.orderNumber, // ✅ Add order number
+        lastUpdated: new Date(o.lastUpdated),
+        timeInStatus: this.getTimeInStatus(new Date(o.createdAt))
+      })).sort((a: any, b: any) => {
+        return b.lastUpdated.getTime() - a.lastUpdated.getTime();
+      });
 
-        // New KPI logic
-        const oldestPending = this.activeOrders
-          .filter(o => o.status === 'Pending')
-          .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())[0];
+      // Update other order arrays with order numbers
+      this.inProgressOrders = this.activeOrders.filter(o => o.status === 'In Progress' || o.status === 'Confirmed');
+      this.awaitingServiceOrders = this.activeOrders.filter(o => o.status === 'Awaiting Service');
+      this.pendingPaymentOrders = this.activeOrders.filter(o => o.status === 'Pending Payment' || o.status === 'Served');
 
-        this.oldestPendingOrder = oldestPending;
+      // Update oldest pending order with order number
+      const oldestPending = this.activeOrders
+        .filter(o => o.status === 'Pending')
+        .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())[0];
 
-      },
-      error: (err) => {
-        console.error('Error loading dashboard data:', err);
-      },
-    });
+      this.oldestPendingOrder = oldestPending;
+    },
+    error: (err) => {
+      console.error('Error loading dashboard data:', err);
+    },
+  });
 
-    // Fetch real-time operational data
-    this.loadOperationalKpis();
-    this.loadWaiterRequests();
-    this.loadTodayStats();
-  }
-
+  this.loadOperationalKpis();
+  this.loadWaiterRequests();
+  this.loadTodayStats();
+}
 // ✨ NEW: Load Operational KPIs (Kitchen Backlog & Notifications)
   loadOperationalKpis(): void {
     // Kitchen Backlog
@@ -494,14 +517,12 @@ viewBill(orderId: number): void {
     }
   });
 }
-
 closeBillModal(): void {
   this.showBillModal = false;
   this.billHtmlContent = '';
 }
 
 reprintBill(orderID: number) {
-  // Implement bill reprinting logic
   window.open(`${this.ORDER_API}/${orderID}/bill`, '_blank');
 }
 getPages(): number[] {
@@ -552,6 +573,7 @@ loadAllOrders() {
     next: res => {
       this.allOrders = res.orders.map(o => ({
         orderID: o.orderID,
+                orderNumber: o.orderNumber, // ✅ Add order number
         createdAt: new Date(o.createdAt),
         tableNo: o.tableNo,
         status: o.orderStatus,
@@ -624,61 +646,69 @@ loadAllOrders() {
 getTableCountByStatus(status: string): number {
   return this.tableStatus.filter(t => t.status === status).length;
 }
-  applyFilters(): void {
-    // Convert dates to Date objects for comparison
-    const startDate = this.customStartDate ? new Date(this.customStartDate) : null;
-    const endDate = this.customEndDate ? new Date(this.customEndDate + 'T23:59:59') : null;
+applyFilters(): void {
+  const startDate = this.customStartDate ? new Date(this.customStartDate) : null;
+  const endDate = this.customEndDate ? new Date(this.customEndDate + 'T23:59:59') : null;
 
-    this.filteredOrders = this.allOrders
-      .filter(order => {
-        const orderDate = order.createdAt;
-        let ok = true;
-        
-        // Date filtering
-        if (startDate) ok = ok && orderDate >= startDate;
-        if (endDate) ok = ok && orderDate <= endDate;
-        
-        // Other filters
-        if (this.filterTableNo != null) ok = ok && order.tableNo == this.filterTableNo;
-        if (this.filterStatus) ok = ok && order.status?.toLowerCase() === this.filterStatus.toLowerCase();
-        if (this.filterPaymentMethod) ok = ok && order.paymentMethod?.toLowerCase() === this.filterPaymentMethod.toLowerCase();
-        
-        // Search text
-        if (this.searchText) {
-          const searchLower = this.searchText.toLowerCase();
-          ok = ok && (
-            order.orderID.toString().includes(searchLower) ||
-            (order.tableNo?.toString().includes(searchLower)) ||
-            order.items.some((i: any) => i.productName.toLowerCase().includes(searchLower)
-          ))
-        }
-        return ok;
-      })
-      .sort((a, b) => {
-        const aValue = a[this.sortColumn];
-        const bValue = b[this.sortColumn];
-        
-        if (this.sortDirection === 'asc') {
-          return aValue > bValue ? 1 : -1;
-        } else {
-          return aValue < bValue ? 1 : -1;
-        }
-      });
-    
-    this.updatePagination();
+  this.filteredOrders = this.allOrders
+    .filter(order => {
+      const orderDate = order.createdAt;
+      let ok = true;
+      
+      // Date filtering
+      if (startDate) ok = ok && orderDate >= startDate;
+      if (endDate) ok = ok && orderDate <= endDate;
+      
+      // Other filters
+      if (this.filterTableNo != null) ok = ok && order.tableNo == this.filterTableNo;
+      if (this.filterStatus) ok = ok && order.status?.toLowerCase() === this.filterStatus.toLowerCase();
+      if (this.filterPaymentMethod) ok = ok && order.paymentMethod?.toLowerCase() === this.filterPaymentMethod.toLowerCase();
+      
+      // Search text - update to search order numbers too
+      if (this.searchText) {
+        const searchLower = this.searchText.toLowerCase();
+        ok = ok && (
+          order.orderNumber.toString().includes(searchLower) || // ✅ Search order numbers
+          order.orderID.toString().includes(searchLower) || // Keep orderID search for backward compatibility
+          (order.tableNo?.toString().includes(searchLower)) ||
+          order.items.some((i: any) => i.productName.toLowerCase().includes(searchLower))
+        )
+      }
+      return ok;
+    })
+    .sort((a, b) => {
+      let aValue, bValue;
+      
+      // Handle orderNumber sorting specifically
+      if (this.sortColumn === 'orderNumber') {
+        aValue = a.orderNumber;
+        bValue = b.orderNumber;
+      } else {
+        aValue = a[this.sortColumn];
+        bValue = b[this.sortColumn];
+      }
+      
+      if (this.sortDirection === 'asc') {
+        return aValue > bValue ? 1 : -1;
+      } else {
+        return aValue < bValue ? 1 : -1;
+      }
+    });
+  
+  this.updatePagination();
+}
+
+
+
+sortOrders(column: string): void {
+  if (this.sortColumn === column) {
+    this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+  } else {
+    this.sortColumn = column;
+    this.sortDirection = 'asc';
   }
-
-
-
-  sortOrders(column: string): void {
-    if (this.sortColumn === column) {
-      this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
-    } else {
-      this.sortColumn = column;
-      this.sortDirection = 'asc';
-    }
-    this.applyFilters();
-  }
+  this.applyFilters();
+}
 
   // Pagination Methods
   updatePagination(): void {
@@ -715,11 +745,10 @@ getTableCountByStatus(status: string): number {
   }
 
 
-  downloadBill(orderId: number): void {
-    const url = `${this.ORDER_API}/${orderId}/bill`;
-    window.open(url, '_blank');
-  }
-
+downloadBill(orderId: number): void {
+  const url = `${this.ORDER_API}/${orderId}/bill`;
+  window.open(url, '_blank');
+}
   toggleItems(order: any): void {
     order.showItems = !order.showItems;
   }
@@ -819,7 +848,183 @@ getPaymentMethodPercentage(methodAmount: number): string {
   const percentage = (methodAmount / this.reportData.totalRevenue) * 100;
   return percentage.toFixed(1) + '%';
 }
+// Category Management Methods
+openAddCategoryModal(): void {
+  this.isEditCategoryMode = false;
+  this.modalCategory = {
+    categoryName: '',
+    categoryDescription: '',
+    isAvailable: true
+  };
+  this.showCategoryModal = true;
+}
 
+openEditCategoryModal(category: any): void {
+  this.isEditCategoryMode = true;
+  this.modalCategory = { ...category };
+  this.showCategoryModal = true;
+}
+
+closeCategoryModal(): void {
+  this.showCategoryModal = false;
+}
+
+addCategory(): void {
+  const newCategory = {
+    categoryName: this.modalCategory.categoryName,
+    categoryDescription: this.modalCategory.categoryDescription,
+    isAvailable: this.modalCategory.isAvailable,
+    restaurantId: this.restaurantId
+  };
+
+  this.http.post(this.CATEGORY_URL, newCategory).subscribe({
+    next: () => {
+      this.loadCategories();
+      this.closeCategoryModal();
+    },
+    error: err => console.error('Add category failed:', err)
+  });
+}
+
+updateCategory(): void {
+  const payload = {
+    categoryID: this.modalCategory.categoryID,
+    categoryName: this.modalCategory.categoryName,
+    categoryDescription: this.modalCategory.categoryDescription,
+    isAvailable: this.modalCategory.isAvailable,
+    restaurantId: this.restaurantId
+  };
+
+  this.http.put(`${this.CATEGORY_URL}/${payload.categoryID}`, payload).subscribe({
+    next: () => {
+      this.loadCategories();
+      this.closeCategoryModal();
+    },
+    error: err => console.error('Update category error:', err)
+  });
+}
+
+deleteCategory(categoryID: number): void {
+  if (!confirm('Delete this category? This will fail if there are items in this category.')) return;
+  
+  this.http.delete(`${this.CATEGORY_URL}/${categoryID}?restaurantId=${this.restaurantId}`).subscribe({
+    next: () => this.loadCategories(),
+    error: err => {
+      console.error('Delete category failed:', err);
+      alert('Cannot delete category with existing items. Please move or delete items first.');
+    }
+  });
+}
+
+toggleCategoryAvailability(category: any): void {
+  const newAvail = !category.isAvailable;
+  const payload = { isAvailable: newAvail };
+  
+  this.http.put(`${this.CATEGORY_URL}/${category.categoryID}/availability?restaurantId=${this.restaurantId}`, payload).subscribe({
+    next: () => category.isAvailable = newAvail,
+    error: err => console.error('Category availability update failed:', err)
+  });
+}
+
+// Subcategory Management Methods
+openAddSubcategoryModal(): void {
+  this.isEditSubcategoryMode = false;
+  this.modalSubcategory = {
+    subCategoryName: '',
+    subCategoryDescription: '',
+    categoryID: null,
+    isAvailable: true
+  };
+  this.showSubcategoryModal = true;
+}
+
+openEditSubcategoryModal(subcategory: any): void {
+  this.isEditSubcategoryMode = true;
+  this.modalSubcategory = { ...subcategory };
+  this.showSubcategoryModal = true;
+}
+
+closeSubcategoryModal(): void {
+  this.showSubcategoryModal = false;
+}
+
+addSubcategory(): void {
+  const newSubcategory = {
+    subCategoryName: this.modalSubcategory.subCategoryName,
+    subCategoryDescription: this.modalSubcategory.subCategoryDescription,
+    categoryID: this.modalSubcategory.categoryID,
+    isAvailable: this.modalSubcategory.isAvailable,
+    restaurantId: this.restaurantId
+  };
+
+  this.http.post(this.SUBCATEGORY_URL, newSubcategory).subscribe({
+    next: () => {
+      this.loadSubCategories();
+      this.closeSubcategoryModal();
+    },
+    error: err => console.error('Add subcategory failed:', err)
+  });
+}
+
+updateSubcategory(): void {
+  const payload = {
+    subCategoryID: this.modalSubcategory.subCategoryID,
+    subCategoryName: this.modalSubcategory.subCategoryName,
+    subCategoryDescription: this.modalSubcategory.subCategoryDescription,
+    categoryID: this.modalSubcategory.categoryID,
+    isAvailable: this.modalSubcategory.isAvailable,
+    restaurantId: this.restaurantId
+  };
+
+  this.http.put(`${this.SUBCATEGORY_URL}/${payload.subCategoryID}`, payload).subscribe({
+    next: () => {
+      this.loadSubCategories();
+      this.closeSubcategoryModal();
+    },
+    error: err => console.error('Update subcategory error:', err)
+  });
+}
+
+deleteSubcategory(subCategoryID: number): void {
+  if (!confirm('Delete this subcategory? This will fail if there are items in this subcategory.')) return;
+  
+  this.http.delete(`${this.SUBCATEGORY_URL}/${subCategoryID}?restaurantId=${this.restaurantId}`).subscribe({
+    next: () => this.loadSubCategories(),
+    error: err => {
+      console.error('Delete subcategory failed:', err);
+      alert('Cannot delete subcategory with existing items. Please move or delete items first.');
+    }
+  });
+}
+
+toggleSubcategoryAvailability(subcategory: any): void {
+  const newAvail = !subcategory.isAvailable;
+  const payload = { isAvailable: newAvail };
+  
+  this.http.put(`${this.SUBCATEGORY_URL}/${subcategory.subCategoryID}/availability?restaurantId=${this.restaurantId}`, payload).subscribe({
+    next: () => subcategory.isAvailable = newAvail,
+    error: err => console.error('Subcategory availability update failed:', err)
+  });
+}
+
+// Helper Methods
+getCategoryName(categoryID: number): string {
+  const category = this.categories.find(c => c.categoryID === categoryID);
+  return category ? category.categoryName : '—';
+}
+
+getSubcategoryName(subCategoryID: number): string {
+  const subcategory = this.subcategories.find(sc => sc.subCategoryID === subCategoryID);
+  return subcategory ? subcategory.subCategoryName : '—';
+}
+
+getCategoryItemCount(categoryID: number): number {
+  return this.products.filter(p => p.categoryID === categoryID).length;
+}
+
+getSubcategoryItemCount(subCategoryID: number): number {
+  return this.products.filter(p => p.subCategoryID === subCategoryID).length;
+}
 // Add this helper method for safe number display
 safeNumber(value: any, defaultValue: number = 0): number {
   return Number(value) || defaultValue;
@@ -839,22 +1044,59 @@ safeNumber(value: any, defaultValue: number = 0): number {
     }
   }
 exportToCSV() {
+  // CSV Header Section
   const headers = [
-    'Order ID', 'Date', 'Time', 'Table Number', 'Customer Name', 
-    'Total Items', 'Subtotal', 'Discount', 'CGST', 'SGST', 
-    'Service Charge', 'Total Amount', 'Payment Method', 'Payment Status',
-    'Order Duration', 'Item Details'
+    'ORDER HISTORY REPORT',
+    `Restaurant: ${this.getRestaurantName()}`,
+    `Period: ${this.getFormattedDateRange()}`,
+    `Generated: ${new Date().toLocaleString()}`,
+    `Report ID: ORD-${Date.now()}`,
+    ''
   ];
 
-  const csvRows = this.filteredOrders.map((order: any) => {
+  // Executive Summary Section
+  const summary = [
+    ['EXECUTIVE SUMMARY'],
+    ['Metric', 'Value'],
+    ['Total Orders', this.filteredOrders.length],
+    ['Completed Orders', this.filteredOrders.filter(o => o.status === 'Completed').length],
+    ['Cancelled Orders', this.filteredOrders.filter(o => o.status === 'Cancelled').length],
+    ['Success Rate', `${(this.calculateSuccessRate() * 100).toFixed(1)}%`],
+    ['Total Revenue', `₹${this.calculateTotalRevenue().toFixed(2)}`],
+    ['Average Order Value', `₹${this.calculateAverageOrderValue().toFixed(2)}`],
+    ['Highest Order Value', `₹${this.getHighestOrderValue().toFixed(2)}`],
+    ['Lowest Order Value', `₹${this.getLowestOrderValue().toFixed(2)}`],
+    ['', '']
+  ];
+
+  // Payment Method Breakdown
+  const paymentHeader = ['PAYMENT METHOD ANALYSIS'];
+  const paymentMethods = this.getPaymentMethodBreakdown();
+  const paymentData = paymentMethods.map(p => [
+    p.method,
+    p.count,
+    `₹${p.amount.toFixed(2)}`,
+    `${p.percentage}%`
+  ]);
+
+  // Detailed Orders Data
+  const ordersHeader = ['DETAILED ORDER BREAKDOWN'];
+  const ordersColumns = [
+      'Order Number', 'Date', 'Time', 'Table Number', 'Customer Name', 
+    'Total Items', 'Subtotal', 'Discount', 'CGST', 'SGST', 
+    'Service Charge', 'Total Amount', 'Payment Method', 'Payment Status',
+    'Order Status', 'Order Duration', 'Waiter Name', 'Item Details'
+  ];
+
+  const ordersData = this.filteredOrders.map((order: any) => {
+    const orderDate = new Date(order.createdAt);
     const itemDetails = order.items.map((item: any) => 
-      `${item.productName} x${item.quantity} @ ₹${item.unitPrice}`
+      `${item.productName} x${item.quantity} @ ₹${item.unitPrice}` +
+      (item.customizations?.length ? ` [${item.customizations.map((c: any) => c.optionName).join(', ')}]` : '')
     ).join('; ');
 
-    const orderDate = new Date(order.createdAt);
-    
     return [
-      order.orderID,
+      order.orderNumber, // ✅ Use order number instead of orderID
       orderDate.toLocaleDateString(),
       orderDate.toLocaleTimeString(),
       order.tableNo || 'Takeaway',
@@ -869,40 +1111,101 @@ exportToCSV() {
       order.paymentMethod || 'Pending',
       order.status,
       this.getOrderDuration(order),
+      order.waiterName || 'N/A',
       `"${itemDetails}"`
-    ].map(field => `"${String(field).replace(/"/g, '""')}"`).join(',');
+    ];
   });
 
-  // Add summary section
-  const summary = [
-    [],
-    ['SUMMARY'],
-    ['Total Orders:', this.filteredOrders.length],
-    ['Total Revenue:', `₹${this.calculateTotalRevenue().toFixed(2)}`],
-    ['Average Order Value:', `₹${this.calculateAverageOrderValue().toFixed(2)}`],
-    ['Success Rate:', `${(this.calculateSuccessRate() * 100).toFixed(1)}%`],
-    ['Report Period:', this.getFormattedDateRange()],
-    ['Generated On:', new Date().toLocaleString()],
-    []
+  // Top Selling Items
+  const itemsHeader = ['TOP SELLING ITEMS'];
+  const itemsColumns = ['Item Name', 'Quantity Sold', 'Revenue', '% of Total Revenue'];
+  const topItems = this.getTopSellingItems().slice(0, 15);
+  const itemsData = topItems.map(item => [
+    item.name,
+    item.quantity,
+    `₹${item.revenue.toFixed(2)}`,
+    `${item.percentage}%`
+  ]);
+
+  // Hourly Performance
+  const hourlyHeader = ['HOURLY PERFORMANCE'];
+  const hourlyColumns = ['Hour', 'Orders', 'Revenue', 'Average Order Value'];
+  const hourlyData = this.getHourlyPerformance();
+  const hourlyTableData = hourlyData.map(hour => [
+    `${hour.hour}:00 - ${hour.hour}:59`,
+    hour.orders,
+    `₹${hour.revenue.toFixed(2)}`,
+    `₹${hour.average.toFixed(2)}`
+  ]);
+
+  // Footer Section
+  const footer = [
+    [''],
+    ['REPORT FOOTNOTES'],
+    ['* All amounts in Indian Rupees (₹)'],
+    ['* Duration calculated from order creation to completion'],
+    ['* Takeaway orders marked as "Takeaway" in Table column'],
+    ['* Success Rate = (Completed Orders / Total Orders) * 100'],
+    [''],
+    ['END OF REPORT']
   ];
 
-  const summaryCsv = summary.map(row => row.map(field => `"${field}"`).join(','));
-  const csvContent = [headers.join(','), ...csvRows, ...summaryCsv].join('\n');
-  
+  // Combine all sections
+  const csvContent = [
+    ...headers.map(row => this.formatCsvRow([row])),
+    ...summary.map(row => this.formatCsvRow(row)),
+    this.formatCsvRow([]),
+    ...paymentHeader.map(row => this.formatCsvRow([row])),
+    this.formatCsvRow(['Payment Method', 'Order Count', 'Amount', 'Percentage']),
+    ...paymentData.map(row => this.formatCsvRow(row)),
+    this.formatCsvRow([]),
+    ...ordersHeader.map(row => this.formatCsvRow([row])),
+    this.formatCsvRow(ordersColumns),
+    ...ordersData.map(row => this.formatCsvRow(row)),
+    this.formatCsvRow([]),
+    ...itemsHeader.map(row => this.formatCsvRow([row])),
+    this.formatCsvRow(itemsColumns),
+    ...itemsData.map(row => this.formatCsvRow(row)),
+    this.formatCsvRow([]),
+    ...hourlyHeader.map(row => this.formatCsvRow([row])),
+    this.formatCsvRow(hourlyColumns),
+    ...hourlyTableData.map(row => this.formatCsvRow(row)),
+    ...footer.map(row => this.formatCsvRow(row))
+  ].join('\n');
+
   this.downloadFile(csvContent, 'text/csv', 
-    `Order_History_${this.getRestaurantName()}_${new Date().toISOString().slice(0,10)}.csv`);
+    `Order_History_Report_${this.getRestaurantName()}_${this.getFormattedDateRange()}_${new Date().toISOString().slice(0,10)}.csv`);
 }
 
-// Helper Methods
+// Helper method to format CSV rows properly
+private formatCsvRow(fields: any[]): string {
+  return fields.map(field => {
+    if (field === null || field === undefined) return '""';
+    const stringField = String(field);
+    // Escape quotes and wrap in quotes if contains comma, quote, or newline
+    if (stringField.includes('"') || stringField.includes(',') || stringField.includes('\n')) {
+      return `"${stringField.replace(/"/g, '""')}"`;
+    }
+    return stringField;
+  }).join(',');
+}
+
+// Enhanced payment method breakdown with more details
 getPaymentMethodBreakdown() {
   const methods: any = {};
   this.filteredOrders.forEach(order => {
     const method = order.paymentMethod || 'Pending';
     if (!methods[method]) {
-      methods[method] = { count: 0, amount: 0 };
+      methods[method] = { count: 0, amount: 0, completed: 0, cancelled: 0 };
     }
     methods[method].count++;
     methods[method].amount += this.calculateOrderTotal(order);
+    
+    if (order.status === 'Completed') {
+      methods[method].completed++;
+    } else if (order.status === 'Cancelled') {
+      methods[method].cancelled++;
+    }
   });
 
   const totalAmount = this.calculateTotalRevenue();
@@ -910,10 +1213,13 @@ getPaymentMethodBreakdown() {
     method,
     count: methods[method].count,
     amount: methods[method].amount,
+    completed: methods[method].completed,
+    cancelled: methods[method].cancelled,
     percentage: totalAmount > 0 ? ((methods[method].amount / totalAmount) * 100).toFixed(1) : '0.0'
   }));
 }
 
+// Enhanced order duration calculation
 getOrderDuration(order: any): string {
   if (!order.closedAt) return 'Ongoing';
   
@@ -928,20 +1234,46 @@ getOrderDuration(order: any): string {
   return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
 }
 
-getRestaurantName(): string {
-  // You can get this from your restaurant service or use a default
-  // For now, using a default name - you can enhance this by fetching actual restaurant data
-  return 'Restaurant';
+// Get restaurant details for reporting
+getRestaurantDetails(): any {
+  // You can enhance this to fetch from your restaurant service
+  return {
+    name: this.getRestaurantName(),
+    address: '123 Restaurant Street, City, State - 560001',
+    phone: '+91-9876543210',
+    email: 'info@restaurant.com',
+    gstin: '29ABCDE1234F1Z5'
+  };
 }
 
 getFormattedDateRange(): string {
   if (this.filterDateOption === 'custom' && this.customStartDate && this.customEndDate) {
     const start = new Date(this.customStartDate);
     const end = new Date(this.customEndDate);
-    return `${start.toLocaleDateString()} - ${end.toLocaleDateString()}`;
+    return `${start.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })} to ${end.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`;
   }
-  return this.filterDateOption.charAt(0).toUpperCase() + this.filterDateOption.slice(1);
+  
+  const rangeMap: any = {
+    'today': 'Today',
+    'yesterday': 'Yesterday', 
+    'last7': 'Last 7 Days',
+    'last30': 'Last 30 Days',
+    'thismonth': 'This Month',
+    'lastmonth': 'Last Month'
+  };
+  
+  return rangeMap[this.filterDateOption] || 'Custom Range';
 }
+
+
+
+getRestaurantName(): string {
+  // You can get this from your restaurant service or use a default
+  // For now, using a default name - you can enhance this by fetching actual restaurant data
+  return 'Restaurant';
+}
+
+
 
 
 
@@ -963,111 +1295,360 @@ private downloadFile(data: string, type: string, filename: string) {
   a.click();
   window.URL.revokeObjectURL(url);
 }
+// Add this method to your ManagerComponent class
+safeString(value: any, fallback: string = ''): string {
+  if (value === null || value === undefined) {
+    return fallback;
+  }
+  try {
+    return String(value);
+  } catch {
+    return fallback;
+  }
+}
+
 
 exportToPDF() {
   const doc = new jsPDF();
-  
-  // Restaurant Header
-  doc.setFontSize(20);
-  doc.setTextColor(40, 40, 40);
-  doc.text('ORDER HISTORY REPORT', 105, 20, { align: 'center' });
-  
-  // Report Details
-  doc.setFontSize(10);
-  doc.setTextColor(100, 100, 100);
-  doc.text(`Restaurant: ${this.getRestaurantName()}`, 20, 35);
-  doc.text(`Period: ${this.getFormattedDateRange()}`, 20, 42);
-  doc.text(`Generated: ${new Date().toLocaleDateString()}`, 20, 49);
-  doc.text(`Total Orders: ${this.filteredOrders.length}`, 140, 35);
-  doc.text(`Total Revenue: ₹${this.calculateTotalRevenue().toLocaleString('en-IN')}`, 140, 42);
-  doc.text(`Success Rate: ${(this.calculateSuccessRate() * 100).toFixed(1)}%`, 140, 49);
 
-  // Summary Section
-  doc.setFontSize(12);
-  doc.setTextColor(40, 40, 40);
-  doc.text('SUMMARY OVERVIEW', 20, 65);
-  
+  // Enhanced safe helper functions
+  const safeString = (value: any, fallback: string = ''): string => {
+    if (value === null || value === undefined) {
+      return fallback;
+    }
+    try {
+      return String(value);
+    } catch {
+      return fallback;
+    }
+  };
+
+  const safeNumber = (value: any, fallback: number = 0): number => {
+    if (value === null || value === undefined) {
+      return fallback;
+    }
+    const num = Number(value);
+    return isNaN(num) ? fallback : num;
+  };
+
+  // Restaurant Header with styling
+  doc.setFillColor(41, 128, 185);
+  doc.rect(0, 0, 210, 30, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(20);
+  doc.text('ORDER HISTORY REPORT', 105, 15, { align: 'center' });
+
   doc.setFontSize(10);
+  doc.text(`Restaurant: ${safeString(this.getRestaurantName(), 'Unknown')}`, 105, 22, { align: 'center' });
+  doc.text(`Period: ${safeString(this.getFormattedDateRange(), 'N/A')}`, 105, 27, { align: 'center' });
+
+  // Report Details
+  doc.setTextColor(0, 0, 0);
+  doc.setFontSize(9);
+  doc.text(`Generated: ${new Date().toLocaleString()}`, 20, 40);
+  doc.text(`Report ID: ORD-${Date.now()}`, 20, 45);
+
+  // Summary Statistics
+  const summaryY = 55;
+  doc.setFontSize(12);
+  doc.setTextColor(41, 128, 185);
+  doc.text('EXECUTIVE SUMMARY', 20, summaryY);
+
+  doc.setFontSize(10);
+  doc.setTextColor(0, 0, 0);
+
+  const totalOrders = this.filteredOrders.length;
+  const completedOrders = this.filteredOrders.filter(o => o.status === 'Completed').length;
+  const cancelledOrders = this.filteredOrders.filter(o => o.status === 'Cancelled').length;
+  const successRate = totalOrders > 0 ? (completedOrders / totalOrders) * 100 : 0;
+  const totalRevenue = this.calculateTotalRevenue();
+  const avgOrderValue = this.calculateAverageOrderValue();
+  const highestOrder = this.getHighestOrderValue();
+  const lowestOrder = this.getLowestOrderValue();
+
   const summaryData = [
-    ['Metric', 'Value'],
-    ['Total Orders', this.filteredOrders.length.toString()],
-    ['Completed Orders', this.filteredOrders.filter(o => o.status === 'Completed').length.toString()],
-    ['Cancelled Orders', this.filteredOrders.filter(o => o.status === 'Cancelled').length.toString()],
-    ['Total Revenue', `₹${this.calculateTotalRevenue().toLocaleString('en-IN')}`],
-    ['Average Order Value', `₹${this.calculateAverageOrderValue().toLocaleString('en-IN')}`],
-    ['Success Rate', `${(this.calculateSuccessRate() * 100).toFixed(1)}%`]
+    ['Total Orders', safeString(totalOrders)],
+    ['Completed Orders', safeString(completedOrders)],
+    ['Cancelled Orders', safeString(cancelledOrders)],
+    ['Success Rate', `${safeString(successRate.toFixed(1))}%`],
+    ['Total Revenue', `₹${safeString(totalRevenue.toLocaleString('en-IN'))}`],
+    ['Average Order Value', `₹${safeString(avgOrderValue.toLocaleString('en-IN'))}`],
+    ['Highest Order Value', `₹${safeString(highestOrder.toLocaleString('en-IN'))}`],
+    ['Lowest Order Value', `₹${safeString(lowestOrder.toLocaleString('en-IN'))}`]
   ];
 
-  autoTable(doc, {
-    head: [summaryData[0]],
-    body: summaryData.slice(1),
-    startY: 70,
-    theme: 'grid',
-    headStyles: { fillColor: [41, 128, 185] },
-    styles: { fontSize: 9, cellPadding: 3 }
+  // Two-column summary layout
+  const col1X = 20;
+  const col2X = 105;
+  let currentY = summaryY + 10;
+
+  summaryData.forEach((item, index) => {
+    const col = index % 2 === 0 ? col1X : col2X;
+    const rowY = currentY + Math.floor(index / 2) * 6;
+
+    const label = safeString(item[0], '');
+    const value = safeString(item[1], 'N/A');
+
+    // FIX: Use proper font style constants instead of undefined
+    doc.setFont('helvetica', 'bold');
+    doc.text(`${label}:`, col, rowY);
+    doc.setFont('helvetica', 'normal');
+    doc.text(value, col + 40, rowY);
   });
 
-  // Detailed Orders Table
-  const finalY = (doc as any).lastAutoTable.finalY + 15;
+  // Payment Method Analysis
+  const paymentY = currentY + 20;
   doc.setFontSize(12);
-  doc.text('DETAILED ORDER BREAKDOWN', 20, finalY);
-
-  const orderData = this.filteredOrders.map(order => [
-    order.orderID.toString(),
-    order.createdAt.toLocaleDateString(),
-    order.tableNo || 'Takeaway',
-    order.items.length.toString(),
-    `₹${this.calculateOrderTotal(order).toLocaleString('en-IN')}`,
-    order.paymentMethod || 'Pending',
-    this.getOrderDuration(order)
-  ]);
-
-  autoTable(doc, {
-    head: [['Order ID', 'Date', 'Table', 'Items', 'Amount', 'Payment', 'Duration']],
-    body: orderData,
-    startY: finalY + 5,
-    theme: 'grid',
-    headStyles: { fillColor: [52, 152, 219] },
-    styles: { fontSize: 8, cellPadding: 2 },
-    columnStyles: {
-      0: { cellWidth: 25 },
-      1: { cellWidth: 30 },
-      2: { cellWidth: 20 },
-      3: { cellWidth: 15 },
-      4: { cellWidth: 25 },
-      5: { cellWidth: 20 },
-      6: { cellWidth: 25 }
-    }
-  });
-
-  // Payment Method Breakdown
-  const paymentSummaryY = (doc as any).lastAutoTable.finalY + 15;
-  doc.setFontSize(12);
-  doc.text('PAYMENT METHOD ANALYSIS', 20, paymentSummaryY);
+  doc.setTextColor(41, 128, 185);
+  doc.text('PAYMENT METHOD ANALYSIS', 20, paymentY);
 
   const paymentMethods = this.getPaymentMethodBreakdown();
-  const paymentData = paymentMethods.map(p => [p.method, p.count.toString(), `₹${p.amount.toLocaleString('en-IN')}`, `${p.percentage}%`]);
+  const paymentData = paymentMethods.map(p => [
+    safeString(p.method, 'Unknown'),
+    safeString(p.count, '0'),
+    `₹${safeString(safeNumber(p.amount).toLocaleString('en-IN'))}`,
+    `${safeString(p.percentage, '0.0')}%`
+  ]);
 
   autoTable(doc, {
     head: [['Payment Method', 'Orders', 'Amount', '% of Total']],
     body: paymentData,
-    startY: paymentSummaryY + 5,
+    startY: paymentY + 5,
     theme: 'grid',
-    headStyles: { fillColor: [39, 174, 96] },
-    styles: { fontSize: 9, cellPadding: 3 }
+    headStyles: {
+      fillColor: [52, 152, 219],
+      textColor: 255,
+      fontStyle: 'bold'
+    },
+    styles: {
+      fontSize: 9,
+      cellPadding: 3,
+      lineColor: [200, 200, 200],
+      lineWidth: 0.1
+    },
+    alternateRowStyles: {
+      fillColor: [245, 245, 245]
+    }
+  });
+
+  // Detailed Order Breakdown
+  const ordersY = (doc as any).lastAutoTable.finalY + 15;
+  doc.setFontSize(12);
+  doc.setTextColor(41, 128, 185);
+  doc.text('DETAILED ORDER BREAKDOWN', 20, ordersY);
+
+  const orderData = (this.filteredOrders || []).map(order => {
+    const orderDate = new Date(order.createdAt || new Date());
+    const itemCount = safeNumber((order.items || []).length);
+    const totalAmount = this.calculateOrderTotal(order);
+    const paymentMethod = safeString(order.paymentMethod, 'Pending');
+    const status = safeString(order.status, 'Unknown');
+    const duration = this.getOrderDuration(order);
+    const customerName = safeString(order.customerName, 'Guest');
+    const tableNo = safeString(order.tableNo, 'Takeaway');
+
+return [
+  this.safeString(order.orderNumber, ''), // ✅ Use the existing safeString method
+  this.safeString(orderDate.toLocaleDateString(), ''),
+  tableNo,
+  this.safeString(itemCount.toString(), '0'),
+  `₹${this.safeString(totalAmount.toLocaleString('en-IN'), '0.00')}`,
+  paymentMethod,
+  status,
+  duration,
+  customerName
+];
+  });
+
+  autoTable(doc, {
+    head: [['Order Number', 'Date', 'Table', 'Items', 'Amount', 'Payment', 'Status', 'Duration', 'Customer']],
+    body: orderData,
+    startY: ordersY + 5,
+    theme: 'grid',
+    headStyles: {
+      fillColor: [44, 62, 80],
+      textColor: 255,
+      fontStyle: 'bold'
+    },
+    styles: {
+      fontSize: 8,
+      cellPadding: 2,
+      lineColor: [200, 200, 200],
+      lineWidth: 0.1
+    },
+    columnStyles: {
+      0: { cellWidth: 20 },
+      1: { cellWidth: 25 },
+      2: { cellWidth: 15 },
+      3: { cellWidth: 15 },
+      4: { cellWidth: 25 },
+      5: { cellWidth: 20 },
+      6: { cellWidth: 20 },
+      7: { cellWidth: 20 },
+      8: { cellWidth: 25 }
+    },
+    alternateRowStyles: {
+      fillColor: [250, 250, 250]
+    },
+    margin: { top: 10 }
+  });
+
+  // Top Selling Items
+  const itemsY = (doc as any).lastAutoTable.finalY + 15;
+  doc.setFontSize(12);
+  doc.setTextColor(41, 128, 185);
+  doc.text('TOP SELLING ITEMS', 20, itemsY);
+
+  const topItems = (this.getTopSellingItems() || []).slice(0, 10);
+  const itemsData = topItems.map(item => [
+    safeString(item.name, 'Unknown'),
+    safeString(item.quantity, '0'),
+    `₹${safeString(safeNumber(item.revenue).toLocaleString('en-IN'))}`,
+    `${safeString(item.percentage, '0.0')}%`
+  ]);
+
+  autoTable(doc, {
+    head: [['Item Name', 'Qty Sold', 'Revenue', '% of Total']],
+    body: itemsData,
+    startY: itemsY + 5,
+    theme: 'grid',
+    headStyles: {
+      fillColor: [39, 174, 96],
+      textColor: 255,
+      fontStyle: 'bold'
+    },
+    styles: {
+      fontSize: 9,
+      cellPadding: 3
+    }
+  });
+
+  // Hourly Performance
+  const hourlyY = (doc as any).lastAutoTable.finalY + 15;
+  doc.setFontSize(12);
+  doc.setTextColor(41, 128, 185);
+  doc.text('HOURLY PERFORMANCE', 20, hourlyY);
+
+  const hourlyData = this.getHourlyPerformance() || [];
+  const hourlyTableData = hourlyData.map(hour => [
+    `${safeString(hour.hour, '0')}:00`,
+    safeString(hour.orders, '0'),
+    `₹${safeString(safeNumber(hour.revenue).toLocaleString('en-IN'))}`,
+    `₹${safeString(safeNumber(hour.average).toLocaleString('en-IN'))}`
+  ]);
+
+  autoTable(doc, {
+    head: [['Hour', 'Orders', 'Revenue', 'Avg. Order']],
+    body: hourlyTableData,
+    startY: hourlyY + 5,
+    theme: 'grid',
+    headStyles: {
+      fillColor: [142, 68, 173],
+      textColor: 255,
+      fontStyle: 'bold'
+    },
+    styles: {
+      fontSize: 9,
+      cellPadding: 3
+    }
   });
 
   // Footer
   const pageCount = doc.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
+
     doc.setFontSize(8);
     doc.setTextColor(150, 150, 150);
     doc.text(`Page ${i} of ${pageCount}`, 105, 290, { align: 'center' });
-    doc.text(`Generated by Restaurant Management System`, 105, 295, { align: 'center' });
+    doc.text(`Generated by Restaurant Management System • ${safeString(this.getRestaurantName(), 'Unknown')}`, 105, 295, { align: 'center' });
+    doc.text(`Confidential - For Internal Use Only`, 105, 285, { align: 'center' });
   }
 
-  doc.save(`Order_Report_${this.getRestaurantName()}_${new Date().toISOString().slice(0,10)}.pdf`);
+  // Save PDF with safe filename
+  const filename = `Order_History_Report_${safeString(this.getRestaurantName(), 'Unknown')}_${safeString(this.getFormattedDateRange(), 'N/A')}_${new Date().toISOString().slice(0, 10)}.pdf`;
+  doc.save(filename);
+}
+
+// ✨ NEW: Acknowledge Waiter Request
+acknowledgeWaiterRequest(id: number): void {
+  this.http.put(`${this.ORDER_API}/waiter-requests/${id}/accept`, {}).subscribe({
+    next: () => {
+      this.loadWaiterRequests();
+      console.log('Waiter request acknowledged');
+    },
+    error: (err) => {
+      console.error('Failed to acknowledge request:', err);
+      alert('Failed to acknowledge waiter request');
+    }
+  });
+}
+// Add these helper methods to your component class
+getHighestOrderValue(): number {
+  return this.filteredOrders.length > 0 
+    ? Math.max(...this.filteredOrders.map(o => this.calculateOrderTotal(o)))
+    : 0;
+}
+
+getLowestOrderValue(): number {
+  return this.filteredOrders.length > 0 
+    ? Math.min(...this.filteredOrders.filter(o => this.calculateOrderTotal(o) > 0).map(o => this.calculateOrderTotal(o)))
+    : 0;
+}
+
+getTopSellingItems(): any[] {
+  const itemMap = new Map();
+  
+  this.filteredOrders.forEach(order => {
+    order.items.forEach((item: any) => {
+      const key = item.productName;
+      if (!itemMap.has(key)) {
+        itemMap.set(key, {
+          name: key,
+          quantity: 0,
+          revenue: 0
+        });
+      }
+      const existing = itemMap.get(key);
+      existing.quantity += item.quantity;
+      existing.revenue += item.unitPrice * item.quantity;
+    });
+  });
+
+  const totalRevenue = this.calculateTotalRevenue();
+  const items = Array.from(itemMap.values())
+    .map(item => ({
+      ...item,
+      percentage: totalRevenue > 0 ? ((item.revenue / totalRevenue) * 100).toFixed(1) : '0.0'
+    }))
+    .sort((a, b) => b.revenue - a.revenue);
+
+  return items;
+}
+
+getHourlyPerformance(): any[] {
+  const hourlyMap = new Map();
+  
+  // Initialize hours
+  for (let i = 0; i < 24; i++) {
+    hourlyMap.set(i, { hour: i, orders: 0, revenue: 0 });
+  }
+  
+  this.filteredOrders.forEach(order => {
+    const hour = new Date(order.createdAt).getHours();
+    const hourly = hourlyMap.get(hour);
+    hourly.orders++;
+    hourly.revenue += this.calculateOrderTotal(order);
+  });
+
+  const hourlyData = Array.from(hourlyMap.values())
+    .map(hour => ({
+      ...hour,
+      average: hour.orders > 0 ? hour.revenue / hour.orders : 0
+    }))
+    .filter(hour => hour.orders > 0);
+
+  return hourlyData;
 }
 
 
@@ -1200,12 +1781,13 @@ exportToPDF() {
     });
   }
 
-  updateTableStatus(tableId: number, status: string): void {
-    this.http.put(`${this.TABLE_MANAGEMENT_API}/status/${tableId}?restaurantId=${this.restaurantId}`, status).subscribe({
-      next: () => this.loadTableData(),
-      error: (err) => console.error('Error updating table status:', err)
-    });
-  }
+updateTableStatus(tableId: number, status: string): void {
+  // Fix: Send a JSON object { "status": "your_status" } instead of a raw string.
+  this.http.put(`${this.TABLE_MANAGEMENT_API}/status/${tableId}?restaurantId=${this.restaurantId}`, { status }).subscribe({
+    next: () => this.loadTableData(),
+    error: (err) => console.error('Error updating table status:', err)
+  });
+}
 
   createReservation(): void {
     this.http.post(`${this.TABLE_MANAGEMENT_API}/reservations`, {
@@ -1699,43 +2281,48 @@ addCustomer(): void {
     });
   }
 
-  toggleAvailability(product: any): void {
-    const newAvail = !product.isAvailable;
-this.http.put(`${environment.apiUrl}/product/${product.productID}/availability?restaurantId=${this.restaurantId}`, newAvail, {
-      headers: { 'Content-Type': 'application/json' },
-      responseType: 'text'
-    }).subscribe({
-      next: () => product.isAvailable = newAvail,
-      error: err => console.error('Availability update failed:', err)
-    });
+toggleAvailability(product: any): void {
+  const newAvail = !product.isAvailable;
+  // Fix: Send a JSON object with the availability status.
+  const payload = { isAvailable: newAvail };
+  this.http.put(`${environment.apiUrl}/product/${product.productID}/availability?restaurantId=${this.restaurantId}`, payload, {
+    headers: { 'Content-Type': 'application/json' },
+    responseType: 'text'
+  }).subscribe({
+    next: () => product.isAvailable = newAvail,
+    error: err => console.error('Availability update failed:', err)
+  });
+}
+
+private safeCreateDate(timestamp: any): Date | null {
+  if (!timestamp) return null;
+  try {
+    const date = new Date(timestamp);
+    return isNaN(date.getTime()) ? null : date;
+  } catch {
+    return null;
   }
-// ✨ NEW: Utility method for time display
-getTimeInStatus(timestamp: string | Date): string { // <- Change input type
-    const dateObj = (timestamp instanceof Date) ? timestamp : new Date(timestamp); // <- Handle string/Date
-    
-    const now = new Date();
-    const diffMs = now.getTime() - dateObj.getTime();
-    const diffMin = Math.round(diffMs / (1000 * 60));
-
-    if (diffMin < 60) {
-      return `${diffMin} min ago`;
-    }
-
-    const diffHr = (diffMs / (1000 * 60 * 60));
-    return `${diffHr.toFixed(1)} hrs ago`;
-  }
-
-// ✨ NEW: Acknowledge Waiter Request
-  acknowledgeWaiterRequest(id: number): void {
-    this.http.put(`${this.ORDER_API}/waiter-requests/${id}/accept`, {}).subscribe({
-      next: () => {
-        this.loadWaiterRequests();
-      },
-      error: (err) => console.error('Failed to acknowledge request:', err)
-    });
-  }
+}
 
 
+getTimeInStatus(timestamp: string | Date | undefined | null): string {
+  const dateObj = this.safeCreateDate(timestamp);
+  
+  if (!dateObj) {
+    return 'N/A';
+  }
+  
+  const now = new Date();
+  const diffMs = now.getTime() - dateObj.getTime();
+  const diffMin = Math.round(diffMs / (1000 * 60));
+
+  if (diffMin < 60) {
+    return `${diffMin} min ago`;
+  }
+
+  const diffHr = (diffMs / (1000 * 60 * 60));
+  return `${diffHr.toFixed(1)} hrs ago`;
+}
 // Open offer modal
 openOfferModal(): void {
   this.showOfferModal = true;
@@ -1784,16 +2371,16 @@ isOfferFormValid(): boolean {
   }
 }
 
-// Update your createOffer method
+// Update your createOffer method in manager.component.ts
 createOffer(): void {
   if (!this.isOfferFormValid()) {
     alert('Please fill in all required fields correctly.');
     return;
   }
 
-  // Prepare the offer data
+  // Prepare the offer data with RestaurantID
   const offerData = {
-    restaurantID: this.restaurantId,
+    restaurantID: this.restaurantId, // ✅ CRITICAL: Add this line
     code: this.newOffer.code?.trim() || null,
     description: this.newOffer.description,
     discountAmount: this.newOffer.offerType === 'amount' ? this.newOffer.discountAmount : null,
@@ -1805,19 +2392,21 @@ createOffer(): void {
     isActive: true
   };
 
-  this.http.post(this.OFFER_API, offerData).subscribe({
+  console.log('🔍 Sending offer data:', offerData); // Debug log
+
+  // ✅ FIX: Include restaurantId as both query parameter AND in body
+  this.http.post(`${this.OFFER_API}?restaurantId=${this.restaurantId}`, offerData).subscribe({
     next: (res: any) => {
       this.loadOffersData();
       this.closeOfferModal();
       alert('Offer created successfully!');
     },
     error: (err) => {
-      console.error('Error creating offer:', err);
+      console.error('❌ Error creating offer:', err);
       alert('Failed to create offer: ' + (err.error?.message || 'Unknown error'));
     }
   });
 }
-
 // Update your resetNewOffer method
 resetNewOffer(): void {
   this.newOffer = {

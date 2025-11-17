@@ -53,7 +53,7 @@
           <tbody>
             <tr *ngFor="let batch of pendingOrders" class="order-row">
               <td>{{ tableMap[batch.restaurantTableID] || ('Table ' + batch.restaurantTableID) }}</td>
-              <td>#{{ batch.orderID }}</td>
+          <td>#{{ batch.orderNumber }}</td> 
               <td>Batch {{ batch.batchID }}</td>
               <td class="text-start">
                 <ul class="p-0 m-0" style="list-style:none;">
@@ -102,7 +102,7 @@
           <tbody>
             <tr *ngFor="let order of filteredHistoryOrders">
               <td>{{ tableMap[order.restaurantTableID] || ('Table ' + order.restaurantTableID) }}</td>
-              <td>#{{ order.orderID }}</td>
+          <td>#{{ order.orderNumber }}</td> <!-- ✅ CHANGE: orderID to orderNumber -->
               <td class="text-start">
                 <ul class="p-0 m-0" style="list-style:none;">
                   <li *ngFor="let item of order.items" class="small">

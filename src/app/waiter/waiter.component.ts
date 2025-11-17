@@ -1,4 +1,4 @@
-  import { Component, OnInit } from '@angular/core';
+ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders, HttpClientModule } from '@angular/common/http';
@@ -8,7 +8,7 @@ import { PendingPaymentsComponent } from '../pending-payments/pending-payments.c
 import { NewOrderComponent } from '../new-order/new-order.component';
 import { QRCodeComponent } from 'angularx-qrcode';
 import { firstValueFrom } from 'rxjs'; // ✅ ADD THIS IMPORT
-
+import { AuthService } from '../services/auth.service'; // <-- ADD IMPORT
 
 export enum OrderStatus {
   Pending   = "Pending",
@@ -38,10 +38,12 @@ export interface PaymentInfo {
   status: string;
   amount: number;
   paidAt?: Date | null;
+  paymentID?: any; // Add these optional properties
+  paymentId?: any;
 }
-
 export interface Order {
   orderID: number;
+  orderNumber: number; // ✅ ADD THIS LINE
   userID?: number;
   orderStatus: OrderStatus;
   waiterUserID?: number;
@@ -53,6 +55,8 @@ export interface Order {
   latestPayment?: PaymentInfo;   // ✅ ADD THIS LINE
     kitchenStatus?: KitchenStatus;  // Add this line
   totalAmount?: number; // ✅ ADD THIS LINE
+    paymentMethod?: string; // ✅ ADD THIS
+  paymentStatus?: string; // ✅ ADD THIS
 
 }
 export interface RestaurantDetails {
@@ -70,6 +74,7 @@ export interface WaiterRequest {
     isAccepted?:     boolean; // <-- add this
 
 }
+// Add to your existing properties
 
 @Component({
   selector: 'app-waiter',
@@ -85,8 +90,17 @@ export class WaiterComponent implements OnInit {
   selectedOrder?: Order;
   waiterRequests: WaiterRequest[] = [];
   OrderStatus = OrderStatus;
+
+  paymentModal = {
+  open: false,
+  orderId: 0,
+  tableNo: 0,
+  amount: 0,
+  selectedMethod: 'UPI' as 'UPI' | 'Cash',
+  busy: false
+};
 readyNotifications: any[] = [];
-readyOrderMessages: { notificationId: number; message: string; orderId: number; tableNo: number; timestamp: number }[] = [];
+readyOrderMessages: { notificationId: number; orderNumber: number; message: string; orderId: number; tableNo: number; timestamp: number }[] = [];
   KitchenStatus = KitchenStatus;   // ✅ ADD THIS LINE
   error = '';
   isSidebarOpen = false;
@@ -103,6 +117,7 @@ private newOrderSound = new Audio('assets/sounds/new-order.mp3');
 private readyOrderSound = new Audio('assets/sounds/ready-order.mp3');
 private paymentSound   = new Audio('assets/sounds/payment-pending.mp3');
 activeAlerts: { type: 'order' | 'ready' | 'payment', message: string, timestamp: number }[] = [];
+  orderNumberMap: { [orderID: number]: number } = {}; // ✅ ADD THIS PROPERTY
 
   viewMode: 'grid' | 'list' = 'grid';
   selectedStatus = 'all';
@@ -144,7 +159,17 @@ pendingChanges: {
   itemsToRemove: [],
   itemsToAdd: []
 };
+markAsPaidModal = {
+  open: false,
+  orderId: 0,
+  tableNo: 0,
+  amount: 0,
+  selectedMethod: 'Cash' as 'Cash' | 'UPI',
+  busy: false,
+  paymentId: 0,
+    orderNumber: 0 // ✅ ADD THIS
 
+};
 
 selectedPayTab: 'verify' | 'collect' = 'verify';
 
@@ -157,7 +182,9 @@ collectModal = {
   paymentId: 0,
   amount: 0,
   upiUri: '',
-  tab: 'UPI' as 'UPI' | 'CASH'
+  tab: 'UPI' as 'UPI' | 'CASH',
+    orderNumber: 0 // ✅ ADD THIS
+
 };
 
 busyCollect = false;
@@ -174,45 +201,41 @@ private readonly API_BASE = `${environment.apiUrl}`;
 
   private httpOptions: { headers: HttpHeaders } = { headers: new HttpHeaders() };
 
-  constructor(private http: HttpClient, private router: Router, private route: ActivatedRoute) {
+  constructor(private http: HttpClient, private router: Router, private route: ActivatedRoute,private auth: AuthService) {
       this.setupRouterEvents(); // ✅ ADD THIS
 
   }
+// ✅✅✅ THIS IS THE FIX ✅✅✅
 ngOnInit(): void {
-    this.validateUrl(); // ✅ ADD THIS FIRST
+  // ✅ FIX: Subscribe to 'params' (from the URL /waiter/1)
+  // instead of 'queryParams' (from the URL /waiter?restaurantId=1)
+  this.route.params.subscribe(params => {
+    const routeRestaurantId = params['restaurantId'];
+    
+    if (routeRestaurantId) {
+      this.restaurantId = +routeRestaurantId;
+      this.initializeDashboard(); // ✅ Good: Initialize dashboard *after* getting ID
+    } else {
+      // This block should not be reached if the AuthGuard is working,
+      // but we'll leave the error here as a fallback.
+      this.showRestaurantError();
+    }
+  });
 
-  // ✅ Get restaurantId from URL parameters and maintain it in URL
-  this.route.queryParams.subscribe(params => {
-    const urlRestaurantId = params['restaurantId'] || 
-                           params['restaurantid'] || 
-                           params['restaurant'] || 
-                           params['rid'] || 
-                           0;
-    
-    if (urlRestaurantId) {
-      this.restaurantId = +urlRestaurantId;
-      this.initializeDashboard();
-      // Ensure URL stays updated with restaurantId
-      this.updateUrlWithRestaurantId();
-    } else {
-      // Fallback: try to get from localStorage or user data
-      this.initializeFromPersistedData();
-    }
-  });
-
-  window.addEventListener('beforeunload', () => {
-    this.persistUIState();
-  });
+  window.addEventListener('beforeunload', () => {
+    this.persistUIState();
+  });
 }
-// ✅ ENHANCED: Get shareable URL method
+
 getShareableUrl(): string {
-  const baseUrl = window.location.origin + window.location.pathname;
-  return `${baseUrl}?restaurantId=${this.restaurantId}`;
+  // ✅ FIX: Use pathname which will be /waiter/1
+  const baseUrl = window.location.origin + window.location.pathname;
+  return baseUrl; // The URL itself is now shareable
 }
 
-// ✅ ADD: Method to refresh URL (useful for manual refresh)
 refreshUrl(): void {
-  this.updateUrlWithRestaurantId();
+  // This method might not be needed anymore, but we'll leave it
+  this.updateUrlWithRestaurantId();
 }
 private updateUrlWithRestaurantId(): void {
   const currentUrl = this.router.url;
@@ -480,25 +503,31 @@ private loadPendingByTab(): void {
   this.fetchPendingPayments();
 }
 
-private splitPending(payments: any[]) {
-  // Customer payments (paymentChannel === 0 OR source=Customer) need verification
-  this.verifyPayments = payments.filter(p => 
-    p.paymentChannel === 0 || 
-    p.source?.toLowerCase() === 'customer' ||
-    (p.paymentChannel === undefined && p.source?.toLowerCase() !== 'waiter')
-  );
+  // ✅ UPDATE: Enhanced splitPending to include order numbers
+  private splitPending(payments: any[]) {
+    // Customer payments (paymentChannel === 0 OR source=Customer) need verification
+    this.verifyPayments = payments.filter(p => 
+      p.paymentChannel === 0 || 
+      p.source?.toLowerCase() === 'customer' ||
+      (p.paymentChannel === undefined && p.source?.toLowerCase() !== 'waiter')
+    ).map(p => ({
+      ...p,
+      orderNumber: p.orderNumber || p.orderID // ✅ ENSURE ORDER NUMBER
+    }));
 
-  // Waiter payments (paymentChannel === 1 OR source=Waiter) need collection
-  this.collectPayments = payments.filter(p => 
-    p.paymentChannel === 1 ||
-    p.source?.toLowerCase() === 'waiter' ||
-    (p.paymentChannel === undefined && p.source?.toLowerCase() === 'waiter')
-  );
-  
-  console.log('Verify Payments:', this.verifyPayments);
-  console.log('Collect Payments:', this.collectPayments);
-}
-
+    // Waiter payments (paymentChannel === 1 OR source=Waiter) need collection
+    this.collectPayments = payments.filter(p => 
+      p.paymentChannel === 1 ||
+      p.source?.toLowerCase() === 'waiter' ||
+      (p.paymentChannel === undefined && p.source?.toLowerCase() === 'waiter')
+    ).map(p => ({
+      ...p,
+      orderNumber: p.orderNumber || p.orderID // ✅ ENSURE ORDER NUMBER
+    }));
+    
+    console.log('Verify Payments:', this.verifyPayments);
+    console.log('Collect Payments:', this.collectPayments);
+  }
 selectTableForOrders(tableNo: number): void {
   this.selectedTableNo = tableNo;
     this.persistUIState(); // ✅ Persist table selection
@@ -516,6 +545,8 @@ navigateToNewOrder(): void {
 
 onNewOrderPlaced(e: { 
   orderID: number; 
+      orderNumber?: number; // ✅ ADD ORDER NUMBER
+
   paymentStatus?: string; 
   paymentMethod?: string;
   paymentPreference?: string 
@@ -540,17 +571,17 @@ onNewOrderClosed() {
   this.getOrders(); // refresh list after closing
 }
 
-
-
-  private refreshHistoryOnly(): void {
-    if (!this.restaurantId) return;
-    
-    this.http.get<any>(`${this.API_BASE}/order/with-waiter?restaurantId=${this.restaurantId}`, this.httpOptions)
-      .subscribe({
-        next: res => {
-          const all = this.unwrapArray<any>(res.orders).map(o => ({
+private refreshHistoryOnly(): void {
+  if (!this.restaurantId) return;
+  
+  this.http.get<any>(`${this.API_BASE}/order/with-waiter?restaurantId=${this.restaurantId}`, this.httpOptions)
+    .subscribe({
+      next: res => {
+        const all = this.unwrapArray<any>(res.orders).map(o => ({
           orderID: o.orderID,
+          orderNumber: o.orderNumber || o.orderID, // ✅ ADD ORDER NUMBER
           tableNo: o.tableNo,
+          totalAmount: o.totalAmount,
           orderStatus: this.mapOrderStatus(o.orderStatus),
           kitchenStatus: o.kitchenStatus ? this.mapKitchenStatus(o.kitchenStatus) : KitchenStatus.Pending,
           items: this.unwrapArray<any>(o.items).map(i => ({
@@ -566,19 +597,21 @@ onNewOrderClosed() {
             status: o.latestPayment.status,
             amount: o.latestPayment.amount,
             paidAt: o.latestPayment.paidAt ? new Date(o.latestPayment.paidAt) : null
-          } : undefined
+          } : undefined // Changed from null to undefined
         }));
 
-this.allHistoryOrders = all.filter(o =>
-            o.orderStatus === OrderStatus.Served ||
-            o.orderStatus === OrderStatus.Completed ||
-            o.orderStatus === OrderStatus.Cancelled
-          );
-          this.applyHistoryFilter();
-        },
-        error: err => console.error('Error refreshing history:', err)
-      });
-  }
+        this.allHistoryOrders = all.filter(o =>
+          o.orderStatus === OrderStatus.Served ||
+          o.orderStatus === OrderStatus.Completed ||
+          o.orderStatus === OrderStatus.Cancelled
+        );
+        this.applyHistoryFilter();
+      },
+      error: err => console.error('Error refreshing history:', err)
+    });
+}
+
+
 applyHistoryFilter(): void {
   const now = new Date();
 
@@ -714,6 +747,11 @@ markPaymentPaid(payment: any): void {  // Change parameter to accept the payment
       }
     });
 }
+logout(): void {
+    if (confirm('Are you sure you want to log out?')) {
+      this.auth.logout(); // The auth service will handle redirecting to /login
+    }
+  }
 
 
 
@@ -726,56 +764,64 @@ setupNotificationPolling(): void {
 }
 
  checkForReadyNotifications(): void {
-    if (!this.restaurantId) return;
-    
-    this.http.get<any[]>(`${this.API_BASE}/order/waiter/notifications?restaurantId=${this.restaurantId}`, this.httpOptions)
-      .subscribe({
-        next: (notifications) => {
-          if (notifications.length > 0) {
-            this.readyNotifications = notifications;
+  if (!this.restaurantId) return;
+  
+  this.http.get<any[]>(`${this.API_BASE}/order/waiter/notifications?restaurantId=${this.restaurantId}`, this.httpOptions)
+    .subscribe({
+      next: (notifications) => {
+        if (notifications.length > 0) {
+          this.readyNotifications = notifications;
 
-            notifications.forEach(n => {
-              const exists = this.readyOrderMessages.some(m => m.notificationId === n.notificationId);
-              if (!exists) {
-                const msg = `✅ Order #${n.orderId} for Table ${n.tableNo} is ready to serve.`;
+          notifications.forEach(n => {
+            const exists = this.readyOrderMessages.some(m => m.notificationId === n.notificationId);
+            if (!exists) {
+              const orderNumber = n.orderNumber || n.orderId;
+              const msg = `✅ Order #${orderNumber} for Table ${n.tableNo} is ready to serve.`;
 
-                this.readyOrderSound.play().catch(() => {});
-                this.vibrate();
-                this.pushAlert('ready', msg);
+              this.readyOrderSound.play().catch(() => {});
+              this.vibrate();
+              this.pushAlert('ready', msg);
 
-                this.readyOrderMessages.push({
-                  notificationId: n.notificationId,
-                  message: msg,
-                  orderId: n.orderId,
-                  tableNo: n.tableNo,
-                  timestamp: Date.now()
-                });
+              this.readyOrderMessages.push({
+                notificationId: n.notificationId,
+                message: msg,
+                orderId: n.orderId,
+                orderNumber: orderNumber, // ✅ ADD ORDER NUMBER
+                tableNo: n.tableNo,
+                timestamp: Date.now()
+              });
 
-                this.acknowledgeNotification(n.notificationId);
+              this.acknowledgeNotification(n.notificationId);
 
-                setTimeout(() => {
-                  this.readyOrderMessages = this.readyOrderMessages.filter(m => m.notificationId !== n.notificationId);
-                }, 10000);
-              }
-            });
-          } else {
-            this.readyNotifications = [];
-          }
-        },
-        error: (err) => console.error('Error checking ready notifications:', err)
-      });
+              setTimeout(() => {
+                this.readyOrderMessages = this.readyOrderMessages.filter(m => m.notificationId !== n.notificationId);
+              }, 10000);
+            }
+          });
+        } else {
+          this.readyNotifications = [];
+        }
+      },
+      error: (err) => console.error('Error checking ready notifications:', err)
+    });
+}
+  getDisplayOrderNumber(orderID: number): string {
+    const orderNumber = this.orderNumberMap[orderID];
+    return orderNumber ? `#${orderNumber}` : `#${orderID}`;
   }
 
 showReadyOrderNotification(notifications: any[]): void {
   notifications.forEach(n => {
     const exists = this.readyOrderMessages.some(m => m.orderId === n.orderId);
     if (!exists) {
-      const message = `Table ${n.tableNo} → Order ${n.orderId} is ready to serve!`;
+      const orderNumber = n.orderNumber || n.orderId; // ✅ GET ORDER NUMBER
+      const message = `Table ${n.tableNo} → Order #${orderNumber} is ready to serve!`;
 
       this.readyOrderMessages.push({
         notificationId: n.notificationId,
-message: message,
+        message: message,
         orderId: n.orderId,
+        orderNumber: orderNumber, // ✅ ADD ORDER NUMBER
         tableNo: n.tableNo,
         timestamp: Date.now()
       });
@@ -788,7 +834,6 @@ message: message,
     }
   });
 }
-
 
 
 
@@ -821,6 +866,15 @@ acknowledgeNotification(notificationId: number): void {
   });
 }
 
+closeMarkAsPaidModal(): void {
+  this.markAsPaidModal.open = false;
+  this.markAsPaidModal.busy = false;
+}
+
+async markOrderAsPaid(order: Order): Promise<void> {
+  // Redirect to the new modal approach
+  this.openMarkAsPaidModal(order);
+}
 private ensureRestaurantDetails(): Promise<void> {
   return new Promise(async (resolve) => {
     // If we already have valid restaurant details, resolve immediately
@@ -895,38 +949,38 @@ async initiateUpi() {
 }
 
 
-// Enhanced fetchPendingPayments to handle different ID formats
-fetchPendingPayments(): void {
-  if (!this.restaurantId) {
-    console.log('❌ No restaurant ID available for fetching payments');
-    return;
+  fetchPendingPayments(): void {
+    if (!this.restaurantId) {
+      console.log('❌ No restaurant ID available for fetching payments');
+      return;
+    }
+    
+    console.log('🔄 Fetching pending payments...');
+    
+    this.http.get<any[]>(`${this.API_BASE}/order/pending-payments?restaurantId=${this.restaurantId}`, this.httpOptions)
+      .subscribe({
+        next: (payments) => {
+          console.log('📦 Raw payments from API:', payments);
+          
+          this.pendingPayments = (payments || []).map(p => ({
+            ...p,
+            paymentId: p.paymentID || p.paymentId || p.id,
+            orderNumber: p.orderNumber || p.orderID // ✅ ADD ORDER NUMBER
+          }));
+          
+          this.splitPending(this.pendingPayments);
+          console.log('✅ Payments updated:', {
+            total: this.pendingPayments.length,
+            verify: this.verifyPayments.length,
+            collect: this.collectPayments.length
+          });
+        },
+        error: err => {
+          console.error('❌ Error fetching pending payments:', err);
+          this.error = 'Failed to load pending payments';
+        }
+      });
   }
-  
-  console.log('🔄 Fetching pending payments...');
-  
-  this.http.get<any[]>(`${this.API_BASE}/order/pending-payments?restaurantId=${this.restaurantId}`, this.httpOptions)
-    .subscribe({
-      next: (payments) => {
-        console.log('📦 Raw payments from API:', payments);
-        
-        this.pendingPayments = (payments || []).map(p => ({
-          ...p,
-          paymentId: p.paymentID || p.paymentId || p.id
-        }));
-        
-        this.splitPending(this.pendingPayments);
-        console.log('✅ Payments updated:', {
-          total: this.pendingPayments.length,
-          verify: this.verifyPayments.length,
-          collect: this.collectPayments.length
-        });
-      },
-      error: err => {
-        console.error('❌ Error fetching pending payments:', err);
-        this.error = 'Failed to load pending payments';
-      }
-    });
-}
 private checkForNewPendingPayments(): void {
   if (!this.restaurantId || this.selectedSection !== 'pendingPayments') return;
   
@@ -1084,6 +1138,9 @@ async testPaymentEndpoints(): Promise<void> {
 async markUpiAsPaid(): Promise<void> {
   this.busyCollect = true;
   try {
+      const orderReference = this.collectModal.orderNumber ? 
+        `Order #${this.collectModal.orderNumber}` : 
+        `Order #${this.collectModal.orderId}`;
     console.log('💰 Processing UPI payment for order:', this.collectModal.orderId);
     
     // Get the specific payment data for this modal
@@ -1132,6 +1189,9 @@ async markUpiAsPaid(): Promise<void> {
 async markCashReceived() {
   this.busyCollect = true;
   try {
+          const orderReference = this.collectModal.orderNumber ? 
+        `Order #${this.collectModal.orderNumber}` : 
+        `Order #${this.collectModal.orderId}`;
     console.log('💰 Processing Cash payment for order:', this.collectModal.orderId);
     
     // Get the specific payment data for this modal
@@ -1227,6 +1287,7 @@ openCollectModal(p: any) {
 
   this.collectModal.open = true;
   this.collectModal.orderId = p.orderID;
+  this.collectModal.orderNumber = p.orderNumber || p.orderID; // ✅ ADD ORDER NUMBER
   this.collectModal.amount = p.amount;
   this.collectModal.paymentId = p.paymentID || p.paymentId || 0;
   this.collectModal.upiUri = '';
@@ -1343,6 +1404,8 @@ private async printWithPaymentItems(orderId: number, paymentData: any): Promise<
     console.error('Order not found for printing');
     return;
   }
+    const orderNumber = order.orderNumber || orderId;
+
 
   // Build items array including customizations
   const printItems: any[] = [];
@@ -1375,7 +1438,8 @@ private async printWithPaymentItems(orderId: number, paymentData: any): Promise<
     "RestaurantName": this.restaurantDetails.name,
     "RestaurantAddress": this.restaurantDetails.address,
     "Order": {
-      "OrderNumber": orderId.toString(),
+  
+        "OrderNumber": orderNumber.toString(), // ✅ USE ORDER NUMBER
       "TableNo": paymentData.tableNo?.toString() || "0",
       "Items": printItems,
       "ServiceCharge": 0,
@@ -1544,61 +1608,94 @@ getTableNoFromOrder(orderId: number): number {
 setCollectModalTab(tab: 'UPI' | 'CASH'): void {
   this.collectModal.tab = tab;
 }
-  // ✅ UPDATED: All API calls now include restaurantId
-private getOrders(): void {
+// In waiter.component.ts
+
+private async getOrders(): Promise<void> {
   if (!this.restaurantId) return;
 
-  this.http.get<any>(`${this.API_BASE}/order/with-waiter?restaurantId=${this.restaurantId}`, this.httpOptions)
-    .subscribe({
-      next: res => {
-        const all = this.unwrapArray<any>(res.orders).map(o => ({
-          orderID: o.orderID,
-          tableNo: o.tableNo,
-          totalAmount: o.totalAmount,
-          orderStatus: this.mapOrderStatus(o.orderStatus),
-          kitchenStatus: o.kitchenStatus ? this.mapKitchenStatus(o.kitchenStatus) : KitchenStatus.Pending,
-          items: this.unwrapArray<any>(o.items).map(i => ({
-            productID: i.productID,
-            productName: i.productName,
-            quantity: i.quantity,
-            unitPrice: i.unitPrice, 
-            orderItemID: i.orderItemID || i.orderItemId || i.id || i.OrderItemID,
-            customizations: i.customizations || []
-          })),
-          createdAt: o.createdAt ? new Date(o.createdAt) : undefined,
-          closedAt: o.closedAt ? new Date(o.closedAt) : undefined,
-          latestPayment: o.latestPayment ? {
-            method: o.latestPayment.method,
-            status: o.latestPayment.status,
-            amount: o.latestPayment.amount,
-            paidAt: o.latestPayment.paidAt ? new Date(o.latestPayment.paidAt) : null
-          } : undefined
-        }));
+  try {
+    const res = await firstValueFrom(
+      this.http.get<any>(`${this.API_BASE}/order/with-waiter?restaurantId=${this.restaurantId}`, this.httpOptions)
+    );
+    
+    const all = this.unwrapArray<any>(res.orders).map(o => this.mapOrderFromApi(o));
 
-        // ✅ MODIFIED: Show ALL non-completed/cancelled orders regardless of payment
-        this.orders = all.filter(o =>
-          o.orderStatus === OrderStatus.Pending || 
-          o.orderStatus === OrderStatus.Confirmed ||
-          o.orderStatus === OrderStatus.Served // Keep served orders visible until manually completed
-        );
+    this.orders = all.filter(o =>
+      o.orderStatus === OrderStatus.Pending || 
+      o.orderStatus === OrderStatus.Confirmed ||
+      o.orderStatus === OrderStatus.Served
+    );
 
-        // History orders are completed/cancelled only
-        this.allHistoryOrders = all.filter(o =>
-          o.orderStatus === OrderStatus.Completed ||
-          o.orderStatus === OrderStatus.Cancelled
-        );
+    this.allHistoryOrders = all.filter(o =>
+      o.orderStatus === OrderStatus.Completed ||
+      (o.orderStatus === OrderStatus.Served && 
+       o.latestPayment?.status === 'Success')
+    );
 
-        this.applyHistoryFilter();
-        this.groupedUpcomingOrders = this.groupOrdersByTable(this.orders);
-        
-        if (!this.selectedTableNo && this.groupedUpcomingOrders.length > 0) {
-          this.selectedTableNo = this.groupedUpcomingOrders[0].tableNo;
-        }
+    this.applyHistoryFilter();
+    this.groupedUpcomingOrders = this.groupOrdersByTable(this.orders);
+    
+    // --- THIS BLOCK ---
+    // if (!this.selectedTableNo && this.groupedUpcomingOrders.length > 0) {
+    //   this.selectedTableNo = this.groupedUpcomingOrders[0].tableNo;
+    // }
+    // --- IS REPLACED BY THIS ---
+    this.runTableSelectionLogic(); // ✅ Use the new helper function
 
-        this.updateReadyTables();
-      },
-      error: err => console.error('Error fetching orders:', err)
-    });
+    this.updateReadyTables();
+    
+    console.log('✅ Orders refreshed. Total active orders:', this.orders.length);
+
+  } catch (err) {
+    console.error('Error fetching orders:', err);
+  }
+}
+
+private mapOrderFromApi(o: any): Order {
+  let latestPayment: PaymentInfo | undefined = undefined;
+  
+  if (o.latestPayment) {
+    latestPayment = {
+      method: o.latestPayment.method,
+      status: o.latestPayment.status,
+      amount: o.latestPayment.amount,
+      paidAt: o.latestPayment.paidAt ? new Date(o.latestPayment.paidAt) : null,
+      paymentID: o.latestPayment.paymentID || o.latestPayment.paymentId,
+      paymentId: o.latestPayment.paymentId || o.latestPayment.paymentID
+    };
+  }
+  
+  // ✅ STORE ORDER NUMBER MAPPING
+  if (o.orderNumber) {
+    this.orderNumberMap[o.orderID] = o.orderNumber;
+  }
+  
+  return {
+    orderID: o.orderID,
+    orderNumber: o.orderNumber || o.orderID, // ✅ ADD ORDER NUMBER (fallback to orderID)
+    tableNo: o.tableNo,
+    totalAmount: o.totalAmount,
+    orderStatus: this.mapOrderStatus(o.orderStatus),
+    kitchenStatus: o.kitchenStatus ? this.mapKitchenStatus(o.kitchenStatus) : KitchenStatus.Pending,
+    items: this.unwrapArray<any>(o.items).map((i: any) => ({
+      productID: i.productID,
+      productName: i.productName,
+      quantity: i.quantity,
+      unitPrice: i.unitPrice, 
+      orderItemID: i.orderItemID || i.orderItemId || i.id || i.OrderItemID,
+      customizations: i.customizations || []
+    })),
+    createdAt: o.createdAt ? new Date(o.createdAt) : undefined,
+    closedAt: o.closedAt ? new Date(o.closedAt) : undefined,
+    latestPayment: latestPayment
+  };
+}
+
+
+isOrderPaid(order: Order): boolean {
+  return order.latestPayment?.status === 'Success' || 
+         order.latestPayment?.status === 'Paid' ||
+         order.latestPayment?.status === 'Completed';
 }
 lyHistoryFilter(): void {
   const now = new Date();
@@ -1693,27 +1790,34 @@ get readyToServeOrders(): Order[] {
     // ✅ No kitchen status dependency
   );
 }
-serveOrder(orderID: number): void {
-  if (!this.restaurantId) return;
-  
-  // Directly mark as served without payment validation
-  this.http.put(`${this.API_BASE}/Order/${orderID}/serve?restaurantId=${this.restaurantId}`, null, this.httpOptions)
-    .subscribe({
-      next: () => {
-        this.getOrders(); // Refresh the orders list
-        this.pushAlert('order', `✅ Order #${orderID} marked as served`);
-        
-        // Optional: Auto-print bill when serving
-        this.printOrderBill(orderID);
-      },
-      error: err => {
-        console.error('Error serving order:', err);
-        
-        // If the main endpoint fails, try alternative endpoint
-        this.alternativeServeOrder(orderID);
-      }
-    });
-}
+ async serveOrder(orderID: number): Promise<void> {
+    if (!this.restaurantId) return;
+    
+    // Find the order to check payment status and get order number
+    const order = this.orders.find(o => o.orderID === orderID);
+    
+    if (!order) return;
+
+    try {
+      // Call the serve endpoint
+      await firstValueFrom(
+        this.http.put(`${this.API_BASE}/Order/${orderID}/serve?restaurantId=${this.restaurantId}`, null, this.httpOptions)
+      );
+      
+      // Refresh orders to reflect the change
+      this.getOrders();
+      
+      const orderReference = order.orderNumber ? `Order #${order.orderNumber}` : `Order #${orderID}`;
+      this.pushAlert('order', `✅ ${orderReference} marked as served`);
+      
+      // Print bill when serving (if not already printed)
+      this.printOrderBill(orderID);
+    } catch (error: any) {
+      console.error('Error serving order:', error);
+      const orderReference = order.orderNumber ? `Order #${order.orderNumber}` : `Order #${orderID}`;
+      this.pushAlert('order', `❌ Failed to serve ${orderReference}: ${error.error?.message || error.message}`);
+    }
+  }
 
 // Alternative method if main endpoint has restrictions
 alternativeServeOrder(orderID: number): void {
@@ -1869,37 +1973,39 @@ addItemToOrder(product: any): void {
     }
   });
 }
-cancelOrder(order: any): void {
-  if (this.isOrderLocked()) {
-    return;
+  // ✅ UPDATE: Enhanced cancelOrder to use order numbers
+  cancelOrder(order: any): void {
+    if (this.isOrderLocked()) {
+      return;
+    }
+
+    const orderReference = order.orderNumber ? `Order #${order.orderNumber}` : `Order #${order.orderID}`;
+    const reason = prompt(`Reason for cancelling ${orderReference}:`);
+    if (reason === null) return; // User cancelled
+
+    const payload = {
+      reason: reason || 'No reason provided',
+      changedByUserId: this.getCurrentUserId()
+    };
+
+    this.http.delete(
+      `${this.API_BASE}/order/${order.orderID}/cancel?restaurantId=${this.restaurantId}`,
+      { 
+        body: payload,
+        headers: this.httpOptions.headers 
+      }
+    ).subscribe({
+      next: () => {
+        this.getOrders();
+        this.pushAlert('order', `❌ ${orderReference} cancelled`);
+        this.showEditOrderModal = false;
+      },
+      error: (err) => {
+        console.error('Error cancelling order:', err);
+        alert(`Failed to cancel ${orderReference}: ${err.error?.message || err.message}`);
+      }
+    });
   }
-
-  const reason = prompt('Reason for cancellation:');
-  if (reason === null) return; // User cancelled
-
-  const payload = {
-    reason: reason || 'No reason provided',
-    changedByUserId: this.getCurrentUserId()
-  };
-
-  this.http.delete(
-    `${this.API_BASE}/order/${order.orderID}/cancel?restaurantId=${this.restaurantId}`,
-    { 
-      body: payload,
-      headers: this.httpOptions.headers 
-    }
-  ).subscribe({
-    next: () => {
-      this.getOrders();
-      this.pushAlert('order', `❌ Order #${order.orderID} cancelled`);
-      this.showEditOrderModal = false;
-    },
-    error: (err) => {
-      console.error('Error cancelling order:', err);
-      alert('Failed to cancel order: ' + (err.error?.message || err.message));
-    }
-  });
-}
 
 getOrderChangeHistory(orderId: number): void {
   this.http.get(`${this.API_BASE}/order/${orderId}/change-history?restaurantId=${this.restaurantId}`)
@@ -1955,6 +2061,8 @@ closeEditOrderModalWithConfirmation(): void {
   }
 }
 
+// In waiter.component.ts
+
 async saveOrderChanges(): Promise<void> {
   if (this.isSavingChanges || !this.hasUnsavedChanges()) {
     return;
@@ -1974,11 +2082,9 @@ async saveOrderChanges(): Promise<void> {
     if (tableHasChanged) {
       try {
         const payload = {
-          // This is the fix: The '+' converts the string value from the dropdown to a number.
           newTableNo: +this.selectedOrderForEdit.tableNo,
           changedByUserId: this.getCurrentUserId()
         };
-
         await firstValueFrom(
           this.http.put(
             `${this.API_BASE}/order/${this.selectedOrderForEdit.orderID}/change-table?restaurantId=${this.restaurantId}`,
@@ -2061,8 +2167,35 @@ async saveOrderChanges(): Promise<void> {
     if (successCount === totalChanges) {
       this.pushAlert('order', `✅ Successfully saved ${successCount} changes to order #${this.selectedOrderForEdit.orderID}`);
       this.resetPendingChanges();
-      this.getOrders(); // Refresh orders from server
+      
+      // ✅✅✅ THE NEW FIX ✅✅✅
+      // Instead of refreshing from the server (which has the bug),
+      // we manually update our local data with the modal's data.
+
+      // 1. Recalculate the total, since the server won't do it
+      this.selectedOrderForEdit.totalAmount = this.calculateOrderTotal(this.selectedOrderForEdit);
+      
+      // 2. Find the old order in our 'this.orders' list
+      const index = this.orders.findIndex(o => o.orderID === this.selectedOrderForEdit.orderID);
+      
+      if (index !== -1) {
+        // 3. Replace the old order with our newly edited version
+        // We use a deep copy to ensure Angular detects the change
+        this.orders[index] = JSON.parse(JSON.stringify(this.selectedOrderForEdit));
+        
+        // 4. Re-group the orders (this.orders is now updated)
+        this.groupedUpcomingOrders = this.groupOrdersByTable(this.orders);
+        
+        // 5. Re-run the table selection logic to be safe
+        this.runTableSelectionLogic(); 
+
+      } else {
+        // Fallback: If we couldn't find it, just refresh everything
+        await this.refreshOrdersAfterEdit();
+      }
+      
       this.showEditOrderModal = false; // Close modal
+      
     } else {
       throw new Error(`Only ${successCount} out of ${totalChanges} changes were saved`);
     }
@@ -2071,11 +2204,62 @@ async saveOrderChanges(): Promise<void> {
     console.error('Error saving order changes:', error);
     this.pushAlert('order', `❌ Error saving changes: ${error.message}`);
     // Refresh data to ensure consistency with the server state
-    this.getOrders();
+    await this.refreshOrdersAfterEdit();
   } finally {
     this.isSavingChanges = false;
   }
 }
+// In waiter.component.ts
+
+private async refreshOrdersAfterEdit(): Promise<void> {
+  try {
+    // ✅ ADD: A short delay (e.g., 500ms) to allow the server's database
+    // to commit the changes before we re-fetch the data.
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Now, force the complete refresh of orders data
+    await this.getOrders();
+    
+    // (The rest of this function is now redundant, as getOrders() handles everything)
+
+  } catch (error) {
+    console.error('Error refreshing orders after edit:', error);
+  }
+}
+// In waiter.component.ts
+
+private runTableSelectionLogic(): void {
+  // Check if the currently selected table still has orders
+  const selectedTableHasOrders = this.groupedUpcomingOrders.some(g => g.tableNo === this.selectedTableNo);
+
+  // if not, or if no table is selected, pick a new one.
+  if (!this.selectedTableNo || !selectedTableHasOrders) {
+     if (this.groupedUpcomingOrders.length > 0) {
+       // Default to the first table that has orders
+       this.selectedTableNo = this.groupedUpcomingOrders[0].tableNo;
+     } else {
+       // No active orders left, show nothing
+       this.selectedTableNo = null; 
+     }
+  }
+  
+  this.persistUIState(); // ✅ Good to persist this choice
+}
+// ✅ ADD: Method to fetch a single order by ID
+private async fetchOrderById(orderId: number): Promise<Order | null> {
+  try {
+    const response: any = await firstValueFrom(
+      this.http.get(`${this.API_BASE}/order/with-waiter?restaurantId=${this.restaurantId}`, this.httpOptions)
+    );
+    
+    const allOrders = this.unwrapArray<any>(response.orders).map(o => this.mapOrderFromApi(o));
+    return allOrders.find(order => order.orderID === orderId) || null;
+  } catch (error) {
+    console.error('Error fetching order by ID:', error);
+    return null;
+  }
+}
+
 async collectWaiterPayment(orderId: number, method: 'Cash' | 'UPI'): Promise<void> {
   try {
     const response: any = await firstValueFrom(
@@ -2157,15 +2341,7 @@ debugCustomizationPricing(order: any): void {
   
   console.log('Order Total:', this.calculateOrderTotal(order));
 }
-getPaymentStatusBadgeClass(status: string): string {
-  const classes: { [key: string]: string } = {
-    'Pending': 'bg-warning text-dark',
-    'Paid': 'bg-success text-white',
-    'Failed': 'bg-danger text-white',
-    'Refunded': 'bg-secondary text-white'
-  };
-  return classes[status] || 'bg-light text-dark';
-}
+
 
 
 isOrderLocked(): boolean {
@@ -2386,6 +2562,171 @@ shouldShowServeButton(order: Order): boolean {
 }
 
 
+openMarkAsPaidModal(order: Order): void {
+  console.log('💰 Opening unified payment modal for order:', order);
+  
+  // Find the payment ID from various sources
+  let paymentId = 0;
+  
+  if (order.latestPayment) {
+    paymentId = (order.latestPayment as any).paymentID || 
+                (order.latestPayment as any).paymentId || 0;
+  }
+  
+  // If not found in latestPayment, search in pending payments
+  if (!paymentId) {
+    const collectPayment = this.collectPayments.find(p => p.orderID === order.orderID);
+    if (collectPayment) {
+      paymentId = collectPayment.paymentID || collectPayment.paymentId;
+    }
+  }
+
+  this.markAsPaidModal = {
+    open: true,
+    orderId: order.orderID,
+    orderNumber: order.orderNumber || order.orderID, // ✅ ADD ORDER NUMBER
+    tableNo: order.tableNo || 0,
+    amount: order.totalAmount || 0,
+    selectedMethod: order.latestPayment?.method === 'UPI' ? 'UPI' : 'Cash', // Default based on existing method
+    busy: false,
+    paymentId: paymentId
+  };
+}
+
+// Enhanced confirmMarkAsPaid to handle both new payments and existing payments
+async confirmMarkAsPaid(): Promise<void> {
+  if (!this.restaurantId) return;
+
+  this.markAsPaidModal.busy = true;
+
+  try {
+    let paymentId = this.markAsPaidModal.paymentId;
+
+    // If no payment ID exists, create a new payment record
+    if (!paymentId) {
+      console.log('🆕 Creating new payment record for order:', this.markAsPaidModal.orderId);
+      
+      const response: any = await firstValueFrom(
+        this.http.post(
+          `${this.API_BASE}/order/payments/initiate?orderId=${this.markAsPaidModal.orderId}&restaurantId=${this.restaurantId}&method=${this.markAsPaidModal.selectedMethod}&channel=Waiter`,
+          {},
+          this.httpOptions
+        )
+      );
+
+      if (response && response.paymentId) {
+        paymentId = response.paymentId;
+        console.log('✅ Created payment with ID:', paymentId);
+      } else {
+        throw new Error('Failed to create payment record');
+      }
+    }
+
+    // Mark payment as completed
+    console.log('✅ Marking payment as completed:', paymentId);
+    await firstValueFrom(
+      this.http.put(
+        `${this.API_BASE}/order/payments/${paymentId}/complete?restaurantId=${this.restaurantId}`,
+        {},
+        this.httpOptions
+      )
+    );
+
+    // Print bill automatically
+    await this.printOrderBill(this.markAsPaidModal.orderId);
+
+   const orderReference = this.markAsPaidModal.orderNumber ? 
+        `Order #${this.markAsPaidModal.orderNumber}` : 
+        `Order #${this.markAsPaidModal.orderId}`;
+
+    // Success handling
+    this.pushAlert('payment', `✅ ${this.markAsPaidModal.selectedMethod} payment received for Order #${this.markAsPaidModal.orderId}`);
+    
+    // Close modal and refresh data
+    this.closeMarkAsPaidModal();
+    this.getOrders();
+    this.fetchPendingPayments();
+
+  } catch (error: any) {
+    console.error('❌ Error marking order as paid:', error);
+     const orderReference = this.markAsPaidModal.orderNumber ? 
+        `Order #${this.markAsPaidModal.orderNumber}` : 
+        `Order #${this.markAsPaidModal.orderId}`;
+    this.pushAlert('payment', `❌ Failed to mark as paid: ${error.error?.message || error.message}`);
+  } finally {
+    this.markAsPaidModal.busy = false;
+  }
+}
+
+// New method to create payment if none exists
+private async createPaymentForOrder(order: Order): Promise<void> {
+  try {
+    console.log('🆕 Creating new payment record for order:', order.orderID);
+    
+    const response: any = await firstValueFrom(
+      this.http.post(
+        `${this.API_BASE}/order/payments/initiate?orderId=${order.orderID}&restaurantId=${this.restaurantId}&method=Cash&channel=Waiter`,
+        {},
+        this.httpOptions
+      )
+    );
+
+    if (response && response.paymentId) {
+      console.log('✅ Created payment with ID:', response.paymentId);
+      
+      // Immediately mark as paid
+      await firstValueFrom(
+        this.http.put(
+          `${this.API_BASE}/order/payments/${response.paymentId}/complete?restaurantId=${this.restaurantId}`,
+          {},
+          this.httpOptions
+        )
+      );
+
+      this.pushAlert('payment', `✅ Created and marked Order #${order.orderID} as paid`);
+      this.getOrders(); // Refresh orders
+      this.printOrderBill(order.orderID);
+    } else {
+      throw new Error('No payment ID in response');
+    }
+  } catch (error: any) {
+    console.error('Error creating payment:', error);
+    this.pushAlert('payment', `❌ Failed to create payment: ${error.error?.message || error.message}`);
+  }
+}
+// Direct method to mark order as paid (for cash payments)
+private async markOrderAsPaidDirect(orderId: number, paymentId: number): Promise<void> {
+  try {
+    await firstValueFrom(
+      this.http.put(
+        `${this.API_BASE}/order/payments/${paymentId}/complete?restaurantId=${this.restaurantId}`,
+        {},
+        this.httpOptions
+      )
+    );
+
+    this.pushAlert('payment', `✅ Cash payment received for Order #${orderId}`);
+    this.printOrderBill(orderId);
+  } catch (error: any) {
+    console.error('Error marking cash payment:', error);
+    throw error;
+  }
+}
+
+// Enhanced payment status badge class with fallbacks
+getPaymentStatusBadgeClass(status: string): string {
+  if (!status) return 'bg-light text-dark';
+  
+  const classes: { [key: string]: string } = {
+    'Pending': 'bg-warning text-dark',
+    'Paid': 'bg-success text-white',
+    'Completed': 'bg-success text-white',
+    'Success': 'bg-success text-white',
+    'Failed': 'bg-danger text-white',
+    'Refunded': 'bg-secondary text-white'
+  };
+  return classes[status] || 'bg-light text-dark';
+}
 onPaymentCleared(paymentId: number): void {
   // Simply remove from payment lists
   this.pendingPayments = this.pendingPayments.filter(p => 
@@ -2437,4 +2778,4 @@ async finalizeIfPaid() {
   }
 }
 
-}     
+}  

@@ -1,6 +1,4 @@
-
-
-  import { Component, OnInit} from '@angular/core';
+import { Component, OnInit} from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -9,16 +7,12 @@ import { Router } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { CustomizationModalComponent } from '../customization-modal/customization-modal.component';
 import { MatDialogModule } from '@angular/material/dialog';
-
 import { QRCodeComponent } from 'angularx-qrcode';
-
-
 import { environment } from '../../environments/environment';
 import { Observable } from 'rxjs';
 import { PaymentService } from '../services/payment.service';
 import { firstValueFrom } from 'rxjs';
 
-// Add this near the top of your component file (with other interfaces/enums)
 export enum OrderStep {
   MENU = 1,
   ORDER_SUMMARY = 2,
@@ -30,8 +24,8 @@ export enum OrderStep {
 interface Product {
   productID: number;
   productName: string;
-  price: number; // Current price (base + customizations)
-  basePrice?: number; // Original price without customizations
+  price: number; 
+  basePrice?: number; 
   productDescription?: string;
   imagePath?: string;
   categoryID: number;
@@ -41,15 +35,14 @@ interface Product {
   isAvailable?: boolean;
   customizationOptions?: CustomizationOption[];
   customizationOptionIds?: number[];
-  // Add this to track if price includes customizations
   hasCustomizations?: boolean;
 }
+
 interface CartItem extends Product {
   quantity: number;
   customNote?: string;
   customizationOptionIds?: number[];
 }
-
 
 interface CustomizationOption {
   customizationOptionID: number;
@@ -67,7 +60,6 @@ interface Category {
 interface Review {
   orderID: number;
   stars: number;
-
 }
 
 interface SubCategory {
@@ -78,41 +70,36 @@ interface SubCategory {
 }
 
 interface OrderItem {
-  // orderID: number;
   productID: number;
   quantity: number;
   customizationOptionIds?: number[]; 
-    unitPrice: number;
-
+  unitPrice: number;
 }
 
 interface OrderSummary {
   orderID: number;
-    restaurantTableID: number;
-
+  orderNumber: number; 
+  restaurantTableID: number;
   orderItems: Array<{
-    productID: number;
-    quantity: number;
-    unitPrice: number;
-    lineTotal: number;
-
-        customNote?: string;
-
-
-        customizations?: { customizationOptionID: number }[];
-
+   productID: number;
+  quantity: number;
+  unitPrice: number;
+  lineTotal: number;
+  customNote?: string;
+  customizations?: { customizationOptionID: number }[];
   }>;
   subtotal: number;
   cgst: number;
   sgst: number;
   serviceCharge: number;
   totalAmount: number;
-  orderStatus: string; // mapped to string
-
+  orderStatus: string; 
 }
+
 interface PaymentVerificationResponse {
   paid: boolean;
 }
+
 interface Offer {
   offerID: number;
   restaurantID: number;
@@ -127,14 +114,13 @@ interface Offer {
   autoApply: boolean;
 }
 
-
 export interface RestaurantInfo {
   restaurantID: number;
   name: string;
   description?: string;
   logoPath?: string;
-   upiID?: string;     // ✅ NEW
-  upiName?: string;   // ✅ NEW
+   upiID?: string;     
+  upiName?: string;   
 }
 
 export enum OrderStatus {
@@ -155,7 +141,7 @@ export enum OrderStatus {
 })
 export class MenuComponent implements OnInit {
   private paymentPollTimer: any;
-isAdmin: boolean = false; 
+  isAdmin: boolean = false; 
   menuItems: Product[] = [];
   confirmedCart: OrderItem[] = [];
   newCart: OrderItem[] = [];
@@ -166,103 +152,82 @@ isAdmin: boolean = false;
   isOrderProcessing: boolean = false;
   currentUserName: string = 'Guest';
   orderSummaryDetails: OrderSummary | null = null;
- restaurantTableID: number = 0;
+  restaurantTableID: number = 0;
   userID: number = 0;
   searchQuery: string = '';
   errorMessage: string = '';
   orderConfirmationTime: Date | null = null;
   orderCreatedAt: Date | null = null;
   formattedOrderDate: string = '';
-
   subCategoryStates: Map<number, boolean> = new Map<number, boolean>();
-currentStep: OrderStep = OrderStep.MENU;
-restaurantID: number = +(localStorage.getItem('restaurantId') || '0'); // ✅ Load on init
-
-  OrderStep = OrderStep; // expose to HTML template
-cartItems: Product[] = []; // ✅ Stores the full menu items shown to user
-quantityMap: { [productID: number]: number } = {}; // ✅ Tracks quantity per product
-
-paymentQrData: string = '';
+  currentStep: OrderStep = OrderStep.MENU;
+  restaurantID: number = +(localStorage.getItem('restaurantId') || '0'); 
+  OrderStep = OrderStep; 
+  cartItems: Product[] = []; 
+  quantityMap: { [productID: number]: number } = {}; 
+  paymentQrData: string = '';
   selectedFilter: 'veg' | 'nonveg' | null = null;
-  // UPI ID for payment
-upiID: string = '';
-showUPIModal = false;
+  upiID: string = '';
+  showUPIModal = false;
   isLoading: boolean = false;
-
-upiName: string = 'DigiEat';
+  orderNumber: number | null = null; 
+  upiName: string = 'DigiEat';
   Object = Object;
   submittedReviews = new Set<number>();
- restaurantName: string = '';
+  restaurantName: string = '';
   restaurantDescription: string = '';
   restaurantLogoUrl: string = '';
   showCategorySelector = true;
   selectedCategoryID: number | null = null;
- ratings: number = 0;
+  ratings: number = 0;
   submitted: boolean = false;
-private statusPollingTimer: any = null;  // ✅ ADDED to fix missing property
+  private statusPollingTimer: any = null; 
+  selectedPaymentMethod: 'cash' | 'upi' | null = null;
+  paymentLinks: any = null;
+  showUPIOptions = false;
+  paymentSuccess = false;
+  paymentError = false;
+  quantityDebounceTimer: any = null; 
+  showConfirmationModal: boolean = false;
+  orderStatus: string = '';
+  showPaymentConfirmModal: boolean = false;
+  showImageModal = false;
+  modalImageUrl = '';
+  modalImageAlt = '';
+  modalImageLoaded = false;
+  zoom = 1;
+  offers: Offer[] = [];
+  appliedOffer: Offer | null = null;
+  discountAmount: number = 0;
+  private readonly MIN_ZOOM = 1;
+  private readonly MAX_ZOOM = 4;
 
-selectedPaymentMethod: 'cash' | 'upi' | null = null;
-paymentLinks: any = null;
-showUPIOptions = false;
-paymentSuccess = false;
-paymentError = false;
-  quantityDebounceTimer: any = null; // ✅ Add this line here
-showConfirmationModal: boolean = false;
-orderStatus: string = '';
-showPaymentConfirmModal: boolean = false;
-
-
-// SINGLE-IMAGE MODAL STATE & BEHAVIOR
-showImageModal = false;
-modalImageUrl = '';
-modalImageAlt = '';
-modalImageLoaded = false;
-
-zoom = 1;
-private readonly MIN_ZOOM = 1;
-private readonly MAX_ZOOM = 4;
-
-// keyboard handler: only Escape is needed
 private keydownHandler = (e: KeyboardEvent) => {
   if (this.showImageModal && e.key === 'Escape') this.closeImageModal();
 };
 
-
-
-offers: Offer[] = [];
-appliedOffer: Offer | null = null;
-discountAmount: number = 0;
-
 private readonly API_BASE = environment.apiUrl;
-
  constructor(private http: HttpClient, private router: Router,private dialog: MatDialog,private paymentService: PaymentService) { }
-
 private beforeUnloadListener = (event: BeforeUnloadEvent) => {
   this.saveOrderState();
 };
 
 async ngOnInit(): Promise<void> {
   this.isLoading = true;
-
-  // 1. Get table number from URL or localStorage
   const queryParams = new URLSearchParams(window.location.search);
   const tableParam = queryParams.get('tableNo');
+  const restaurantParam = queryParams.get('restaurantId');
   const stepFromQuery = queryParams.get('step');
-
-  const localTable = localStorage.getItem('restaurantTableID');
-  const tableID = tableParam ? +tableParam : +(localTable || '0');
-
+  const tableID = tableParam ? +tableParam : +(localStorage.getItem('restaurantTableID') || '0');
+  const restaurantID = restaurantParam ? +restaurantParam : +(localStorage.getItem('restaurantId') || '0');
   this.restaurantTableID = tableID;
+  this.restaurantID = restaurantID;
   localStorage.setItem('restaurantTableID', String(this.restaurantTableID));
-
-  if (!tableParam) {
-    const updatedURL = `${window.location.pathname}?tableNo=${this.restaurantTableID}`;
+  localStorage.setItem('restaurantId', String(this.restaurantID));
+  if (!tableParam || !restaurantParam) {
+    const updatedURL = `${window.location.pathname}?tableNo=${this.restaurantTableID}&restaurantId=${this.restaurantID}`;
     window.history.replaceState({}, '', updatedURL);
   }
-
-  this.fetchRestaurantInfo(); // if you use this method elsewhere, it's fine
-
-  // 2. Restore order state if available
   const storageKey = `orderState_table_${this.restaurantTableID}`;
   const saved = localStorage.getItem(storageKey);
   let restoredFromStorage = false;
@@ -311,19 +276,19 @@ async ngOnInit(): Promise<void> {
       this.currentStep = parsed;
     }
   }
-
-  // 3. Fetch restaurant info using the table number
   try {
     const restaurantResponse = await firstValueFrom(
-this.http.get<any>(`${this.API_BASE}/RestaurantTable/info?tableIdentifier=${this.restaurantTableID}`)    );
+      this.http.get<any>(`${this.API_BASE}/RestaurantTable/bynumber?tableNo=${this.restaurantTableID}&restaurantId=${this.restaurantID}`)
+    );
 
     if (!restaurantResponse || !restaurantResponse.restaurantID) {
       throw new Error('Invalid restaurant information.');
     }
-
-    // ✅ Fix: use correct property casing
-    this.restaurantID = restaurantResponse.restaurantID;
-    localStorage.setItem('restaurantId', this.restaurantID.toString());
+    if (restaurantResponse.restaurantID !== this.restaurantID) {
+      console.warn('Restaurant ID mismatch. Updating with correct ID.');
+      this.restaurantID = restaurantResponse.restaurantID;
+      localStorage.setItem('restaurantId', this.restaurantID.toString());
+    }
 
     this.restaurantName = restaurantResponse.name || '';
     this.restaurantDescription = restaurantResponse.description || '';
@@ -332,13 +297,34 @@ this.http.get<any>(`${this.API_BASE}/RestaurantTable/info?tableIdentifier=${this
       : '';
 
   } catch (err) {
-    console.error('Failed to load restaurant info from table number:', err);
-    alert('Invalid table or restaurant information. Please rescan.');
-    this.router.navigate(['/']);
-    return;
-  }
+    console.error('Failed to load restaurant info from table number and restaurant ID:', err);
+        try {
+      console.log('Trying fallback with table identifier only...');
+      const fallbackResponse = await firstValueFrom(
+        this.http.get<any>(`${this.API_BASE}/RestaurantTable/info?tableIdentifier=${this.restaurantTableID}`)
+      );
 
-  // 4. Load categories, menu, and subcategories
+      if (fallbackResponse && fallbackResponse.restaurantID) {
+        this.restaurantID = fallbackResponse.restaurantID;
+        localStorage.setItem('restaurantId', this.restaurantID.toString());
+        
+        this.restaurantName = fallbackResponse.name || '';
+        this.restaurantDescription = fallbackResponse.description || '';
+        this.restaurantLogoUrl = fallbackResponse.logoPath
+          ? `${environment.baseUrl}/${fallbackResponse.logoPath.replace(/^\/+/, '')}`
+          : '';
+        const updatedURL = `${window.location.pathname}?tableNo=${this.restaurantTableID}&restaurantId=${this.restaurantID}`;
+        window.history.replaceState({}, '', updatedURL);
+      } else {
+        throw new Error('Fallback also failed');
+      }
+    } catch (fallbackError) {
+      console.error('Fallback also failed:', fallbackError);
+      alert('Invalid table or restaurant information. Please rescan.');
+      this.router.navigate(['/']);
+      return;
+    }
+  }
   try {
     await Promise.all([
       this.fetchCategories(),
@@ -375,10 +361,9 @@ this.http.get<any>(`${this.API_BASE}/RestaurantTable/info?tableIdentifier=${this
   }
 }
 
-
-async loadRestaurantInfoFromTableNo(tableIdentifier: string | number): Promise<void> {
+async loadRestaurantInfoFromTableNo(tableNo: number, restaurantId: number): Promise<void> {
   try {
-    const url = `${this.API_BASE}/restauranttable/info?tableIdentifier=${tableIdentifier.toString()}`;
+    const url = `${this.API_BASE}/RestaurantTable/bynumber?tableNo=${tableNo}&restaurantId=${restaurantId}`;
     const data: any = await firstValueFrom(this.http.get(url));
 
     if (!data || !data.restaurantID) {
@@ -386,6 +371,7 @@ async loadRestaurantInfoFromTableNo(tableIdentifier: string | number): Promise<v
     }
 
     this.restaurantID = data.restaurantID;
+    this.restaurantTableID = data.restaurantTableID; // The actual table ID
     this.restaurantName = data.name || '';
     this.restaurantDescription = data.description || '';
     
@@ -397,12 +383,16 @@ async loadRestaurantInfoFromTableNo(tableIdentifier: string | number): Promise<v
     }
 
     localStorage.setItem('restaurantID', this.restaurantID.toString());
+    localStorage.setItem('restaurantTableID', this.restaurantTableID.toString());
+
+    const updatedURL = `${window.location.pathname}?tableNo=${tableNo}&restaurantId=${restaurantId}`;
+    window.history.replaceState({}, '', updatedURL);
+
   } catch (error) {
-    console.error('❌ Failed to load restaurant info:', error);
+    console.error('❌ Failed to load restaurant info from table number and restaurant ID:', error);
     throw error;
   }
 }
-
 
 getCartTotalAmount(): number {
   return this.newCart.reduce((total, item) => total + item.quantity * item.unitPrice, 0);
@@ -446,8 +436,6 @@ evaluateOffers(): void {
     new Date(o.validFrom) <= now &&
     new Date(o.validTo) >= now
   );
-
-  // Pick best discount (highest ₹ value)
   let bestOffer: Offer | null = null;
   let maxDiscount = 0;
 
@@ -465,7 +453,6 @@ evaluateOffers(): void {
       bestOffer = offer;
     }
   }
-
   this.appliedOffer = bestOffer;
   this.discountAmount = maxDiscount;
 console.log('🟠 Evaluating offers — Subtotal:', subtotal);
@@ -474,14 +461,12 @@ console.log('🟢 Valid offers found:', validOffers);
   console.log('✅ Applied Offer:', this.appliedOffer);
 
 }
-// In your component class
 getFormattedDate(date: Date | string | null): string {
   if (!date) return 'N/A';
   
   const parsedDate = typeof date === 'string' ? new Date(date) : date;
   return isNaN(parsedDate.getTime()) ? 'N/A' : parsedDate.toLocaleString();
 }
-
 async placeFinalOrder(): Promise<void> {
   this.showConfirmationModal = false;
 
@@ -517,58 +502,41 @@ closeImageModal() {
 onModalImageLoad() {
   this.modalImageLoaded = true;
 }
-
-/** Zoom via mouse wheel (desktop) */
 onWheelZoom(event: WheelEvent) {
   event.preventDefault();
   const delta = -event.deltaY / 500;
   this.zoom = Math.min(this.MAX_ZOOM, Math.max(this.MIN_ZOOM, this.zoom + delta));
 }
-
-/** Double-click toggles quick zoom */
 toggleZoom() {
   this.zoom = (this.zoom === 1) ? 2 : 1;
 }
-
-
-// Add this helper method to validate steps
 private isValidOrderStep(step: number): step is OrderStep {
   return Object.values(OrderStep).includes(step);
 }
-
-// ✅ FINAL PATCHED SNIPPET
-// Add this new method to MenuComponent:
 finalizeOrder(): void {
-  // 1) Clear localStorage for this table
-  const key = `orderState_table_${this.restaurantTableID}`;
-  localStorage.removeItem(key);
+    const key = `orderState_table_${this.restaurantTableID}`;
+    localStorage.removeItem(key);
+    this.orderID = null;
+    this.orderNumber = null; 
+    this.newCart = [];
+    this.confirmedCart = [];
+    this.currentStep = OrderStep.MENU;
+    this.menuItems.forEach(i => {
+      i.quantity = 0;
+      i.price = i.basePrice ?? i.price;
+    });
+    this.showUPIModal = false;
+    this.paymentSuccess = false;
+    this.paymentError = false;
+    this.showUPIOptions = false;
+    this.orderSummaryDetails = null;
+    this.orderCreatedAt = null;
+    this.selectedPaymentMethod = null;
+  }
 
-  // 2) Reset internal component state
-  this.orderID = null;
-  this.newCart = [];
-  this.confirmedCart = [];
-  this.currentStep = OrderStep.MENU;
-
-  // Reset menu quantities
-  this.menuItems.forEach(i => {
-    i.quantity = 0;
-    i.price = i.basePrice ?? i.price;
-  });
-
-  // 3) Hide modals or options if any
-  this.showUPIModal = false;
-  this.paymentSuccess = false;
-  this.paymentError = false;
-  this.showUPIOptions = false;
-  this.orderSummaryDetails = null;
-  this.orderCreatedAt = null;
-  this.selectedPaymentMethod = null;
-}
 queuePlaceOrder(): void {
   this.submitCartAndProceed();
 }
-
-
 copyToClipboard(text: string): void {
   navigator.clipboard.writeText(text).then(() => {
     console.log('Copied to clipboard!');
@@ -583,10 +551,11 @@ private saveOrderState(): void {
   const safeCreatedAt =
     this.orderCreatedAt instanceof Date && !isNaN(this.orderCreatedAt.getTime())
       ? this.orderCreatedAt
-      : new Date(); // fallback
+      : new Date(); 
 
   const state = {
     orderID: this.orderID,
+    orderNumber: this.orderNumber, 
     currentStep: this.currentStep,
     orderCreatedAt: safeCreatedAt.toISOString(),
     restaurantTableID: this.restaurantTableID,
@@ -594,10 +563,8 @@ private saveOrderState(): void {
     confirmedCart: this.confirmedCart,
     newCart: this.newCart
   };
-
   const key = `orderState_table_${this.restaurantTableID}`;
   localStorage.setItem(key, JSON.stringify(state));
-
   this.updateUrlWithCurrentStep();
 }
 
@@ -605,10 +572,14 @@ private saveOrderState(): void {
 private updateUrlWithCurrentStep(): void {
   const currentUrl = new URL(window.location.href);
   currentUrl.searchParams.set('step', String(this.currentStep));
+  if (!currentUrl.searchParams.has('tableNo')) {
+    currentUrl.searchParams.set('tableNo', String(this.restaurantTableID));
+  }
+  if (!currentUrl.searchParams.has('restaurantId')) {
+    currentUrl.searchParams.set('restaurantId', String(this.restaurantID));
+  }
   window.history.replaceState({}, '', currentUrl.toString());
 }
-
-
 
 private restoreOrderState(): boolean {
   const key = `orderState_table_${this.restaurantTableID}`;
@@ -619,28 +590,24 @@ private restoreOrderState(): boolean {
   try {
     const state = JSON.parse(savedState);
     
-    // Validate the stored state
     if (!state.orderID || !state.currentStep) {
       console.warn('Invalid saved state - missing required fields');
       return false;
     }
 
-    // Check if order is expired (older than 1 hour)
     const orderAge = Date.now() - new Date(state.orderCreatedAt).getTime();
-    if (orderAge > 60 * 60 * 1000) { // 1 hour
+    if (orderAge > 60 * 60 * 1000) { 
       console.warn('Order expired - clearing saved state');
       localStorage.removeItem(key);
       return false;
     }
-
-    // Restore the state
     this.orderID = state.orderID;
+    this.orderNumber = state.orderNumber || state.orderID; 
     this.currentStep = state.currentStep;
     this.orderCreatedAt = new Date(state.orderCreatedAt);
     this.userID = state.userID;
     this.confirmedCart = state.confirmedCart || [];
     this.newCart = state.newCart || [];
-
     console.log('✅ Successfully restored order state');
     return true;
   } catch (err) {
@@ -649,10 +616,6 @@ private restoreOrderState(): boolean {
     return false;
   }
 }
-
-
-
-
 openUPIPaymentModal(): void {
   this.initiateUPIPayment();
   this.showUPIModal = true;
@@ -661,57 +624,29 @@ openUPIPaymentModal(): void {
 closeUPIPaymentModal(): void {
   this.showUPIModal = false;
 }
+ private generateUPILinks(upiId: string, upiName: string, amount: number, note: string): any {
+    const amountStr = amount.toFixed(2);
+    const encodedUpiId = encodeURIComponent(upiId);
+    const encodedName = encodeURIComponent(upiName);
+    const orderReference = this.orderNumber ? `Order #${this.orderNumber}` : `Order ${this.orderID}`;
+    const encodedNote = encodeURIComponent(orderReference);
+    
+    return {
+      universal: `https://upilink.vercel.app/pay?pa=${encodedUpiId}&pn=${encodedName}&am=${amountStr}&tn=${encodedNote}&cu=INR`,
+      direct: `upi://pay?pa=${encodedUpiId}&pn=${encodedName}&am=${amountStr}&tn=${encodedNote}`,
+      phonePe: `phonepe://pay?pa=${encodedUpiId}&pn=${encodedName}&am=${amountStr}&tn=${encodedNote}`,
+      gPay: `tez://upi/pay?pa=${encodedUpiId}&pn=${encodedName}&am=${amountStr}&tn=${encodedNote}`,
+      upiId: upiId,
+      amount: amountStr,
+      orderId: this.orderID,
+      orderNumber: this.orderNumber
+    };
+  }
 
-// ✅ Modify confirmUPIPayment():
-// confirmUPIPayment(): void {
-//   if (!this.orderID || !this.orderSummaryDetails) return;
-
-//   const payload = { method: 'UPI' };
-
-//   this.http.post(`${this.API_BASE}/order/${this.orderID}/pending`, payload)
-//     .subscribe({
-//       next: () => {
-//         this.paymentSuccess = true;
-//         this.showUPIModal = false;
-
-//         // ✅ ONLY finalize after pending payment is created
-//         this.finalizeOrder();
-//       },
-//       error: (error) => {
-//         console.error('❌ UPI pending payment failed:', error);
-//         this.paymentError = true;
-//       }
-//     });
-// }
-
-
-
-
-private generateUPILinks(upiId: string, upiName: string, amount: number, note: string): any {
-  const amountStr = amount.toFixed(2);
-  const encodedUpiId = encodeURIComponent(upiId);
-  const encodedName = encodeURIComponent(upiName);
-  const encodedNote = encodeURIComponent(note);
-  
-  return {
-    universal: `https://upilink.vercel.app/pay?pa=${encodedUpiId}&pn=${encodedName}&am=${amountStr}&tn=${encodedNote}&cu=INR`,
-    direct: `upi://pay?pa=${encodedUpiId}&pn=${encodedName}&am=${amountStr}&tn=${encodedNote}`,
-    phonePe: `phonepe://pay?pa=${encodedUpiId}&pn=${encodedName}&am=${amountStr}&tn=${encodedNote}`,
-    gPay: `tez://upi/pay?pa=${encodedUpiId}&pn=${encodedName}&am=${amountStr}&tn=${encodedNote}`,
-    upiId: upiId,
-    amount: amountStr,
-    orderId: this.orderID
-  };
-}
-
-// Add this to your component
 handlePaymentError(error: any): void {
   console.error('Payment error:', error);
   this.paymentError = true;
   this.paymentService.stopPaymentPolling();
-  
-  // Show error to user
-//   alert('Payment failed. Please try again or choose another payment method.');
  }
 
 private startPaymentPolling(): void {
@@ -719,9 +654,7 @@ private startPaymentPolling(): void {
     console.warn('Cannot start payment polling: orderID is null');
     return;
   }
-
   this.stopPaymentPolling();
-  
   this.paymentPollTimer = setInterval(async () => {
     try {
       const response = await firstValueFrom(
@@ -729,7 +662,6 @@ private startPaymentPolling(): void {
           `${this.API_BASE}/order/${this.orderID}/payment-status?restaurantId=${this.restaurantID}`
         )
       );
-
       if (response.paid) {
         this.paymentSuccess = true;
         this.stopPaymentPolling();
@@ -740,7 +672,7 @@ private startPaymentPolling(): void {
       this.paymentError = true;
       this.stopPaymentPolling();
     }
-  }, 5000); // Check every 5 seconds
+  }, 5000); 
 }
 
 private stopPaymentPolling(): void {
@@ -749,8 +681,6 @@ private stopPaymentPolling(): void {
     this.paymentPollTimer = null;
   }
 }
-
-// ✅ Modify payWithCash():
 async payWithCash(): Promise<void> {
   if (!this.orderID) return;
 
@@ -784,35 +714,36 @@ async processPayment(): Promise<void> {
     this.paymentError = true;
   }
 }
-async initiateUPIPayment(): Promise<void> {
-  if (!this.orderID || !this.orderSummaryDetails) return;
+ async initiateUPIPayment(): Promise<void> {
+    if (!this.orderID || !this.orderSummaryDetails) return;
 
-  try {
-    const response = await firstValueFrom(
-      this.http.post<any>(
-        `${this.API_BASE}/order/${this.orderID}/initiate-payment?restaurantId=${this.restaurantID}`,
-        { method: 'UPI' }
-      )
-    );
+    try {
+      const response = await firstValueFrom(
+        this.http.post<any>(
+          `${this.API_BASE}/order/${this.orderID}/initiate-payment?restaurantId=${this.restaurantID}`,
+          { method: 'UPI' }
+        )
+      );
 
-    // Generate UPI links with the response data
-    this.paymentLinks = this.generateUPILinks(
-      response.upiId,
-      response.upiName,
-      response.amount,
-      `Payment for Order ${this.orderID}`
-    );
+      // Generate UPI links with the response data
+      const orderReference = this.orderNumber ? `Order #${this.orderNumber}` : `Order ${this.orderID}`;
+      this.paymentLinks = this.generateUPILinks(
+        response.upiId,
+        response.upiName,
+        response.amount,
+        orderReference // ✅ USE ORDER NUMBER IN PAYMENT NOTE
+      );
 
-    // Generate QR code data
-    this.paymentQrData = `upi://pay?pa=${encodeURIComponent(response.upiId)}&pn=${encodeURIComponent(response.upiName)}&am=${response.amount.toFixed(2)}&tn=${encodeURIComponent(`Payment for Order ${this.orderID}`)}&cu=INR`;
+      // Generate QR code data
+      this.paymentQrData = `upi://pay?pa=${encodeURIComponent(response.upiId)}&pn=${encodeURIComponent(response.upiName)}&am=${response.amount.toFixed(2)}&tn=${encodeURIComponent(orderReference)}&cu=INR`;
 
-    this.showUPIOptions = true;
-    this.startPaymentPolling();
-  } catch (error) {
-    console.error('UPI Payment initiation failed:', error);
-    this.paymentError = true;
+      this.showUPIOptions = true;
+      this.startPaymentPolling();
+    } catch (error) {
+      console.error('UPI Payment initiation failed:', error);
+      this.paymentError = true;
+    }
   }
-}
 
 
 openPaymentApp(app: string): void {
@@ -864,21 +795,24 @@ this.paymentService.startPaymentPolling(this.orderID!, (paid) => {
     }
   }
 
-
-
   ngOnDestroy(): void {
       window.removeEventListener('beforeunload', this.beforeUnloadListener);
-  window.removeEventListener('popstate', this.onPopState);
+      window.removeEventListener('popstate', this.onPopState);
   
- try { window.removeEventListener('keydown', this.keydownHandler); } catch {}
-  document.body.style.overflow = '';
-    if (this.paymentPollTimer) clearInterval(this.paymentPollTimer);
-    if (this.statusPollingTimer) clearInterval(this.statusPollingTimer);
-  }
+      try { window.removeEventListener('keydown', this.keydownHandler); } catch {}
+      document.body.style.overflow = '';
 
+      // ✅ Stop all pollers
+      this.stopPaymentPolling(); 
+      this.stopStatusPolling();
+  }
 goToStep(step: OrderStep): void {
   console.log(`[Navigation] Attempting to go from step ${this.currentStep} to step ${step}`);
   
+  // ✅ STOP all pollers first
+  this.stopStatusPolling();
+  this.stopPaymentPolling(); 
+
   const validSteps = [
     OrderStep.MENU,
     OrderStep.ORDER_SUMMARY,
@@ -890,10 +824,12 @@ goToStep(step: OrderStep): void {
   if (validSteps.includes(step as any)) {
     console.log(`[Navigation] Valid step transition to ${step}`);
     this.currentStep = step as (typeof validSteps)[number];
-    window.history.pushState({ step }, '', `?step=${step}`);
+    
+    const newUrl = `?tableNo=${this.restaurantTableID}&restaurantId=${this.restaurantID}&step=${step}`;
+    window.history.pushState({ step }, '', newUrl);
+    
     this.saveOrderState();
     
-    // Additional logging for state
     console.log('[Navigation] Current state after transition:', {
       orderID: this.orderID,
       currentStep: this.currentStep,
@@ -904,33 +840,31 @@ goToStep(step: OrderStep): void {
     console.warn(`[Navigation] Invalid step transition attempted: ${step}`);
   }
 
+  // --- Start pollers based on the new step ---
+
   if (step === OrderStep.MENU) {
     console.log('[Navigation] Returning to menu. Resetting UI quantities to ZERO for fresh ordering.');
-    
-    // ✅ Only clear newCart (pending items), keep confirmedCart intact
     this.newCart = [];
-    
-    // ✅ Reset UI quantities to ZERO (fresh start for new ordering session)
     this.syncUIQuantitiesWithConfirmedCart();
-    
-    // ✅ Clear quantity map for UI
     this.quantityMap = {};
   }
 
   if (step === OrderStep.ORDER_SUMMARY) {
     console.log('[Navigation] Loading order summary for step 2');
     this.getOrderSummary();
-    this.startStatusPolling();
-    this.fetchMenuItems(); // Make sure full menuItems is restored
+    this.startStatusPolling(); // To check for new items added
+    this.startPaymentPolling(); // ✅ ADDED: To check if waiter marked as paid
+    this.fetchMenuItems();
   }
   
   if (step === OrderStep.PAYMENT) {
     console.log('[Navigation] Preparing payment step');
-    this.stopStatusPolling();
     this.getOrderSummary();
+    this.startPaymentPolling(); // ✅ ADDED: To check for payment
     this.fetchMenuItems();
   }
 }
+
 // ✅ FIXED: Reset UI quantities to ZERO when going back to menu
 private syncUIQuantitiesWithConfirmedCart(): void {
   this.cartItems.forEach(ci => {
@@ -1039,7 +973,45 @@ onPopState = (event: PopStateEvent) => {
     this.updateUrlWithCurrentStep(); // ← maintain proper URL
   }
 };
+
 private fetchRestaurantInfo(): void {
+  // Use the new endpoint that requires both tableNo and restaurantId
+  const url = `${this.API_BASE}/RestaurantTable/bynumber?tableNo=${this.restaurantTableID}&restaurantId=${this.restaurantID}`;
+  
+  this.http.get<any>(url).subscribe({
+    next: info => {
+      this.restaurantName = info.name;
+      this.restaurantDescription = info.description || '';
+      this.upiID = info.upiID || '';
+      this.upiName = info.upiName || info.name || 'DigiEat';
+      this.restaurantID = info.restaurantID;
+      
+      localStorage.setItem('restaurantId', String(this.restaurantID));
+
+      // Logo setup
+      if (info.logoPath) {
+        const cleanPath = info.logoPath.replace(/^\/+/, '');
+        this.restaurantLogoUrl = cleanPath.includes('uploads/')
+          ? `${environment.baseUrl}/${cleanPath}`
+          : `${environment.baseUrl}/uploads/${cleanPath}`;
+      } else {
+        this.restaurantLogoUrl = 'assets/images/default-logo.png';
+      }
+
+      console.log('Constructed logo URL:', this.restaurantLogoUrl);
+
+      // ✅ Now that restaurantID is set, fetch offers
+      this.fetchOffers();
+    },
+    error: err => {
+      console.error('Could not load restaurant info', err);
+      // Fallback to the old endpoint
+      this.fallbackFetchRestaurantInfo();
+    }
+  });
+}
+
+private fallbackFetchRestaurantInfo(): void {
   this.http.get<RestaurantInfo>(`${this.API_BASE}/order/table/${this.restaurantTableID}/payment-details`)
     .subscribe({
       next: info => {
@@ -1048,7 +1020,8 @@ private fetchRestaurantInfo(): void {
         this.upiID = info.upiID || '';
         this.upiName = info.upiName || info.name || 'DigiEat';
         this.restaurantID = info.restaurantID;
-  localStorage.setItem('restaurantId', String(this.restaurantID)); // ✅ THIS LINE
+        
+        localStorage.setItem('restaurantId', String(this.restaurantID));
 
         // Logo setup
         if (info.logoPath) {
@@ -1060,17 +1033,17 @@ private fetchRestaurantInfo(): void {
           this.restaurantLogoUrl = 'assets/images/default-logo.png';
         }
 
-        console.log('Constructed logo URL:', this.restaurantLogoUrl);
+        // Update URL with correct restaurant ID
+        const updatedURL = `${window.location.pathname}?tableNo=${this.restaurantTableID}&restaurantId=${this.restaurantID}`;
+        window.history.replaceState({}, '', updatedURL);
 
-        // ✅ Now that restaurantID is set, fetch offers
         this.fetchOffers();
       },
       error: err => {
-        console.error('Could not load restaurant info', err);
+        console.error('Fallback also failed to load restaurant info', err);
       }
     });
 }
-
 
 
   // Toggle filter behavior: if the selected filter is already active, disable it.
@@ -1588,66 +1561,68 @@ private openCustomizationModal(product: Product): Promise<{ customizationOptionI
         });
     });
 }
-async submitCartAndProceed(): Promise<any> {
-  console.log('[Order Flow] Starting submitCartAndProceed');
-  this.rebuildNewCart();
 
-  const storedTableID = localStorage.getItem('restaurantTableID');
-  if (!storedTableID) {
-    console.error('No table ID found');
-    return null;
-  }
+  async submitCartAndProceed(): Promise<any> {
+    console.log('[Order Flow] Starting submitCartAndProceed');
+    this.rebuildNewCart();
 
-  const tableID = +storedTableID;
-  let newOrder: any = null;
+    const storedTableID = localStorage.getItem('restaurantTableID');
+    if (!storedTableID) {
+      console.error('No table ID found');
+      return null;
+    }
 
-  try {
-    // ✅ STEP 1: CREATE ORDER IF NEEDED
-    if (!this.orderID) {
-      console.log('[Order Flow] No existing order, creating new one...');
-      const url = `${this.API_BASE}/order/generate?tableNo=${tableID}&restaurantId=${this.restaurantID}`;
-      const body = { userID: this.userID };
+    const tableID = +storedTableID;
+    let newOrder: any = null;
 
-      newOrder = await firstValueFrom(this.http.post<any>(url, body));
+    try {
+      // ✅ STEP 1: CREATE ORDER IF NEEDED
+      if (!this.orderID) {
+        console.log('[Order Flow] No existing order, creating new one...');
+        const url = `${this.API_BASE}/order/generate?tableNo=${tableID}&restaurantId=${this.restaurantID}`;
+        const body = { userID: this.userID };
 
-      if (newOrder) {
-        this.orderID = newOrder.orderID;
-        this.orderStatus = newOrder.orderStatus;
-        this.orderCreatedAt = new Date(newOrder.createdAt);
+        newOrder = await firstValueFrom(this.http.post<any>(url, body));
+
+        if (newOrder) {
+          this.orderID = newOrder.orderID;
+          this.orderNumber = newOrder.orderNumber; // ✅ SET ORDER NUMBER FROM RESPONSE
+          this.orderStatus = newOrder.orderStatus;
+          this.orderCreatedAt = new Date(newOrder.createdAt);
+        }
+        console.log('[Order Flow] New order created with ID:', this.orderID, 'Number:', this.orderNumber);
+      } else {
+        console.log('[Order Flow] Existing order found, checking status...');
+        const statusResp = await firstValueFrom(
+          this.http.get<any>(`${this.API_BASE}/order/status/${this.orderID}?restaurantId=${this.restaurantID}`)
+        );
+        this.orderStatus = statusResp.status;
+        console.log('[Order Flow] Current order status:', this.orderStatus);
       }
-      console.log('[Order Flow] New order created with ID:', this.orderID);
-    } else {
-      console.log('[Order Flow] Existing order found, checking status...');
-      const statusResp = await firstValueFrom(
-        this.http.get<any>(`${this.API_BASE}/order/status/${this.orderID}?restaurantId=${this.restaurantID}`)
-      );
-      this.orderStatus = statusResp.status;
-      console.log('[Order Flow] Current order status:', this.orderStatus);
+
+      // ✅ STEP 2: ADD/UPDATE CART ITEMS
+      await this.addNewItemsToOrder();
+
+      // ✅ STEP 3: CONFIRM ORDER IF NOT ALREADY
+      if (this.orderStatus !== 'Confirmed') {
+        await firstValueFrom(
+          this.http.post(`${this.API_BASE}/order/${this.orderID}/confirm?restaurantId=${this.restaurantID}`, {})
+        );
+        this.orderStatus = 'Confirmed';
+      }
+
+      // ✅ STEP 4: Move to summary and refresh - WAIT for getOrderSummary to complete
+      await this.getOrderSummary(); // Wait for this to complete
+      this.goToStep(OrderStep.ORDER_SUMMARY);
+      this.saveOrderState();
+
+      return newOrder;
+
+    } catch (error) {
+      console.error('[Order Flow] Error in submitCartAndProceed:', error);
+      return null;
     }
-
-    // ✅ STEP 2: ADD/UPDATE CART ITEMS
-    await this.addNewItemsToOrder();
-
-    // ✅ STEP 3: CONFIRM ORDER IF NOT ALREADY
-    if (this.orderStatus !== 'Confirmed') {
-      await firstValueFrom(
-        this.http.post(`${this.API_BASE}/order/${this.orderID}/confirm?restaurantId=${this.restaurantID}`, {})
-      );
-      this.orderStatus = 'Confirmed';
-    }
-
-    // ✅ STEP 4: Move to summary and refresh - WAIT for getOrderSummary to complete
-    await this.getOrderSummary(); // Wait for this to complete
-    this.goToStep(OrderStep.ORDER_SUMMARY);
-    this.saveOrderState();
-
-    return newOrder;
-
-  } catch (error) {
-    console.error('[Order Flow] Error in submitCartAndProceed:', error);
-    return null;
   }
-}
 rebuildNewCart() {
   console.log('🧩 cartItems:', this.cartItems);
   console.log('📦 quantityMap:', this.quantityMap);
@@ -1791,67 +1766,64 @@ private async postCartItems(): Promise<void> {
 }
 
 
-// In your order summary component, ensure customizations are displayed
-async getOrderSummary(): Promise<void> {
-  return new Promise<void>(async (resolve, reject) => {
-    if (!this.orderID || !this.restaurantID) {
-      console.warn('⚠️ Missing orderID or restaurantID to fetch summary');
-      reject('Missing orderID or restaurantID');
-      return;
-    }
+  async getOrderSummary(): Promise<void> {
+    return new Promise<void>(async (resolve, reject) => {
+      if (!this.orderID || !this.restaurantID) {
+        console.warn('⚠️ Missing orderID or restaurantID to fetch summary');
+        reject('Missing orderID or restaurantID');
+        return;
+      }
 
-    this.isLoading = true;
+      this.isLoading = true;
 
-    try {
-      const timestamp = new Date().getTime(); // Prevents cache
-      const summary = await firstValueFrom(
-        this.http.get<OrderSummary>(
-          `${this.API_BASE}/order/${this.orderID}/summary?restaurantId=${this.restaurantID}&timestamp=${timestamp}`
-        )
-      );
+      try {
+        const timestamp = new Date().getTime(); // Prevents cache
+        const summary = await firstValueFrom(
+          this.http.get<OrderSummary>(
+            `${this.API_BASE}/order/${this.orderID}/summary?restaurantId=${this.restaurantID}&timestamp=${timestamp}`
+          )
+        );
 
-      console.log("✅ Summary fetched from backend:", summary);
+        console.log("✅ Summary fetched from backend:", summary);
 
-      // Optional status mapping (if you use internal UI mappings)
-      summary.orderStatus = this.mapStatus(summary.orderStatus);
+        // Optional status mapping (if you use internal UI mappings)
+        summary.orderStatus = this.mapStatus(summary.orderStatus);
 
-      this.orderSummaryDetails = summary;
+        this.orderSummaryDetails = summary;
+        
+        // ✅ SET ORDER NUMBER FROM SUMMARY RESPONSE
+        this.orderNumber = summary.orderNumber || this.orderID;
 
-      // ✅ FIXED: Clear and rebuild confirmedCart from fresh backend data
-      this.confirmedCart = [];
-      summary.orderItems.forEach(item => {
-        this.confirmedCart.push({
-          productID: item.productID,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          customizationOptionIds: item.customizations?.map(c => c.customizationOptionID) || []
+        // ✅ FIXED: Clear and rebuild confirmedCart from fresh backend data
+        this.confirmedCart = [];
+        summary.orderItems.forEach(item => {
+          this.confirmedCart.push({
+            productID: item.productID,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            customizationOptionIds: item.customizations?.map(c => c.customizationOptionID) || []
+          });
         });
-      });
 
-      console.log("✅ confirmedCart updated from backend:", this.confirmedCart);
+        console.log("✅ confirmedCart updated from backend:", this.confirmedCart);
 
-      // ✅ Evaluate offers (if your system supports them)
-      this.evaluateOffers();
+        // ✅ Evaluate offers (if your system supports them)
+        this.evaluateOffers();
 
-      resolve(); // Resolve the promise when done
+        resolve();
 
-    } catch (error) {
-      console.error('❌ Error fetching order summary:', error);
-      reject(error); // Reject the promise on error
-    } finally {
-      this.isLoading = false;
-    }
-  });
-}
-
-// Helper method to get base price without customizations
+      } catch (error) {
+        console.error('❌ Error fetching order summary:', error);
+        reject(error); 
+      } finally {
+        this.isLoading = false;
+      }
+    });
+  }
 getProductBasePrice(productID: number): number {
   const product = this.menuItems.find(p => p.productID === productID);
   return product?.basePrice || product?.price || 0;
 }
-
-
-
 private refreshOrderSummary() {
   if (this.currentStep === OrderStep.ORDER_SUMMARY) {
     this.getOrderSummary();
@@ -1876,18 +1848,14 @@ getProductName(productID: number): string {
   const product = this.menuItems.find(p => p.productID === productID);
 
   if (product) return product.productName;
-
-  // 🔁 Fallback: try to find it from order summary if menuItems doesn't have it
   const summaryItem = this.orderSummaryDetails?.orderItems.find(i => i.productID === productID);
   if (summaryItem) return `Item #${productID}`;
 
   return 'Unknown Item';
 }
-
   toggleWaiterOptions(): void {
     this.showWaiterOptions = !this.showWaiterOptions;
   }
-
 private async sendOrderToKitchen(): Promise<void> {
   if (!this.orderID) {
     console.warn('[Order Flow] Cannot send to kitchen - no orderID');
@@ -1909,24 +1877,22 @@ private async sendOrderToKitchen(): Promise<void> {
     throw error;
   }
 }
-
-
-downloadBill() {
-  this.http.get(`${this.API_BASE}/order/${this.orderID}/bill`, {
-    responseType: 'blob',
-  }).subscribe(blob => {
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Bill_Order_${this.orderID}.pdf`;
-    a.click();
-    window.URL.revokeObjectURL(url);
-  }, error => {
-    alert('Failed to generate bill. Please try again or ask staff for help.');
-  });
-}
-
-
-
-
+ downloadBill() {
+    const fileName = this.orderNumber 
+      ? `Bill_Order_${this.orderNumber}.pdf`
+      : `Bill_Order_${this.orderID}.pdf`;
+    
+    this.http.get(`${this.API_BASE}/order/${this.orderID}/bill`, {
+      responseType: 'blob',
+    }).subscribe(blob => {
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName; 
+      a.click();
+      window.URL.revokeObjectURL(url);
+    }, error => {
+      alert('Failed to generate bill. Please try again or ask staff for help.');
+    });
+  }
 }         

@@ -1,4 +1,4 @@
-// login.component.ts - Simplified
+// restaurant-login.component.ts - Fixed
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -6,14 +6,14 @@ import { Router } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 
 @Component({
-  selector: 'app-login',
+  selector: 'app-restaurant-login',
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
     <div class="login-container">
       <div class="login-card">
-        <h2>Staff Login</h2>
-        
+        <h2>Restaurant Staff Login</h2>
+
         <form (ngSubmit)="login()" #loginForm="ngForm">
           <div class="form-group">
             <label>Email:</label>
@@ -118,17 +118,14 @@ import { AuthService } from '../services/auth.service';
     }
   `]
 })
-// login.component.ts - ENHANCED with proper navigation
-export class LoginComponent {
+// restaurant-login.component.ts - FIXED navigation
+export class RestaurantLoginComponent {
   email = '';
   password = '';
   error = '';
   isLoading = false;
 
-  constructor(
-    private auth: AuthService, 
-    private router: Router
-  ) {}
+  constructor(private auth: AuthService, private router: Router) {}
 
   login(): void {
     this.isLoading = true;
@@ -137,8 +134,6 @@ export class LoginComponent {
     this.auth.login({ email: this.email, password: this.password }).subscribe({
       next: (response) => {
         this.isLoading = false;
-        
-        // Get restaurant ID from auth service (comes from backend via JWT)
         const userRestaurantId = this.auth.restaurantId;
         
         if (!userRestaurantId) {
@@ -146,7 +141,7 @@ export class LoginComponent {
           return;
         }
 
-        // ✅ ENHANCED: Navigate based on role with restaurant context
+        // ✅ FIXED: Use the enhanced navigation logic
         this.navigateToRoleDashboard(userRestaurantId);
       },
       error: (err) => {
@@ -160,7 +155,7 @@ export class LoginComponent {
     // ✅ FIXED: Handle both capitalized and lowercase roles
     const userRole = this.auth.role ? this.auth.role.toLowerCase() : null;
 
-    console.log('🔐 Login: Navigating based on role:', userRole, 'Restaurant ID:', restaurantId);
+    console.log('🔐 RestaurantLogin: Navigating based on role:', userRole, 'Restaurant ID:', restaurantId);
 
     // ✅ FIXED: Handle role mapping for database compatibility
     let targetRole = userRole;
@@ -168,7 +163,7 @@ export class LoginComponent {
     // Map 'manager' to 'admin' for routing purposes
     if (userRole === 'manager') {
       targetRole = 'admin';
-      console.log('🔄 Login: Mapped manager to admin for routing');
+      console.log('🔄 RestaurantLogin: Mapped manager to admin for routing');
     }
 
     switch (targetRole) {
