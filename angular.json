@@ -16,34 +16,33 @@
             "outputPath": "dist/digital-menu",
             "index": "src/index.html",
             "main": "src/main.ts",
-            "polyfills": [
-              "zone.js"
-            ],
+            "polyfills": ["zone.js"],
             "tsConfig": "tsconfig.app.json",
-"assets": [
-  "src/favicon.ico",
-  "src/assets",
-  "src/index.html",
-    "src/manifest.webmanifest"
 
-
-],
+            "assets": [
+              {
+                "glob": "**/*",
+                "input": "src/assets",
+                "output": "/assets"
+              },
+              "src/favicon.ico",
+              "src/manifest.webmanifest",
+              "src/index.html"
+            ],
 
             "styles": [
               "src/styles.css",
-                            "node_modules/bootstrap/dist/css/bootstrap.min.css"
-
+              "node_modules/bootstrap/dist/css/bootstrap.min.css"
             ],
-"scripts": [
-  "./node_modules/bootstrap/dist/js/bootstrap.bundle.min.js",
-  "./node_modules/jspdf/dist/jspdf.umd.min.js",
-  "./node_modules/jspdf-autotable/dist/jspdf.plugin.autotable.js"
-],
-"serviceWorker": true,
-"ngswConfigPath": "ngsw-config.json"
-
-
+            "scripts": [
+              "./node_modules/bootstrap/dist/js/bootstrap.bundle.min.js",
+              "./node_modules/jspdf/dist/jspdf.umd.min.js",
+              "./node_modules/jspdf-autotable/dist/jspdf.plugin.autotable.js"
+            ],
+            "serviceWorker": true,
+            "ngswConfigPath": "ngsw-config.json"
           },
+
           "configurations": {
             "production": {
               "fileReplacements": [
@@ -52,29 +51,31 @@
                   "with": "src/environments/environment.prod.ts"
                 }
               ],
-"budgets": [
-  {
-    "type": "initial",
-    "maximumWarning": "2.5MB",
-    "maximumError": "3MB"
-  },
-  {
-    "type": "anyComponentStyle",
-    "maximumWarning": "100kB",
-    "maximumError": "200kB"
-  }
-],
-
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "2.5MB",
+                  "maximumError": "3MB"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "100kB",
+                  "maximumError": "200kB"
+                }
+              ],
               "outputHashing": "all"
             },
+
             "development": {
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
             }
           },
+
           "defaultConfiguration": "production"
         },
+
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
           "configurations": {
@@ -87,37 +88,40 @@
           },
           "defaultConfiguration": "development"
         },
+
         "extract-i18n": {
           "builder": "@angular-devkit/build-angular:extract-i18n"
         },
+
         "test": {
           "builder": "@angular-devkit/build-angular:karma",
           "options": {
-            "polyfills": [
-              "zone.js",
-              "zone.js/testing"
-            ],
+            "polyfills": ["zone.js", "zone.js/testing"],
             "tsConfig": "tsconfig.spec.json",
-"assets": [
-  "src/favicon.ico",
-  "src/assets",
-  "src/index.html",
-    "src/manifest.webmanifest"
 
-],
-
-            "styles": [
-              "src/styles.css"
+            "assets": [
+              {
+                "glob": "**/*",
+                "input": "src/assets",
+                "output": "/assets"
+              },
+              "src/favicon.ico",
+              "src/manifest.webmanifest",
+              "src/index.html"
             ],
+
+            "styles": ["src/styles.css"],
             "scripts": []
           }
         }
       }
     }
   },
+
   "cli": {
     "analytics": "a60b798d-29f8-4525-b233-07fb6545fc4e"
   },
+
   "schematics": {
     "@schematics/angular:component": {
       "type": "component"
