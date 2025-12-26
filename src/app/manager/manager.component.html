@@ -13,6 +13,12 @@
       <li (click)="selectSection('editMenu')" [class.active]="selectedSection === 'editMenu'">
         <i class="bi bi-pencil-square"></i> Edit Menu
       </li>
+      <li
+  [class.active]="selectedSection === 'inventory'"
+  (click)="selectedSection = 'inventory'">
+  <i class="bi bi-box-seam"></i> Inventory
+</li>
+
       <li (click)="selectSection('reports')" [class.active]="selectedSection === 'reports'">
         <i class="bi bi-bar-chart-line-fill"></i> Reports
       </li>
@@ -45,6 +51,11 @@
       </button>
       <h1>Manager Dashboard</h1>
     </header>
+
+    <app-inventory-management
+  *ngIf="selectedSection === 'inventory'">
+</app-inventory-management>
+
 
     <!-- STAFF MANAGEMENT SECTION -->
 <section *ngIf="selectedSection === 'staff'" class="staff-section">

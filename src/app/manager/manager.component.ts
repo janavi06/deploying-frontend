@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { environment } from '../../environments/environment';
 import { ActivatedRoute, Router } from '@angular/router'; // ADD THIS
 import { AuthService } from '../services/auth.service'; // ADD THIS IMPORT
+import { InventoryManagementComponent } from '../inventory-management/inventory-management.component';
 
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -14,7 +15,7 @@ import autoTable from 'jspdf-autotable';
 @Component({
   selector: 'app-manager',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule,  InventoryManagementComponent,],
   templateUrl: './manager.component.html',
   styleUrls: ['./manager.component.css'],
 })
@@ -99,7 +100,7 @@ showCreateShiftModal: boolean = false;
 restaurantId: number = 0; 
 
   // Section management
-selectedSection: 'dashboard' | 'history' | 'editMenu' | 'settings' | 'reports' | 'staff' | 'tables' | 'expenses' | 'customers' | 'advanced' | 'offers' = 'dashboard';  isSidebarOpen = false;
+selectedSection: 'dashboard' | 'history' | 'inventory'|'editMenu' | 'settings' | 'reports' | 'staff' | 'tables' | 'expenses' | 'customers' | 'advanced' | 'offers' = 'dashboard';  isSidebarOpen = false;
 
   // Product management
   products: any[] = [];
