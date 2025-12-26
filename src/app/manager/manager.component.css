@@ -1,1362 +1,272 @@
-/* Sidebar */
+/* --- Manager Wrapper Layout --- */
+.manager-wrapper {
+  display: flex;
+  min-height: 100vh;
+  background-color: #f3f4f6; /* Soft grey background for contrast */
+  font-family: 'Inter', -apple-system, sans-serif;
+  font-size: 13px;
+  color: #1e293b;
+}
+
+/* --- Sidebar Styling --- */
 .sidebar {
-  position: fixed;
-  top: 0;
-  left: -240px;
   width: 240px;
-  height: 100%;
-  background: #2c3e50;
-  transition: left 0.3s ease;
-  overflow-y: auto;
-  color: #ecf0f1;
+  background: #ffffff;
+  border-right: 1px solid #e2e8f0;
+  transition: all 0.3s ease;
+  position: fixed;
+  height: 100vh;
   z-index: 1000;
 }
 
-.sidebar.open {
-  left: 0;
+.sidebar-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid #f1f5f9;
 }
 
-.sidebar-header {
-  padding: 1rem;
-  text-align: center;
-  background: #1a252f;
+.sidebar-header h2 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0;
+  color: #2563eb;
 }
 
 .sidebar-menu {
   list-style: none;
-  padding: 0;
+  padding: 1rem;
   margin: 0;
 }
 
 .sidebar-menu li {
-  padding: 0.75rem 1rem;
+  padding: 10px 14px;
+  margin-bottom: 4px;
+  border-radius: 8px;
   cursor: pointer;
+  color: #64748b;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: all 0.2s;
 }
 
-.sidebar-menu li.active,
+.sidebar-menu li i { font-size: 1.1rem; }
+
 .sidebar-menu li:hover {
-  background: #34495e;
+  background: #f8fafc;
+  color: #2563eb;
 }
 
-/* Main content shifts right when sidebar is open */
+.sidebar-menu li.active {
+  background: #2563eb;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+}
+
+/* --- Main Content Area --- */
 .main-content {
-  margin-left: 0;
-  transition: margin-left 0.3s ease;
-  padding: 1rem;
+  flex: 1;
+  margin-left: 240px; /* Aligned with sidebar */
+  padding: 1.5rem;
+  transition: all 0.3s ease;
 }
 
-.main-content.sidebar-open {
-  margin-left: 240px;
-}
-
-/* Dashboard header */
 .dashboard-header {
   display: flex;
   align-items: center;
-  margin-bottom: 1rem;
+  gap: 1rem;
+  margin-bottom: 2rem;
 }
 
-.sidebar-toggle {
-  font-size: 1.5rem;
-  margin-right: 1rem;
-  background: none;
-  border: none;
-  cursor: pointer;
+.dashboard-header h1 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0;
 }
 
-/* History table */
-.history-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.history-table th,
-.history-table td {
-  padding: 0.5rem;
-  border: 1px solid #ddd;
-}
-
-/* Modal override (Bootstrap base) */
-.modal.show {
-  background-color: rgba(0,0,0,0.5);
-}
-
-
-/* Sidebar spacing tweaks */
-.manager-dashboard .controls {
-  gap: .5rem;
-}
-
-/* Card grid adjustments */
+/* --- Professional Cards & KPIs --- */
 .card {
-  border-radius: .5rem;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-
-.card-title {
-  font-size: 1.1rem;
-  font-weight: 600;
-}
-
-.card-text {
-  font-size: .9rem;
-  color: #555;
-}
-
-.badge {
-  margin-right: .25rem;
-}
-
-/* Ensure modal appears above grid */
-.modal {
-  z-index: 1050;
-}
-
-
-
-/* manager.component.css */
-/* Card Styles */
-.menu-item-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  transition: transform 0.2s ease;
-}
-
-.menu-item-card:hover {
-  transform: translateY(-2px);
-}
-
-.menu-item-card .card-body {
-  padding: 1.25rem;
-}
-
-/* Form Switch */
-.form-switch .form-check-input {
-  width: 2.75em;
-  height: 1.5em;
-  margin-left: 0;
-}
-
-.form-switch .form-check-input:checked {
-  background-color: #00b14f;
-  border-color: #00b14f;
-}
-
-/* Category Tabs */
-.nav-tabs .nav-link {
-  color: #666;
-  border: none;
-  padding: 0.75rem 1.5rem;
-}
-
-.nav-tabs .nav-link.active {
-  color: #00b14f;
-  border-bottom: 3px solid #00b14f;
-  font-weight: 500;
-}
-
-/* Add Button */
-.btn-primary {
-  background-color: #00b14f;
-  border-color: #00b14f;
-  padding: 0.5rem 1.25rem;
-}
-
-.btn-primary:hover {
-  background-color: #009a43;
-  border-color: #009a43;
-}
-
-/* Modal Styles */
-.modal-content {
-  border-radius: 12px;
-
-}
-
-.modal-header {
-  border-bottom: none;
-  padding: 1.5rem;
-}
-
-.modal-title {
-  font-weight: 600;
-}
-
-.modal-body {
-  padding: 1.5rem;
-}
-
-
-/* e.g. style the button yourself */
-.edit-menu-section button {
-  padding: 0.5rem 1rem;
-  background-color: #1b84e7;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  font-size: 1rem;
-  cursor: pointer;
-}
-
-.edit-menu-section button:hover {
-  background-color: #186fc5;
-}
-
-/* align that wrapper div to the left if needed */
-.edit-menu-section > .container-fluid > div {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.02);
   margin-bottom: 1.5rem;
-}
-
-
-
-
-/* 2. Bump up font‐sizes throughout the dashboard */
-.manager-dashboard,
-.manager-dashboard .table th,
-.manager-dashboard .table td,
-.manager-dashboard .filter-bar label,
-.manager-dashboard .search-wrapper input,
-.manager-dashboard .btn {
-  font-size:22px !important;
-}
-
-/* Slightly larger headers */
-.dashboard-header h1 {
-  font-size: 2rem !important;
-}
-.edit-menu-section h2 {
-  font-size: 1.5rem !important;
-}
-
-/* Edit Button */
-.edit-btn {
-  background-color: #ffd438 !important;
-  color: #fff !important;
-  border: none !important;
-  border-radius: 4px !important;
-  padding: 0.4rem 0.7rem !important;
-  transition: background-color 0.2s ease !important;
-}
-
-.edit-btn:hover {
-  background-color: #e3b40b !important;
-}
-
-/* Delete Button */
-.delete-btn {
-  background-color: #e81212 !important;
-  color: #fff !important;
-  border: none !important;
-  border-radius: 4px !important;
-  padding: 0.4rem 0.7rem !important;
-  transition: background-color 0.2s ease !important;
-}
-
-.delete-btn:hover {
-  background-color: #c81010 !important;
-}
-
-
-
-
-/* Toggle-switch styling */
-.toggle-switch {
-  position: relative;
-  display: inline-block;
-  width: 42px;
-  height: 22px;
-}
-
-.toggle-switch input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.toggle-slider {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: #ccc;
-  border-radius: 22px;
-  transition: background-color 0.3s;
-}
-
-.toggle-slider::before {
-  content: "";
-  position: absolute;
-  height: 18px;
-  width: 18px;
-  left: 2px;
-  top: 2px;
-  background-color: #fff;
-  border-radius: 50%;
-  transition: transform 0.3s;
-}
-
-/* Checked state */
-.toggle-switch input:checked + .toggle-slider {
-  background-color: #1b84e7;
-}
-
-.toggle-switch input:checked + .toggle-slider::before {
-  transform: translateX(20px);
-}
-
-/* Optional: focus outline */
-.toggle-switch input:focus + .toggle-slider {
-  box-shadow: 0 0 0 3px rgba(27,132,231,0.3);
-}
-
-
-
-
-/* Enhanced search bar */
-.search-wrapper {
-  display: flex !important;
-  justify-content: flex-start !important;
-  margin: 0 !important;
-  /* make the wrapper take up to 80% of its container */
-  width: 80%;
-  max-width: 500px;
-  padding-bottom: 30px;
-}
-
-.search-wrapper input {
-  width: 100%;
-height: 50px;
-  padding: 0.5rem 1rem;
-  font-size: 1.125rem;
-  border: 1px solid #ccd0d5;
-  border-radius: 8px;
-  background-color: #fff;
-  transition: box-shadow 0.2s ease, border-color 0.2s ease;
-  
-}
-
-
-
-/* Responsive Design */
-@media (max-width: 768px) {
-  .menu-item-card {
-    margin-bottom: 1rem;
-  }
-  
-  .nav-tabs .nav-link {
-    padding: 0.5rem 1rem;
-    font-size: 0.9rem;
-  }
-}
-
-
-/* Sidebar */
-.sidebar {
-  position: fixed;
-  top: 0;
-  left: -240px;
-  width: 240px;
-  height: 100%;
-  background: #2c3e50;
-  transition: left 0.3s ease;
-  overflow-y: auto;
-  color: #ecf0f1;
-  z-index: 1000;
-  box-shadow: 3px 0 15px rgba(0,0,0,0.1);
-}
-
-/* Search Bar Adjustments */
-.search-wrapper {
-  flex: 1 1 300px;
-  max-width: 500px;
-  padding-bottom: 0;
-}
-
-@media (max-width: 768px) {
-  .search-wrapper {
-    flex: 1 1 100%;
-    order: 3;
-    margin-top: 1rem;
-  }
-}
-
-/* Button Color Changes */
-.edit-btn {
-  background-color: #1b84e7 !important;
-}
-
-.delete-btn {
-  background-color: #dc3545 !important;
-}
-
-.delete-btn:hover {
-  background-color: #bb2d3b !important;
-}
-
-/* Larger Toggle Switch */
-.toggle-switch {
-  width: 60px;
-  height: 34px;
-}
-
-.toggle-slider {
-  border-radius: 34px;
-}
-
-.toggle-slider::before {
-  height: 26px;
-  width: 26px;
-  top: 4px;
-  left: 4px;
-}
-
-.toggle-switch input:checked + .toggle-slider::before {
-  transform: translateX(26px);
-}
-
-/* Modern Table Styling */
-.history-table {
-  border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
-.history-table th,
-.history-table td {
-  padding: 1rem;
-  border-bottom: 1px solid #dee2e6;
-}
-
-.history-table thead {
-  background: #1b84e7;
-  color: white;
-}
-
-.history-table tbody tr:hover {
-  background-color: #f8f9fa;
-}
-
-/* Enhanced Modal Styling */
-.modal-content {
-  border: none;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-}
-
-.modal-header {
-  background: #f8f9fa;
-  border-bottom: 1px solid #dee2e6;
-}
-
-/* Better Form Controls */
-.form-control, .form-select {
-  border: 1px solid #ced4da;
-  border-radius: 8px;
-  padding: 0.75rem 1rem;
-  transition: border-color 0.3s ease;
-}
-
-.form-control:focus, .form-select:focus {
-  border-color: #1b84e7;
-  box-shadow: 0 0 0 3px rgba(27,132,231,0.1);
-}
-
-/* Improved Card Interactions */
-.menu-item-card {
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.menu-item-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 5px 15px rgba(0,0,0,0.15);
-}
-
-/* Add to manager.component.css */
-.card {
-  border-radius: 15px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-canvas {
-  max-height: 400px;
-  margin: 1rem 0;
-}
-
-.display-4 {
-  font-size: 2.5rem;
-  font-weight: bold;
-  color: #2c3e50;
-}
-
-/* Revenue Section Styles */
-.revenue-section .card {
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-}
-
-.revenue-section .card-header {
-  background-color: #f8f9fa;
-  border-bottom: 1px solid #eaeaea;
-}
-
-.revenue-section .table-sm td, 
-.revenue-section .table-sm th {
-  padding: 0.5rem;
-}
-
-.text-success {
-  color: #28a745 !important;
-}
-
-.text-danger {
-  color: #dc3545 !important;
-}
-
-.bi-arrow-up {
-  color: #28a745;
-}
-
-.bi-arrow-down {
-  color: #dc3545;
-}
-
-/* Make charts responsive */
-canvas {
-  max-width: 100%;
-  height: auto !important;
-}
-.manager-dashboard,
-.manager-dashboard .table th,
-.manager-dashboard .table td,
-.manager-dashboard .filter-bar label,
-.manager-dashboard .search-wrapper input,
-.manager-dashboard .btn {
-  font-size: 14px !important;
-}
-.dashboard-header h1 {
-  font-size: 1.5rem !important;
-}
-.sidebar-menu li {
-  padding: 0.5rem 1rem;
-  font-size: 14px;
-}
-.card-title,
-.revenue-section h5,
-.edit-menu-section h2 {
-  font-size: 1rem !important;
-}
-.history-table th,
-.history-table td {
-  padding: 0.5rem 0.75rem;
-  font-size: 13px;
-}
-.form-control, .form-select {
-  padding: 0.5rem 0.75rem;
-  font-size: 14px;
-}
-.btn, .btn-sm {
-  padding: 0.3rem 0.75rem !important;
-  font-size: 13px !important;
-}
-.modal-body {
-  padding: 1rem;
-}
-.modal-header {
-  padding: 1rem;
-}
-canvas {
-  max-height: 280px;
-  margin: 0.5rem 0;
-}
-.manager-dashboard {
-  font-size: 13px;
-}
-/* Order History Styles */
-.history-section {
-  padding: 20px;
-}
-
-.summary-card {
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  transition: all 0.3s ease;
-}
-
-.summary-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+.card-header {
+  background: #ffffff;
+  border-bottom: 1px solid #f1f5f9;
+  padding: 1rem 1.25rem;
 }
 
 .kpi-card {
-  border-left: 4px solid #3b82f6;
-  border-radius: 8px;
-  margin-bottom: 20px;
-}
-
-.kpi-card .card-body {
-  padding: 1.25rem;
-}
-
-.item-details {
-  max-height: 0;
-  overflow: hidden;
-  transition: max-height 0.3s ease;
-}
-
-.item-details.show {
-  max-height: 500px;
-}
-
-/* Reports Styles */
-.report-section {
-  padding: 20px;
-}
-
-.chart-container {
-  position: relative;
-  min-height: 300px;
-}
-
-/* Table Styles */
-.table-responsive {
-  overflow-x: auto;
-}
-
-.table-hover tbody tr:hover {
-  background-color: rgba(0, 0, 0, 0.02);
-}
-
-/* Pagination Styles */
-.pagination {
-  margin-bottom: 0;
-}
-
-/* Badge Styles */
-.badge {
-  font-weight: 500;
-  padding: 5px 8px;
-}
-
-/* Tooltip Styles */
-[tooltip] {
-  position: relative;
-  cursor: pointer;
-}
-
-[tooltip]:hover::after {
-  content: attr(tooltip);
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #333;
-  color: #fff;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  white-space: nowrap;
-  z-index: 100;
-}
-
-/* Responsive Adjustments */
-@media (max-width: 768px) {
-  .dashboard-toolbar .btn-group {
-    flex-wrap: wrap;
-    gap: 5px;
-  }
-  
-  .kpi-card {
-    margin-bottom: 15px;
-  }
-}
-
-.modal-body {
-  max-height: 80vh;
-  overflow-y: auto;
-}
-@media (max-width: 768px) {
-  .edit-menu-section .row {
-    flex-direction: column;
-  }
-
-  .search-wrapper {
-    width: 100% !important;
-    margin-top: 10px;
-  }
-
-  .edit-menu-section .btn {
-    width: 100%;
-  }
-
-  .edit-menu-section .table {
-    font-size: 14px;
-  }
-}
-/* Staff Management Styles */
-.staff-section .table-item {
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.staff-section .table-item:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-}
-
-/* Table Management Styles */
-.table-section .floor-plan-container {
-  position: relative;
-  height: 500px;
-  background: #f8f9fa;
-  border: 1px solid #dee2e6;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.table-section .floor-plan {
-  position: relative;
-  width: 100%;
-  height: 100%;
-}
-
-.table-section .table-item {
-  position: absolute;
-  width: 80px;
-  height: 80px;
-  border-radius: 8px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-weight: bold;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  border: 2px solid transparent;
-}
-
-.table-section .table-item:hover {
-  transform: scale(1.1);
-  border-color: #000;
-}
-
-.table-section .table-item.occupied {
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0% { opacity: 1; }
-  50% { opacity: 0.8; }
-  100% { opacity: 1; }
-}
-
-.table-section .table-number {
-  font-size: 16px;
-  font-weight: bold;
-}
-
-.table-section .table-status {
-  font-size: 10px;
-  opacity: 0.9;
-}
-
-.table-section .table-capacity {
-  font-size: 10px;
-  opacity: 0.8;
-}
-
-/* Expense Tracking Styles */
-.expense-section .budget-status {
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: bold;
-}
-
-/* Customer Management Styles */
-.customer-section .vip-badge {
-  background: linear-gradient(45deg, #FFD700, #FFA500);
-  color: #000;
-}
-
-/* Advanced Analytics Styles */
-.advanced-analytics-section .kpi-card {
-  transition: transform 0.3s ease;
-}
-
-.advanced-analytics-section .kpi-card:hover {
-  transform: translateY(-5px);
-}
-
-/* Mobile Optimization */
-@media (max-width: 768px) {
-  .staff-section .table-responsive,
-  .expense-section .table-responsive,
-  .customer-section .table-responsive {
-    font-size: 14px;
-  }
-  
-  .table-section .floor-plan-container {
-    height: 300px;
-  }
-  
-  .table-section .table-item {
-    width: 60px;
-    height: 60px;
-  }
-  
-  .table-section .table-number {
-    font-size: 12px;
-  }
-  
-  .advanced-analytics-section .card-body {
-    padding: 1rem;
-  }
-}
-
-/* Integration Styles */
-.integration-card {
-  border-left: 4px solid #007bff;
-  transition: all 0.3s ease;
-}
-
-.integration-card:hover {
-  border-left-color: #0056b3;
-  background-color: #f8f9fa;
-}
-
-/* Dark Theme Support */
-@media (prefers-color-scheme: dark) {
-  .table-section .floor-plan-container {
-    background: #2d3748;
-    border-color: #4a5568;
-  }
-  
-  .integration-card:hover {
-    background-color: #2d3748;
-  }
-}
-
-/* Print Styles */
-@media print {
-  .btn, .modal, .sidebar {
-    display: none !important;
-  }
-  
-  .card {
-    border: 1px solid #000 !important;
-    break-inside: avoid;
-  }
-}
-
-/* Offers Section Styles */
-.offers-section .card {
   border: none;
-  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  transition: transform 0.2s;
 }
 
-.offers-section .table th {
-  border-top: none;
-  font-weight: 600;
-  color: #495057;
-}
+.kpi-card:hover { transform: translateY(-3px); }
 
-.offers-section .badge {
-  font-size: 0.75em;
-}
+.kpi-revenue { border-bottom: 4px solid #10b981; }
+.kpi-backlog { border-bottom: 4px solid #f59e0b; }
+.kpi-service { border-bottom: 4px solid #ef4444; }
+.kpi-payment { border-bottom: 4px solid #3b82f6; }
 
-/* Offer Modal Styles */
-.btn-group .btn-check:checked + .btn {
-  background-color: #0d6efd;
-  border-color: #0d6efd;
-  color: white;
-}
-
-/* Chart container */
-.chart-container {
-  position: relative;
-}
-
-.modal-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  z-index: 1040;
-  width: 100vw;
-  height: 100vh;
-  background-color: #000;
-  opacity: 0.5;
-}
-
-.modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  z-index: 1050;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  outline: 0;
-}
-
-.modal-dialog {
-  position: relative;
-  width: auto;
-  margin: 0.5rem;
-  pointer-events: none;
-}
-
-.modal.show .modal-dialog {
-  transform: none;
-}
-
-.modal-content {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  pointer-events: auto;
-  background-color: #fff;
-  background-clip: padding-box;
-  border: 1px solid rgba(0, 0, 0, 0.2);
-  border-radius: 0.3rem;
-  outline: 0;
-}
-
-@media (min-width: 576px) {
-  .modal-dialog {
-    max-width: 500px;
-    margin: 1.75rem auto;
-  }
-}
-
-body.modal-open {
-  overflow: hidden;
-}
-/* Angular Modal Styles */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1050;
-}
-
-.modal-content {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-  width: 90%;
-  max-width: 500px;
-  max-height: 90vh;
-  overflow-y: auto;
-}
-
-.modal-header {
-  padding: 1rem 1.5rem;
-  border-bottom: 1px solid #dee2e6;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.modal-title {
-  margin: 0;
-  font-size: 1.25rem;
-  font-weight: 600;
-}
-
-.btn-close {
-  background: none;
-  border: none;
+.kpi-icon {
   font-size: 1.5rem;
-  cursor: pointer;
-  color: #6c757d;
-  padding: 0;
-  width: 30px;
-  height: 30px;
+  margin-bottom: 0.5rem;
+  color: #64748b;
+}
+
+.card-text {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+/* --- Tables Styling --- */
+.table {
+  font-size: 12.5px;
+}
+
+.modern-table thead th {
+  background: #f8fafc;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  padding: 12px;
+  border: none;
+}
+
+.modern-table tbody td {
+  padding: 12px;
+  vertical-align: middle;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.highlight-warning { background-color: #fffbeb !important; }
+.highlight-info { background-color: #f0f9ff !important; }
+
+/* --- Badges & Status --- */
+.badge {
+  font-weight: 600;
+  padding: 0.35em 0.65em;
+  border-radius: 6px;
+  font-size: 11px;
+}
+
+.bg-danger-soft { background: #fee2e2; color: #b91c1c; }
+.bg-success-soft { background: #dcfce7; color: #15803d; }
+
+/* --- Form Elements --- */
+.form-control, .form-select {
+  font-size: 13px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  padding: 8px 12px;
+}
+
+.form-control:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* --- Floor Plan (Table Management) --- */
+.floor-plan-container {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 2rem;
+  min-height: 400px;
+  position: relative;
+}
+
+.table-item {
+  width: 100px;
+  height: 100px;
+  border-radius: 12px;
+  position: absolute;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-}
-
-.btn-close:hover {
-  color: #495057;
-}
-
-.modal-body {
-  padding: 1.5rem;
-}
-
-.modal-footer {
-  padding: 1rem 1.5rem;
-  border-top: 1px solid #dee2e6;
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
-}
-
-/* Form Styles */
-.form-label {
-  font-weight: 500;
-  margin-bottom: 0.5rem;
-}
-
-.form-control, .form-select {
-  width: 100%;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #ced4da;
-  border-radius: 0.375rem;
-  font-size: 0.875rem;
-}
-
-.form-control:focus, .form-select:focus {
-  border-color: #86b7fe;
-  outline: 0;
-  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-}
-
-/* Button Styles */
-.btn {
-  padding: 0.5rem 1rem;
-  border: 1px solid transparent;
-  border-radius: 0.375rem;
-  font-size: 0.875rem;
-  font-weight: 500;
   cursor: pointer;
-  transition: all 0.15s ease-in-out;
-}
-
-.btn-primary {
-  background-color: #0d6efd;
-  border-color: #0d6efd;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  transition: transform 0.2s;
   color: white;
+  text-align: center;
+  font-size: 11px;
 }
 
-.btn-primary:hover:not(:disabled) {
-  background-color: #0b5ed7;
-  border-color: #0a58ca;
+.table-item:hover { transform: scale(1.05); }
+.table-item.occupied { animation: pulse-red 2s infinite; }
+
+@keyframes pulse-red {
+  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
 }
 
-.btn-primary:disabled {
-  background-color: #6c757d;
-  border-color: #6c757d;
-  cursor: not-allowed;
-}
-
-.btn-secondary {
-  background-color: #6c757d;
-  border-color: #6c757d;
-  color: white;
-}
-
-.btn-secondary:hover {
-  background-color: #5c636a;
-  border-color: #565e64;
-}
-
-/* Tab styling */
-.nav-tabs .nav-link {
-  color: #6c757d;
-  border: none;
-  padding: 0.75rem 1.5rem;
-}
-
-.nav-tabs .nav-link.active {
-  color: #0d6efd;
-  border-bottom: 2px solid #0d6efd;
-  background: transparent;
-}
-
-.nav-tabs .nav-link:hover {
-  border-color: transparent;
-  color: #0d6efd;
-}
-
-/* Modal overlay */
+/* --- Modals --- */
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(4px);
+  z-index: 2000;
   display: flex;
-  justify-content: center;
   align-items: center;
-  z-index: 1050;
+  justify-content: center;
 }
 
 .modal-content {
-  background: white;
-  border-radius: 0.5rem;
-  width: 90%;
-  max-width: 500px;
-  max-height: 90vh;
-  overflow-y: auto;
+  border: none;
+  border-radius: 16px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
 }
 
-/* Toggle switch */
+/* --- Toggle Switch --- */
 .toggle-switch {
   position: relative;
   display: inline-block;
-  width: 50px;
-  height: 24px;
+  width: 34px;
+  height: 20px;
 }
 
-.toggle-switch input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
 
 .toggle-slider {
   position: absolute;
   cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: #ccc;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: #cbd5e1;
   transition: .4s;
-  border-radius: 24px;
+  border-radius: 34px;
 }
 
 .toggle-slider:before {
   position: absolute;
   content: "";
-  height: 16px;
-  width: 16px;
-  left: 4px;
-  bottom: 4px;
+  height: 14px; width: 14px;
+  left: 3px; bottom: 3px;
   background-color: white;
   transition: .4s;
   border-radius: 50%;
 }
 
-input:checked + .toggle-slider {
-  background-color: #198754;
-}
+input:checked + .toggle-slider { background-color: #2563eb; }
+input:checked + .toggle-slider:before { transform: translateX(14px); }
 
-input:checked + .toggle-slider:before {
-  transform: translateX(26px);
-}
-
-/* Table responsive */
-.truncate-cell {
-  max-width: 200px;
-}
-
-/* Button styles */
-.edit-btn {
-  color: #0d6efd;
-  border: 1px solid #0d6efd;
-}
-
-.edit-btn:hover {
-  background: #0d6efd;
-  color: white;
-}
-
-.delete-btn {
-  color: #dc3545;
-  border: 1px solid #dc3545;
-}
-
-.delete-btn:hover:not(:disabled) {
-  background: #dc3545;
-  color: white;
-}
-
-.delete-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/*
- * 1. ROOT VARIABLES
- * Defines the sidebar width and transition speed.
- */
-:root {
-  --sidebar-width: 260px;
-  --sidebar-transition: transform 0.3s ease-in-out, margin-left 0.3s ease-in-out;
-}
-
-/*
- * 2. MOBILE-FIRST STYLES (Default)
- * These apply to all screen sizes, starting with mobile.
- */
-.manager-wrapper {
-  position: relative;
-  overflow-x: hidden; /* Prevents horizontal scrolling */
-}
-
-/* * SIDEBAR (Mobile Default: Hidden)
- * - position: fixed -> Makes it an overlay.
- * - transform: translateX(-100%) -> Hides it off-screen to the left.
- */
-.sidebar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  height: 100vh; /* Full viewport height */
-  width: var(--sidebar-width);
-  background: #ffffff; /* Clean white background */
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  transform: translateX(-100%);
-  transition: var(--sidebar-transition);
-  z-index: 1050; /* High z-index to appear over content */
-  overflow-y: auto; /* Allow sidebar to scroll if items are many */
-}
-
-/* * SIDEBAR (Mobile Toggled: Visible)
- * - The .open class is added by your Angular [class.open].
- * - transform: translateX(0) -> Slides it into view.
- */
-.sidebar.open {
-  transform: translateX(0);
-}
-
-/* * MAIN CONTENT (Mobile Default: Full Width)
- * - It takes up 100% width.
- * - The sidebar will slide OVER this content.
- */
-.main-content {
-  width: 100%;
-  padding: 1rem;
-  transition: var(--sidebar-transition);
-  /* Add padding-top to account for the fixed header */
-  padding-top: 80px; /* Adjust as needed based on your header's height */
-}
-
-/*
- * HEADER
- * - Make the header fixed on mobile so the toggle is always visible.
- */
-.dashboard-header {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  display: flex;
-  align-items: center;
-  padding: 1rem;
-  background: #ffffff;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  z-index: 1040;
-}
-
-/* Adjust main content padding to account for fixed header */
-.main-content {
-  margin-top: 60px; /* Or the exact height of your header */
-  padding: 1.5rem;
-}
-
-.sidebar-toggle {
-  z-index: 1041; /* Ensure toggle is above header */
-}
-
-/*
- * 3. DESKTOP STYLES (Large Screens)
- * This media query applies to screens 992px wide and up.
- */
-@media (min-width: 992px) {
-  /*
-   * HEADER (Desktop)
-   * - Un-fix the header and put it inside the main content flow.
-   */
-  .dashboard-header {
-    position: static;
-    box-shadow: none;
-    background: transparent;
-    padding: 0 0 1.5rem 0; /* Reset padding */
-  }
-
-  /*
-   * SIDEBAR (Desktop: Visible by default)
-   * - It's still `fixed` but now it's ON-screen by default.
-   */
+/* --- Responsive Adjustments --- */
+@media (max-width: 991px) {
   .sidebar {
+    transform: translateX(-100%);
+  }
+  .sidebar.open {
     transform: translateX(0);
-    box-shadow: 0 0 15px rgba(0, 0, 0, 0.05);
   }
-
-  /* * MAIN CONTENT (Desktop: Pushed over)
-   * - Your [class.sidebar-open] is the key.
-   * - By default, it has a margin to make space for the sidebar.
-   */
   .main-content {
-    margin-left: var(--sidebar-width);
-    margin-top: 0; /* Reset mobile margin */
-    width: calc(100% - var(--sidebar-width));
+    margin-left: 0;
   }
-
-  /* * CLOSED STATE (Desktop: Toggled)
-   * - When .open is NOT present (toggled off)...
-   */
-  .sidebar:not(.open) {
-    transform: translateX(-100%); /* Slide the sidebar away */
-  }
-
-  .main-content:not(.sidebar-open) {
-    margin-left: 0; /* The content slides back to fill the screen */
-    width: 100%;
-  }
-}
-
-/*
- * 4. GENERAL RESPONSIVE FIXES
- * Helps with your "BIG AND NOT GOOD" content.
- */
-
-/* Make all images responsive */
-img,
-.floor-plan-container {
-  max-width: 100%;
-  height: auto;
-}
-
-/* Allow your filter toolbar to wrap on small screens */
-.dashboard-toolbar .row {
-  display: flex;
-  flex-wrap: wrap;
-}
-
-/* Make inputs and buttons full-width on small screens for forms */
-.modal-body .form-control,
-.modal-body .btn {
-  width: 100%;
-}
-
-/* Ensure filter inputs stack cleanly */
-@media (max-width: 767px) {
-  .dashboard-toolbar .col-md-2,
-  .dashboard-toolbar .col-md-3 {
-    flex: 1 1 100%; /* Make all filters full-width */
-  }
-}
-
-/* Make KPI cards readable */
-.kpi-card .card-title {
-  font-size: 1rem;
-}
-.kpi-card .card-text {
-  font-size: 1.75rem;
-  font-weight: 600;
-}
-
-/* Allow floor plan to scroll horizontally if it's too wide */
-.floor-plan-container {
-  overflow-x: auto;
-  padding: 1rem;
-  border: 1px solid #eee;
-  background: #f9f9f9;
 }

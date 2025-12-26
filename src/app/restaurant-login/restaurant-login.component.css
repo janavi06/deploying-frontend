@@ -1,54 +1,46 @@
-/* restaurant-login.component.css */
-.login-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 20px;
+/* Minimal restaurant login CSS
+   - Clean, white card on subtle background
+   - Compact typography and full responsive behavior
+*/
+
+:host { display:block; box-sizing:border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial; }
+
+.login-container{
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+  background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
 }
 
-.login-form {
-  background: white;
-  padding: 2rem;
-  border-radius: 10px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-  width: 100%;
-  max-width: 400px;
+.login-card{
+  width:100%;
+  max-width:420px;
+  background:#fff;
+  border-radius:12px;
+  padding:20px;
+  box-shadow:0 8px 30px rgba(15,23,42,0.06);
 }
 
-.restaurant-info {
-  background: #e3f2fd;
-  border-left: 4px solid #2196f3;
-  padding: 0.75rem;
-  margin-bottom: 1rem;
-  border-radius: 4px;
-}
+.login-header{ display:flex; align-items:center; gap:12px; margin-bottom:8px; }
+.login-title{ font-size:1.05rem; font-weight:700; margin:0; }
+.login-sub{ font-size:0.88rem; color:#6b7280; margin:0 }
 
-.form-group {
-  margin-bottom: 1rem;
-}
+.restaurant-info{ background:#fbfdff; border-left:4px solid #e6f0ff; padding:10px 12px; border-radius:6px; margin-bottom:12px; color:#0b5cff }
 
-.form-group label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
-}
+.form-group{ margin-bottom:12px; }
+.form-group label{ display:block; margin-bottom:6px; font-size:0.9rem; color:#374151 }
+.form-control{ width:100%; padding:10px 12px; border-radius:8px; border:1px solid #eef2f7; font-size:0.95rem }
 
-.form-control {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 1rem;
-}
+.btn{ display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:10px 14px; border-radius:8px; border:none; background:#0b7cff; color:#fff; cursor:pointer; font-size:0.95rem }
+.btn.ghost{ background:transparent; color:#0b7cff; border:1px solid rgba(11,124,255,0.08) }
+.btn-block{ width:100% }
 
-.btn-block {
-  width: 100%;
-  padding: 0.75rem;
-}
+.login-footer{ text-align:center; margin-top:12px; font-size:0.88rem; color:#6b7280 }
 
-.login-footer {
-  margin-top: 1.5rem;
-  text-align: center;
+@media (max-width:480px){
+  .login-card{ padding:14px; border-radius:10px }
+  .login-header{ flex-direction:column; align-items:flex-start; gap:6px }
+  .login-title{ font-size:1rem }
 }

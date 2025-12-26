@@ -1,4 +1,4 @@
-  import { Component, Inject } from '@angular/core';
+  import { Component, Inject,ViewEncapsulation } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef, MatDialogModule } from '@angular/material/dialog';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -20,6 +20,8 @@ interface Product {
   selector: 'app-customization-modal',
   templateUrl: './customization-modal.component.html',
   styleUrls: ['./customization-modal.component.css'],
+    encapsulation: ViewEncapsulation.None,   // 🔴 THIS IS REQUIRED
+
   standalone: true,
   imports: [
     CommonModule,

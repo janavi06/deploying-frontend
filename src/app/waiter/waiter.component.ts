@@ -1,4 +1,4 @@
- import { Component, OnInit } from '@angular/core';
+ import { Component, OnInit , ViewEncapsulation} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders, HttpClientModule } from '@angular/common/http';
@@ -81,6 +81,8 @@ export interface WaiterRequest {
     standalone: true, 
   templateUrl: './waiter.component.html',
   styleUrls: ['./waiter.component.css'],
+    encapsulation: ViewEncapsulation.None ,
+
 
   imports: [CommonModule, FormsModule, HttpClientModule, PendingPaymentsComponent,NewOrderComponent,QRCodeComponent],
 })
@@ -466,10 +468,10 @@ switchPayTab(tab: 'verify' | 'collect') {
       );
 
       if (paymentPreference === 'PayNow') {
-        this.pushAlert('order', `✅ Order #${response.orderID} placed and paid!`);
+        // this.pushAlert('order', `✅ Order #${response.orderID} placed and paid!`);
         // Order goes directly to history
       } else {
-        this.pushAlert('order', `✅ Order #${response.orderID} placed - Payment Pending`);
+        // this.pushAlert('order', `✅ Order #${response.orderID} placed - Payment Pending`);
         // Order goes to pending payments
       }
 
@@ -553,13 +555,13 @@ onNewOrderPlaced(e: {
 }) {
   if (e.paymentPreference === 'PayNow') {
     if (e.paymentStatus === 'created') {
-      this.pushAlert('order', `🆕 Order #${e.orderID} created - Complete payment to confirm`);
+      // this.pushAlert('order', `🆕 Order #${e.orderID} created - Complete payment to confirm`);
     } else if (e.paymentStatus === 'paid') {
-      this.pushAlert('order', `✅ Order #${e.orderID} placed and paid via ${e.paymentMethod}! Check Orders section.`);
+      // this.pushAlert('order', `✅ Order #${e.orderID} placed and paid via ${e.paymentMethod}! Check Orders section.`);
     }
   } else {
     // PayLater orders
-    this.pushAlert('order', ` Order #${e.orderID} placed - Payment pending in Collect tab`);
+    // this.pushAlert('order', ` Order #${e.orderID} placed - Payment pending in Collect tab`);
   }
   
   // Refresh orders to show the new order in the correct section
@@ -780,7 +782,7 @@ setupNotificationPolling(): void {
 
               this.readyOrderSound.play().catch(() => {});
               this.vibrate();
-              this.pushAlert('ready', msg);
+              // this.pushAlert('ready', msg);
 
               this.readyOrderMessages.push({
                 notificationId: n.notificationId,
@@ -1131,7 +1133,7 @@ async testPaymentEndpoints(): Promise<void> {
 
   setTimeout(() => {
     this.activeAlerts = this.activeAlerts.filter(a => a.timestamp !== now);
-  }, 20000); // auto-dismiss after 20s
+  }, 2000); // auto-dismiss after 20s
 }
 
 // Enhanced UPI payment method

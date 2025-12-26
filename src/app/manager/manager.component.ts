@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit,ViewEncapsulation } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -16,6 +16,8 @@ import autoTable from 'jspdf-autotable';
   selector: 'app-manager',
   standalone: true,
   imports: [CommonModule, FormsModule,  InventoryManagementComponent,],
+      encapsulation: ViewEncapsulation.None,   // 🔴 THIS IS REQUIRED
+  
   templateUrl: './manager.component.html',
   styleUrls: ['./manager.component.css'],
 })

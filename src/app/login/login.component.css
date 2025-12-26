@@ -1,73 +1,97 @@
-/* Container */
+/* --- Login Page Wrapper --- */
+.login-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background-color: #f3f4f6; /* Consistent grey background */
+  font-family: 'Inter', -apple-system, sans-serif;
+  padding: 20px;
+}
+
+/* --- Minimalist Form Card --- */
 form {
-    max-width: 400px;
-    margin: 3rem auto;
-    padding: 2rem;
-    background: #ffffff;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    box-sizing: border-box;
-  }
-  
-  /* Form title */
-  form h2 {
-    text-align: center;
-    margin-bottom: 1.5rem;
-    font-size: 1.75rem;
-    color: #333;
-  }
-  
-  /* Labels & inputs */
-  form label {
-    display: block;
-    margin-bottom: 1rem;
-    font-size: 0.9rem;
-    color: #555;
-  }
-  form label input {
-    width: 100%;
-    padding: 0.75rem;
-    margin-top: 0.25rem;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 1rem;
-    box-sizing: border-box;
-  }
-  
-  /* Submit button */
-  form button[type="submit"] {
-    width: 100%;
-    padding: 0.75rem;
-    margin-top: 1rem;
-    background-color: #007BFF;
-    color: #fff;
-    font-size: 1rem;
-    font-weight: 600;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-  }
-  form button[type="submit"]:hover {
-    background-color: #0056b3;
-  }
-  form button[type="submit"]:disabled {
-    background-color: #cccccc;
-    cursor: not-allowed;
-  }
-  
-  /* Bottom text/link */
-  form p {
-    text-align: center;
-    margin-top: 1.5rem;
-    font-size: 0.9rem;
-    color: #666;
-  }
-  form p a {
-    color: #007BFF;
-    text-decoration: none;
-  }
-  form p a:hover {
-    text-decoration: underline;
-  }
-  
+  background: #ffffff;
+  padding: 2rem;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+  width: 100%;
+  max-width: 360px; /* Compact width */
+  border: 1px solid #e2e8f0;
+}
+
+form h2 {
+  margin: 0 0 1.5rem 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1e293b;
+  text-align: center;
+  letter-spacing: -0.02em;
+}
+
+/* --- Form Labels & Inputs --- */
+label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 1rem;
+}
+
+input {
+  display: block;
+  width: 100%;
+  margin-top: 5px;
+  padding: 10px 12px;
+  font-size: 13px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  color: #1e293b;
+  transition: all 0.2s;
+  box-sizing: border-box; /* Ensures padding doesn't break width */
+}
+
+input:focus {
+  outline: none;
+  background: #ffffff;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* --- Shining Action Button --- */
+button {
+  width: 100%;
+  padding: 12px;
+  background-color: #2563eb;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 0.5rem;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+}
+
+button:hover:not(:disabled) {
+  background-color: #1d4ed8;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 15px rgba(37, 99, 235, 0.3);
+}
+
+button:disabled {
+  background-color: #cbd5e1;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* --- Footer Text --- */
+form p {
+  margin-top: 1.5rem;
+  font-size: 11px;
+  color: #94a3b8;
+  text-align: center;
+  line-height: 1.5;
+}

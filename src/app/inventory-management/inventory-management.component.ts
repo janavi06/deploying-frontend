@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit,ViewEncapsulation } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { CommonModule, DecimalPipe, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -50,6 +50,8 @@ enum StockTransactionType {
   selector: 'app-inventory-management',
   templateUrl: './inventory-management.component.html',
   styleUrls: ['./inventory-management.component.css'],
+      encapsulation: ViewEncapsulation.None,   // 🔴 THIS IS REQUIRED
+
   imports: [CommonModule, FormsModule], // Add required imports here
   providers: [DecimalPipe, DatePipe] // Add pipe providers
 })

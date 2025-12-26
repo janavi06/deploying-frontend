@@ -1,215 +1,63 @@
-/* ====================
-   Container + Modal Styling
-   ==================== */
+/* Minimal customization modal CSS
+   - White background, compact typography
+   - Clear alignment, simple controls, responsive
+*/
+
+:host { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial; }
+
 .customization-modal {
-  background-color: #ffffff;
-  border-radius: 16px;
-  width: 100%;
-  max-width: 520px;
-  /* Add a subtle drop‐shadow so it pops out */
-  box-shadow: 0px 4px 16px rgba(0, 0, 0, 0.1);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  width:100%;
+  max-width:520px;
+  background:#fff;
+  border-radius:12px;
+  overflow:hidden;
+  box-shadow:0 8px 30px rgba(15,23,42,0.06);
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  padding:0;
 }
 
-/* ====================
-   HEADER
-   ==================== */
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 24px;
+.modal-header{
+  display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 16px; border-bottom:1px solid #f3f5f7;
+}
+.header-left{ display:flex; align-items:center; gap:8px; }
+.item-name{ font-size:0.97rem; font-weight:600; color:#111827 }
+.item-price{ font-size:0.92rem; color:#374151 }
+.close-btn{ background:transparent; border:none; font-size:1.05rem; color:#6b7280; cursor:pointer }
+.close-btn:focus{ outline:none; box-shadow:0 0 0 4px rgba(11,124,255,0.06) }
+
+.modal-title-text{ padding:0 16px; font-size:1rem; margin:0; color:#111827 }
+
+.modal-body{ padding:12px 16px; display:flex; flex-direction:column; gap:10px }
+.section-label{ font-size:0.88rem; color:#6b7280; margin:0 }
+
+.customization-options{ background:#fff; border-radius:8px; padding:8px; display:flex; flex-direction:column; gap:8px; border:1px solid #f3f5f7 }
+.option-item{ display:flex; align-items:center; gap:10px; padding:8px; border-radius:8px }
+
+/* custom radio */
+.checkmark{ width:16px; height:16px; border-radius:50%; border:2px solid #d1d5db; display:inline-block; position:relative; flex:0 0 16px }
+.option-item input[type="radio"]{ display:none }
+.option-item input[type="radio"]:checked + .checkmark{ border-color:#0b7cff }
+.option-item input[type="radio"]:checked + .checkmark::after{ content:""; position:absolute; left:3px; top:3px; width:6px; height:6px; background:#0b7cff; border-radius:50% }
+
+.option-name{ flex:1; font-size:0.94rem; color:#111827 }
+.option-price{ font-size:0.9rem; color:#374151 }
+
+.modal-footer{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 16px; border-top:1px solid #f3f5f7 }
+.footer-left{ display:flex; flex-direction:column }
+.total-price{ font-weight:600; font-size:1rem; color:#111827 }
+.view-customized{ font-size:0.85rem; color:#0b7cff; text-decoration:none }
+.view-customized:hover{ text-decoration:underline }
+
+.add-to-cart-btn{ background:#0b7cff; color:#fff; border:none; border-radius:8px; padding:9px 18px; font-weight:600; cursor:pointer }
+.add-to-cart-btn:disabled{ background:#cbd5e1; cursor:not-allowed }
+
+.empty{ padding:12px; text-align:center; color:#6b7280 }
+
+@media (max-width:480px){
+  .customization-modal{ max-width:96vw; border-radius:10px }
+  .modal-header, .modal-body, .modal-footer{ padding-left:12px; padding-right:12px }
+  .modal-title-text{ font-size:0.95rem }
 }
 
-.header-left {
-  display: flex;
-  align-items: center;
-  font-size: 1rem;
-  color: #333333;
-}
-
-.header-left .item-name {
-  font-weight: 600;
-}
-
-.header-left .dot-separator {
-  margin: 0 8px;
-  color: #777777;
-}
-
-.header-left .item-price {
-  font-weight: 600;
-  color: #333333;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  font-size: 1.25rem;
-  line-height: 1;
-  cursor: pointer;
-  color: #777777;
-}
-
-/* Change color on hover of close */
-.close-btn:hover {
-  color: #333333;
-}
-
-/* ====================
-   TITLE & DIVIDER
-   ==================== */
-.modal-title-text {
-  padding: 0 24px;
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: #222222;
-  line-height: 1.4;
-  margin-bottom: 8px;
-}
-
-.divider {
-  border: none;
-  border-top: 1px solid #e0e0e0;
-  margin: 0 24px;
-}
-
-/* ====================
-   BODY (Quantity + Options)
-   ==================== */
-.modal-body {
-  padding: 16px 24px;
-}
-
-.section-label {
-  font-size: 0.9rem;
-  font-weight: 500;
-  color: #555555;
-  margin-bottom: 12px;
-}
-
-/* Container wrapping all options */
-.customization-options {
-  background-color: #f9f9f9;
-  border-radius: 12px;
-  padding: 12px;
-}
-
-/* Each option row */
-.option-item {
-  margin-bottom: 8px;
-}
-
-.option-item:last-child {
-  margin-bottom: 0;
-}
-
-/* Hide the native radio input */
-.option-item input[type="radio"] {
-  display: none;
-}
-
-/* Custom circle (checkmark) */
-.option-item .checkmark {
-  width: 18px;
-  height: 18px;
-  border: 2px solid #4caf50; /* green border for "veg" icon style */
-  border-radius: 50%;
-  display: inline-block;
-  margin-right: 12px;
-  position: relative;
-}
-
-/* When the radio is checked, we draw the orange dot inside */
-.option-item input[type="radio"]:checked + .checkmark::after {
-  content: '';
-  width: 10px;
-  height: 10px;
-  background-color: #ff5722; /* orange / #FF5722 to match the “selected” circle in your image */
-  border-radius: 50%;
-  position: absolute;
-  top: 2px;
-  left: 2px;
-}
-
-/* The label text, flex container to space out name + price */
-.option-item label {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  cursor: pointer;
-}
-
-/* Option name (e.g. “Half”, “Full”) */
-.option-item .option-name {
-  flex: 1;
-  font-size: 0.95rem;
-  color: #333333;
-}
-
-/* Option price on the far right */
-.option-item .option-price {
-  font-size: 0.95rem;
-  font-weight: 500;
-  color: #333333;
-}
-
-/* ====================
-   FOOTER
-   ==================== */
-.modal-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 24px;
-  background-color: #ffffff;
-  border-top: 1px solid #e0e0e0;
-}
-
-/* Left side (total price + link) */
-.footer-left {
-  display: flex;
-  flex-direction: column;
-}
-
-.footer-left .total-price {
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: #333333;
-}
-
-.footer-left .view-customized {
-  font-size: 0.85rem;
-  color: #ff5722; /* same orange used for selected dot */
-  text-decoration: none;
-  margin-top: 4px;
-}
-
-.footer-left .view-customized:hover {
-  text-decoration: underline;
-}
-
-/* Right side “Add to cart” button */
-.add-to-cart-btn {
-  background-color: #22c55e; /* green (Tailwind “emerald-500”) */
-  color: white;
-  font-size: 0.95rem;
-  font-weight: 600;
-  border: none;
-  border-radius: 8px;
-  padding: 10px 24px;
-  cursor: pointer;
-}
-
-/* Disabled state */
-.add-to-cart-btn:disabled {
-  background-color: #a3a3a3;
-  cursor: not-allowed;
-}
-
-.add-to-cart-btn:not(:disabled):hover {
-  background-color: #16a34a; /* a slightly darker green on hover */
-}
