@@ -1,0 +1,112 @@
+<div class="reports-container">
+
+  <!-- 🔝 TOP SCROLLING NAVBAR -->
+  <div class="reports-navbar">
+    <button (click)="setSection('overview')" [class.active]="activeSection==='overview'">
+      Overview
+    </button>
+    <button (click)="setSection('sales')" [class.active]="activeSection==='sales'">
+      Sales
+    </button>
+    <button (click)="setSection('orders')" [class.active]="activeSection==='orders'">
+      Orders
+    </button>
+    <button (click)="setSection('items')" [class.active]="activeSection==='items'">
+      Items
+    </button>
+    <button (click)="setSection('categories')" [class.active]="activeSection==='categories'">
+      Categories
+    </button>
+  </div>
+
+  <!-- 📅 DATE FILTER -->
+  <div class="date-filter" *ngIf="activeSection !== 'overview'">
+    <input type="date" [(ngModel)]="startDate">
+    <input type="date" [(ngModel)]="endDate">
+    <button (click)="setSection(activeSection)">Apply</button>
+  </div>
+
+  <!-- 📊 CONTENT -->
+
+  <!-- OVERVIEW -->
+  <section *ngIf="activeSection === 'overview'" class="cards">
+    <div class="card">
+      <label>Live Orders</label>
+      <span>{{ overview.liveOrders }}</span>
+    </div>
+    <div class="card">
+      <label>Today Revenue</label>
+      <span>₹{{ overview.todayRevenue }}</span>
+    </div>
+    <div class="card">
+      <label>Orders Today</label>
+      <span>{{ overview.todayOrders }}</span>
+    </div>
+    <div class="card">
+      <label>Avg Order Value</label>
+      <span>₹{{ overview.avgOrderValue }}</span>
+    </div>
+  </section>
+
+  <!-- SALES -->
+  <section *ngIf="activeSection === 'sales'" class="table-box">
+    <table>
+      <tr><td>Total Orders</td><td>{{ sales.totalOrders }}</td></tr>
+      <tr><td>Gross Revenue</td><td>₹{{ sales.grossRevenue }}</td></tr>
+      <tr><td>Discount</td><td>₹{{ sales.discount }}</td></tr>
+      <tr><td>Tax</td><td>₹{{ sales.tax }}</td></tr>
+      <tr><td>Net Revenue</td><td>₹{{ sales.netRevenue }}</td></tr>
+    </table>
+  </section>
+
+  <!-- ORDERS -->
+  <section *ngIf="activeSection === 'orders'" class="table-box">
+    <table>
+      <tr><td>Total Orders</td><td>{{ orders.totalOrders }}</td></tr>
+      <tr><td>Completed</td><td>{{ orders.completedOrders }}</td></tr>
+      <tr><td>Cancelled</td><td>{{ orders.cancelledOrders }}</td></tr>
+      <tr><td>Avg Duration (min)</td><td>{{ orders.avgOrderMinutes }}</td></tr>
+    </table>
+  </section>
+
+  <!-- ITEMS -->
+  <section *ngIf="activeSection === 'items'" class="table-box">
+    <table>
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th>Qty Sold</th>
+          <th>Revenue</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let i of items">
+          <td>{{ i.itemName }}</td>
+          <td>{{ i.quantitySold }}</td>
+          <td>₹{{ i.revenue }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- CATEGORIES -->
+  <section *ngIf="activeSection === 'categories'" class="table-box">
+    <table>
+      <thead>
+        <tr>
+          <th>Category</th>
+          <th>Quantity</th>
+          <th>Revenue</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let c of categories">
+          <td>{{ c.category }}</td>
+          <td>{{ c.totalQuantity }}</td>
+          <td>₹{{ c.revenue }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+</div>

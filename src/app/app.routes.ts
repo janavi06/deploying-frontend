@@ -15,6 +15,8 @@ import { InventoryManagementComponent } from './inventory-management/inventory-m
 import { RestaurantLoginComponent } from './restaurant-login/restaurant-login.component';
 import { RestaurantSelectionComponent } from './restaurant-selection/restaurant-selection.component';
 import { UnauthorizedComponent } from './unauthorized/unauthorized.component';
+import { ManagerReportsComponent } from './manager-reports/manager-reports.component';
+
 
 export const routes: Routes = [
   // Public routes
@@ -81,7 +83,9 @@ export const routes: Routes = [
   { path: 'pending-payments', component: PendingPaymentsComponent },
   { path: 'new-order', component: NewOrderComponent },
   { path: 'inventory', component: InventoryManagementComponent },
+    { path: 'manager-reports', component: ManagerReportsComponent },
+
   
   // Fallback route
   { path: '**', redirectTo: '/menu' }
-];
+]; 
