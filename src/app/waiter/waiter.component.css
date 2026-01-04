@@ -4,13 +4,16 @@
   --primary: #2563eb;       /* Electric Blue */
   --success: #10b981;       /* Emerald Green */
   --bg-white: #ffffff;
-  --bg-off: #fbfcfd;
+  --bg-off: #f8fafc;
   --text-dark: #0f172a;
   --text-light: #64748b;
-  --border-soft: #f1f5f9;
+  --border-soft: #e2e8f0;
   --radius-sm: 8px;
   --radius-md: 12px;
-  --shadow-subtle: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --radius-lg: 16px;
+  --shadow-subtle: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
 body {
@@ -100,23 +103,34 @@ body {
   align-items: center;
   gap: 1rem;
   margin-bottom: 2rem;
+  padding: 1rem 0;
   background: var(--bg-white);
+  border-bottom: 1px solid var(--border-soft);
 }
 
 .sidebar-toggle {
-  background: none;
+  background: var(--bg-off);
   border: 1px solid var(--border-soft);
-  padding: 5px 10px;
-  border-radius: 6px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   font-size: 1.2rem;
+  transition: all 0.2s ease;
+  color: var(--text-dark);
+}
+
+.sidebar-toggle:hover {
+  background: var(--border-soft);
+  border-color: var(--primary);
+  color: var(--primary);
 }
 
 .dashboard-header h1 {
-  font-size: 1.1rem;
+  font-size: 1.25rem;
   font-weight: 700;
   margin: 0;
   letter-spacing: -0.02em;
+  color: var(--text-dark);
 }
 
 /* --- Shining Order Cards --- */
@@ -124,54 +138,88 @@ body {
   background: #ffffff;
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-md);
-  padding: 1rem;
+  padding: 1.25rem;
   margin-bottom: 1rem;
   box-shadow: var(--shadow-subtle);
+  transition: all 0.2s ease;
+}
+
+.order-mini-card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
 }
 
 .order-header {
-  border-bottom: 1px solid #f8fafc;
-  padding-bottom: 8px;
-  margin-bottom: 10px;
+  border-bottom: 1px solid var(--border-soft);
+  padding-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .order-id {
   color: var(--primary);
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: 0.875rem;
+  letter-spacing: 0.01em;
 }
 
 /* --- Service Requests (The "Service Alert") --- */
 .notification-panel {
-  background: #f0f9ff;
+  background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%);
   border-left: 4px solid var(--primary);
-  border-radius: var(--radius-sm);
-  padding: 1rem;
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
   margin-bottom: 1.5rem;
+  box-shadow: var(--shadow-subtle);
+}
+
+.notification-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
 }
 
 .notification-header h3 {
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   margin: 0;
   color: var(--primary);
+  font-weight: 600;
+}
+
+.clear-btn {
+  background: transparent;
+  border: 1px solid var(--primary);
+  color: var(--primary);
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.clear-btn:hover {
+  background: var(--primary);
+  color: white;
 }
 
 /* --- Modals & Overlays --- */
 .payment-modal {
   background: white;
-  border-radius: 20px;
+  border-radius: var(--radius-lg);
   padding: 2rem;
-  max-width: 400px;
+  max-width: 420px;
   width: 90%;
   margin: auto;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border-soft);
 }
 
 .payment-backdrop {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(15, 23, 42, 0.3);
-  backdrop-filter: blur(4px);
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(6px);
   z-index: 1050;
 }
 
@@ -179,12 +227,17 @@ body {
 .badge {
   font-size: 11px;
   font-weight: 600;
-  padding: 2px 8px;
+  padding: 4px 10px;
   border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  letter-spacing: 0.01em;
 }
 
-.badge-success { background: #ecfdf5; color: #059669; }
-.badge-warning { background: #fffbeb; color: #d97706; }
+.badge-success { background: #d1fae5; color: #065f46; }
+.badge-warning { background: #fef3c7; color: #92400e; }
+.badge-info { background: #dbeafe; color: #1e40af; }
+.badge-danger { background: #fee2e2; color: #991b1b; }
 
 /* --- Responsive Helpers --- */
 @media (max-width: 768px) {
@@ -235,3 +288,407 @@ body {
 .alert-ready { background: #10b981; }    /* Success Green */
 .alert-payment { background: #f59e0b; }  /* Amber Warning */
 .alert-error { background: #ef4444; }    /* Danger Red */
+
+/* --- Table Navigation Styles --- */
+.table-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 12px 0;
+  margin-bottom: 1rem;
+}
+
+.table-card {
+  cursor: pointer;
+  padding: 12px 20px;
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-off);
+  border: 1.5px solid var(--border-soft);
+  font-weight: 600;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  min-width: 100px;
+  justify-content: center;
+  color: var(--text-dark);
+}
+
+.table-card:hover {
+  background-color: #f1f5f9;
+  border-color: var(--primary);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-subtle);
+}
+
+/* Blue background for active table */
+.table-card.active {
+  background-color: var(--primary) !important;
+  color: white !important;
+  border-color: #1d4ed8;
+  box-shadow: 0 4px 8px rgba(37, 99, 235, 0.25);
+}
+
+.table-card .badge {
+  background-color: rgba(0, 0, 0, 0.08);
+  color: inherit;
+  font-size: 10px;
+}
+
+.table-card.active .badge {
+  background-color: rgba(255, 255, 255, 0.25);
+  color: white;
+}
+
+/* --- Order Card & Action Styles --- */
+.order-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-top: 1px solid var(--border-soft);
+  padding-top: 14px;
+  margin-top: 12px;
+}
+
+/* Align buttons to the right and make them small */
+.action-row .d-flex {
+  justify-content: flex-end !important;
+  gap: 6px !important;
+}
+
+.order-actions .btn-sm {
+  font-size: 0.75rem;
+  padding: 6px 12px;
+  flex: 0 1 auto !important;
+  min-width: 75px;
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.order-actions .btn-sm:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-subtle);
+}
+
+/* Compact Badge for right alignment */
+.order-actions .badge {
+  margin-left: auto; 
+  align-self: center;
+  padding: 5px 10px;
+}
+
+/* Item List Styling */
+.order-items {
+  list-style: none;
+  padding-left: 0;
+  margin-bottom: 12px;
+}
+
+.order-items li {
+  padding: 6px 0;
+  border-bottom: 1px solid #f8fafc;
+}
+
+.order-items li:last-child {
+  border-bottom: none;
+}
+
+.item-main {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.875rem;
+  color: var(--text-dark);
+  font-weight: 500;
+}
+
+.item-price {
+  color: var(--success);
+  font-weight: 600;
+}
+
+.customizations-list {
+  margin-top: 4px;
+  padding-left: 12px;
+}
+
+.customization-item {
+  font-size: 0.75rem;
+  color: var(--text-light);
+  font-style: italic;
+}
+
+.order-payment-info {
+  padding-top: 10px;
+  margin-top: 10px;
+}
+
+.order-time {
+  font-size: 0.75rem;
+  color: var(--text-light);
+}
+
+/* --- Service Requests Section --- */
+.service-requests {
+  background: var(--bg-white);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-subtle);
+}
+
+.sr-heading {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 1.25rem;
+  color: var(--text-dark);
+}
+
+.sr-empty {
+  color: var(--text-light);
+  font-style: italic;
+  text-align: center;
+  padding: 2rem;
+}
+
+.sr-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sr-item {
+  background: var(--bg-off);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+  transition: all 0.2s ease;
+}
+
+.sr-item:hover {
+  background: #f1f5f9;
+  border-color: var(--primary);
+  box-shadow: var(--shadow-subtle);
+}
+
+.sr-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sr-info strong {
+  color: var(--primary);
+  font-size: 0.875rem;
+}
+
+.sr-message {
+  color: var(--text-dark);
+  font-size: 0.875rem;
+}
+
+.sr-meta {
+  margin-top: 6px;
+}
+
+.sr-time {
+  color: var(--text-light);
+  font-size: 0.75rem;
+}
+
+/* --- Order History Section --- */
+.order-history {
+  background: var(--bg-white);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-subtle);
+}
+
+.order-history .table {
+  font-size: 0.875rem;
+  margin-top: 1rem;
+}
+
+.order-history .table thead th {
+  background: var(--bg-off);
+  color: var(--text-dark);
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 12px;
+  border-bottom: 2px solid var(--border-soft);
+}
+
+.order-history .table tbody td {
+  padding: 12px;
+  border-bottom: 1px solid var(--border-soft);
+  vertical-align: middle;
+}
+
+.order-history .table tbody tr:hover {
+  background: var(--bg-off);
+}
+
+/* --- Pending Payments Section --- */
+.pending-payments {
+  background: var(--bg-white);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-subtle);
+}
+
+/* --- Payment Option Cards --- */
+.payment-option-card {
+  border: 2px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: var(--bg-white);
+}
+
+.payment-option-card:hover {
+  border-color: var(--primary);
+  background: #f0f9ff;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.payment-option-card.selected {
+  border-color: var(--primary);
+  background: #eff6ff;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.payment-icon {
+  margin-bottom: 0.75rem;
+  color: var(--primary);
+}
+
+.payment-label {
+  font-size: 1rem;
+  color: var(--text-dark);
+  margin-bottom: 4px;
+}
+
+/* --- Floating Alerts Container --- */
+.floating-alerts-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.floating-alert {
+  pointer-events: auto;
+  min-width: 280px;
+  max-width: 400px;
+  padding: 12px 16px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  color: white;
+  box-shadow: var(--shadow-lg);
+  animation: alertSlideIn 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+}
+
+.floating-alert.floating-order {
+  background: var(--primary);
+}
+
+.floating-alert.floating-ready {
+  background: var(--success);
+}
+
+.floating-alert.floating-payment {
+  background: #f59e0b;
+}
+
+/* --- Notification Items --- */
+.notification-item {
+  background: white;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+
+.notification-item:hover {
+  box-shadow: var(--shadow-subtle);
+  border-color: var(--primary);
+}
+
+.notification-content strong {
+  color: var(--primary);
+  font-size: 0.875rem;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.notification-content p {
+  color: var(--text-dark);
+  font-size: 0.875rem;
+  margin: 4px 0;
+}
+
+.notification-content small {
+  color: var(--text-light);
+  font-size: 0.75rem;
+}
+
+.notification-action {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 6px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.notification-action:hover {
+  background: #1d4ed8;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-subtle);
+}
+
+/* --- New Order Embedded --- */
+.new-order-embedded {
+  background: var(--bg-white);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-subtle);
+}
+
+/* --- Waiter Table Layout --- */
+.waiter-table-layout {
+  background: var(--bg-white);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-subtle);
+}
+
+.order-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1rem;
+}
+
+@media (max-width: 768px) {
+  .order-card-grid {
+    grid-template-columns: 1fr;
+  }
+}

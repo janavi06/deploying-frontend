@@ -131,7 +131,9 @@
     <div class="cart-head">
       <h3>Cart ({{ cart.length }})</h3>
       <div style="display:flex; align-items:center; gap:12px;">
-        <strong>₹{{ total | number:'1.2-2' }}</strong>
+<strong>
+  ₹{{ (orderID ? orderTotal : cartPreviewTotal) | number:'1.2-2' }}
+</strong>
         <button class="cart-toggle" (click)="cartOpen = !cartOpen">
           {{ cartOpen ? 'Hide' : 'View' }} ▲▼
         </button>
@@ -146,12 +148,7 @@
         <span class="chip xs" *ngFor="let chip of c.customisations">{{ chip }}</span>
       </div>
       
-      <div class="price-breakdown text-muted small" *ngIf="c.customisations.length">
-        <div>
-          Base: ₹{{ getProductBasePrice(c.productID) | number:'1.2-2' }} 
-          + Customizations: ₹{{ getCustomizationPrice(c) | number:'1.2-2' }}
-        </div>
-      </div>
+
     </div>
 
     <div class="qty">
@@ -159,8 +156,10 @@
       <span>{{ c.quantity }}</span>
       <button class="qbtn sm" (click)="inc(c)">＋</button>
     </div>
+<div class="amt">
+  ₹{{ (c.unitPrice ?? 0) * (c.quantity ?? 0) | number:'1.2-2' }}
+</div>
 
-    <div class="amt">₹{{ c.unitPrice * c.quantity | number:'1.2-2' }}</div>
     <button class="del" (click)="remove(i)">✕</button>
   </div>
 </div>
@@ -203,10 +202,10 @@
       <div class="options-list">
         <div class="option-item" *ngFor="let opt of modalOptions; let i = index">
           <label class="option-label">
-            <input type="checkbox" 
-                   [(ngModel)]="opt.selected" 
-                   (change)="recalcModalPrice()"
-                   [id]="'opt-' + i">
+<input type="checkbox" 
+       [(ngModel)]="opt.selected"
+       [id]="'opt-' + i">
+
             <span class="option-name">{{ opt.name }}</span>
             <span class="option-price" *ngIf="opt.fixedPrice > 0">
               +₹{{ opt.fixedPrice }}
@@ -219,14 +218,12 @@
       </div>
     </div>
 
-    <div class="price-summary">
-      <p><strong>Base Price: ₹{{ modalProduct?.price || 0 }}</strong></p>
-      <p *ngIf="getSelectedOptionsTotal() > 0">
-        <strong>Customizations: +₹{{ getSelectedOptionsTotal() }}</strong>
-      </p>
-      <p><strong>Quantity: {{ modalQty }}</strong></p>
-      <p class="total-line"><strong>Line total: ₹{{ modalLineTotal | number:'1.2-2' }}</strong></p>
-    </div>
+  <div class="price-summary">
+  <p class="text-muted small">
+    Final price will be calculated automatically
+  </p>
+</div>
+
 
     <div class="modal-actions">
       <button class="btn ghost" (click)="closeModal()">Cancel</button>

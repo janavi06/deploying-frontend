@@ -1,13 +1,9 @@
 import { Component, EventEmitter, Input, OnDestroy, OnInit, Output, ChangeDetectorRef } from '@angular/core';
-import { CommonModule }  from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
-
-// Material dialog + your modal component
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { CustomizationModalComponent } from '../customization-modal/customization-modal.component';
-
-// other existing imports
 import { QRCodeComponent } from 'angularx-qrcode';
 import { environment } from '../../environments/environment';
 
@@ -38,10 +34,14 @@ export interface CartItem {
   productID: number;
   productName: string;
   quantity: number;
-  unitPrice: number;
+
   customizationOptionIds: number[];
   customisations: string[];
+
+  // 🔒 DISPLAY ONLY – set AFTER backend response
+  unitPrice?: number;
 }
+
 
 export interface Category {
   categoryID: number;
@@ -69,12 +69,12 @@ export class NewOrderComponent implements OnInit, OnDestroy {
   @Input() restaurantId!: number;
   @Input() showPaymentOptions: boolean = false;
   @Output() closed = new EventEmitter<void>();
-  @Output() orderPlaced = new EventEmitter<{ 
-    orderID: number; 
-    paymentStatus?: string; 
+  @Output() orderPlaced = new EventEmitter<{
+    orderID: number;
+    paymentStatus?: string;
     paymentMethod?: string;
-    paymentPreference?: string 
-  }>(); 
+    paymentPreference?: string
+  }>();
 
   tables: any[] = [];
   products: Product[] = [];
@@ -98,9 +98,8 @@ export class NewOrderComponent implements OnInit, OnDestroy {
   modalProduct: Product | null = null;
   modalOptions: CustomisationOption[] = [];
   modalQty = 1;
-  modalLineTotal = 0;
 
-  paymentStage: 0|1|2|3 = 0;  
+  paymentStage: 0 | 1 | 2 | 3 = 0;
   orderID = 0;
   orderTotal = 0;
   method: '' | 'Cash' | 'UPI' = '';
@@ -111,45 +110,37 @@ export class NewOrderComponent implements OnInit, OnDestroy {
   upiTxnId = '';
   upiUri = '';
   paymentId: number | null = null;
-// In your NewOrderComponent class
-restaurantDetails: any = {};
   quantityMap: { [id: number]: number } = {};
   paymentPreference: 'PayNow' | 'PayLater' = 'PayLater';
 
   private readonly API = environment.apiUrl;
-  private readonly PRINT_API = 'http://localhost:9000/api/print'; // ✅ ADD PRINT API
 
   constructor(
     private http: HttpClient,
     private dialog: MatDialog,
     private cd: ChangeDetectorRef
-  ) {}
+  ) { }
 
-async ngOnInit(): Promise<void> {
-  if (!this.restaurantId) { 
-    alert('Restaurant ID missing'); 
-    return; 
+  async ngOnInit(): Promise<void> {
+    if (!this.restaurantId) {
+      alert('Restaurant ID missing');
+      return;
+    }
+    this.http.get<any[]>(`${this.API}/restauranttables?restaurantId=${this.restaurantId}`)
+      .subscribe(t => this.tables = t);
+
+    await Promise.all([
+      this.fetchCategories(),
+      this.fetchSubCategories(),
+      this.fetchMenuItems()
+    ]);
+
+    setTimeout(() => {
+      this.debugCustomizationOptions();
+    }, 1000);
   }
 
-  // Fetch restaurant details first
-  await this.fetchRestaurantDetails();
-
-  this.http.get<any[]>(`${this.API}/restauranttables?restaurantId=${this.restaurantId}`)
-           .subscribe(t => this.tables = t);
-
-  await Promise.all([
-    this.fetchCategories(),
-    this.fetchSubCategories(),
-    this.fetchMenuItems()
-  ]);
-  
-  setTimeout(() => {
-    this.debugCustomizationOptions();
-  }, 1000);
-}
-
-
-  ngOnDestroy(): void {}
+  ngOnDestroy(): void { }
 
   toggleSub(sub: SubCategory) { sub.open = !sub.open; }
   goBack() { this.closed.emit(); }
@@ -171,7 +162,6 @@ async ngOnInit(): Promise<void> {
         OrderItems: this.cart.map(c => ({
           productID: c.productID,
           quantity: c.quantity,
-          unitPrice: c.unitPrice,
           customizationOptionIds: c.customizationOptionIds || []
         }))
       };
@@ -182,9 +172,16 @@ async ngOnInit(): Promise<void> {
         `${this.API}/order/generate?tableNo=${this.selectedTable}&restaurantId=${this.restaurantId}&source=waiter&paymentPreference=${this.paymentPreference}`,
         orderPayload
       ).toPromise();
+this.orderTotal = gen.totalAmount ?? 0;
 
       this.orderID = gen.orderID;
-      
+      await this.http.post(
+        `${this.API}/order/${this.orderID}/confirm?restaurantId=${this.restaurantId}`,
+        {}
+      ).toPromise();
+
+      console.log('🔥 Order confirmed → KOT should print now');
+
       console.log('✅ Order created with details:', {
         orderID: this.orderID,
         paymentPreference: this.paymentPreference,
@@ -193,23 +190,22 @@ async ngOnInit(): Promise<void> {
       });
 
       if (this.paymentPreference === 'PayNow') {
-        this.orderTotal = this.total;
         this.paymentStage = 1;
         this.busy = false;
-        
-        this.orderPlaced.emit({ 
+
+        this.orderPlaced.emit({
           orderID: this.orderID,
           paymentStatus: 'created',
           paymentPreference: 'PayNow'
         });
-        
+
       } else {
-        this.orderPlaced.emit({ 
+        this.orderPlaced.emit({
           orderID: this.orderID,
           paymentStatus: 'pending',
           paymentPreference: 'PayLater'
         });
-        
+
         this.resetAndClose();
       }
 
@@ -218,60 +214,28 @@ async ngOnInit(): Promise<void> {
       this.busy = false;
     }
   }
-private async fetchRestaurantDetails(): Promise<void> {
-  try {
-    this.restaurantDetails = await this.http.get<any>(
-      `${this.API}/restaurant/${this.restaurantId}/details`
-    ).toPromise();
-    
-    console.log('🏪 Restaurant details loaded:', this.restaurantDetails);
-  } catch (error) {
-    console.error('❌ Error fetching restaurant details:', error);
-    // Set default values if fetch fails
-    this.restaurantDetails = {
-      name: 'Restaurant',
-      address: 'Address not available'
-    };
-  }
-}
 
   private buildUpiUri(pa: string, pn: string, am: number, tr: string, tn: string = 'ScanUI Order'): string {
     const enc = encodeURIComponent;
     const amt = (am ?? 0).toFixed(2);
     return `upi://pay?pa=${enc(pa)}&pn=${enc(pn)}&am=${enc(amt)}&tr=${enc(tr)}&tn=${enc(tn)}&cu=INR`;
   }
+  private async printOrderBill(orderId: number): Promise<void> {
+    try {
+      console.log('🖨️ Requesting backend to print bill for order:', orderId);
 
-  // ✅ ADD: Print bill method
-private async printOrderBill(orderId: number): Promise<void> {
-  try {
-    console.log('🖨️ Printing bill for order:', orderId);
-    console.log('🏪 Using restaurant details:', this.restaurantDetails);
-    
-    const printData = {
-      "Type": "BILL",
-      "PrinterName": "RP327 Printer",
-      "RestaurantName": this.restaurantDetails.name || "Restaurant",
-      "RestaurantAddress": this.restaurantDetails.address || "Address not available",
-      "Order": {
-        "Items": this.cart.map(item => ({
-          "Name": item.productName,
-          "Qty": item.quantity,
-          "Price": item.unitPrice
-        })),
-        "Total": this.total
-      }
-    };
+      await this.http.post(
+        `${this.API}/order/${orderId}/print-bill?restaurantId=${this.restaurantId}`,
+        {}
+      ).toPromise();
 
-    const response = await this.http.post(this.PRINT_API, printData).toPromise();
-    console.log('✅ Print successful:', response);
-    
-  } catch (error) {
-    console.error('❌ Print failed:', error);
-    // Don't throw error - continue with payment completion
+      console.log('✅ Backend accepted print request');
+    } catch (error) {
+      console.error('❌ Backend print failed:', error);
+    }
   }
-}
 
-  updateQuantity(item: Product, delta: number) {
+   updateQuantity(item: Product, delta: number) {
     item.quantity = Math.max(0, (item.quantity || 0) + delta);
     this.quantityMap[item.productID] = item.quantity;
 
@@ -289,9 +253,10 @@ private async printOrderBill(orderId: number): Promise<void> {
         productID: item.productID,
         productName: item.productName,
         quantity: item.quantity,
-        unitPrice: item.price,
         customizationOptionIds: [],
-        customisations: []
+        customisations: [],
+              unitPrice: item.price   // ✅ FIX
+
       });
     }
   }
@@ -317,10 +282,10 @@ private async printOrderBill(orderId: number): Promise<void> {
   getProductsForSelection() {
     let list = this.products;
 
-    if (this.selectedCategoryID)   list = list.filter(p => p.categoryID === this.selectedCategoryID);
+    if (this.selectedCategoryID) list = list.filter(p => p.categoryID === this.selectedCategoryID);
     if (this.selectedSubCategoryID) list = list.filter(p => p.subCategoryID === this.selectedSubCategoryID);
 
-    if (this.selectedFilter === 'veg')    list = list.filter(p => p.isVeg);
+    if (this.selectedFilter === 'veg') list = list.filter(p => p.isVeg);
     if (this.selectedFilter === 'nonveg') list = list.filter(p => !p.isVeg);
 
     const q = this.searchTerm.trim().toLowerCase();
@@ -354,7 +319,7 @@ private async printOrderBill(orderId: number): Promise<void> {
 
         this.products = apiProducts.map(m => {
           const customizationOptions = m.customizationOptions || m.CustomizationOptions || [];
-          
+
           const product: Product = {
             productID: m.productID,
             productName: m.productName,
@@ -376,7 +341,7 @@ private async printOrderBill(orderId: number): Promise<void> {
           };
 
           if (customizationOptions.length > 0) {
-            console.log(`🎯 Product "${product.productName}" has ${customizationOptions.length} customization options:`, customizationOptions);
+            console.log(` Product "${product.productName}" has ${customizationOptions.length} customization options:`, customizationOptions);
           }
 
           return product;
@@ -385,9 +350,9 @@ private async printOrderBill(orderId: number): Promise<void> {
         this.assignProductsToCategories();
         this.assignProductsToSubCategories();
         this.debugCustomizationOptions();
-        
+
       }).catch(error => {
-        console.error('❌ Error fetching menu items:', error);
+        console.error(' Error fetching menu items:', error);
       });
   }
 
@@ -418,7 +383,7 @@ private async printOrderBill(orderId: number): Promise<void> {
     let list = this.products;
     if (catId) list = list.filter(p => p.categoryID === catId);
     if (subId) list = list.filter(p => p.subCategoryID === subId);
-    if (this.selectedFilter === 'veg')    list = list.filter(p => p.isVeg);
+    if (this.selectedFilter === 'veg') list = list.filter(p => p.isVeg);
     if (this.selectedFilter === 'nonveg') list = list.filter(p => !p.isVeg);
     const q = this.searchTerm.trim().toLowerCase();
     if (q) list = list.filter(p =>
@@ -427,16 +392,10 @@ private async printOrderBill(orderId: number): Promise<void> {
     return list;
   }
 
-  getSelectedOptionsTotal(): number {
-    if (!this.modalOptions) return 0;
-    return this.modalOptions
-      .filter(o => o.selected)
-      .reduce((sum, opt) => sum + opt.fixedPrice, 0);
-  }
-
+ 
   debugCustomizationOptions() {
     console.log('=== 🔧 Customization Options Detailed Debug ===');
-    
+
     this.products.forEach((product, index) => {
       const options = product.customizationOptions || [];
       console.log(`🍽️ [${index + 1}] Product: "${product.productName}"`, {
@@ -451,145 +410,103 @@ private async printOrderBill(orderId: number): Promise<void> {
       });
     });
 
-    const productsWithCustomizations = this.products.filter(p => 
+    const productsWithCustomizations = this.products.filter(p =>
       p.customizationOptions && p.customizationOptions.length > 0
     );
-    
-    console.log(`📊 Summary: ${productsWithCustomizations.length} products have customization options`);
+
+    console.log(` Summary: ${productsWithCustomizations.length} products have customization options`);
     console.log('=== End Debug ===');
   }
 
- async openCustomisation(p: Product) {
-  console.group(`openCustomisation (MatDialog) productID=${p?.productID} name="${p?.productName}"`);
-  if (!p) { console.warn('openCustomisation called with falsy product'); console.groupEnd(); return; }
+  async openCustomisation(p: Product) {
+    console.group(`openCustomisation (MatDialog) productID=${p?.productID} name="${p?.productName}"`);
+    if (!p) { console.warn('openCustomisation called with falsy product'); console.groupEnd(); return; }
 
-  let options = this.getCustomizationOptions(p) 
-                || (p as any).CustomizationOptions 
-                || (p as any).customizationOptions 
-                || [];
+    let options = this.getCustomizationOptions(p)
+      || (p as any).CustomizationOptions
+      || (p as any).customizationOptions
+      || [];
 
-  if (!options || !options.length) {
-    console.warn('No in-memory customization options - fetching from server as fallback');
-    try {
-      const fetched = await this.fetchCustomizationFromServer(p);
-      if (Array.isArray(fetched) && fetched.length) {
-        options = fetched;
-        (p as any).customizationOptions = fetched;
-        (p as any).CustomizationOptions = fetched;
-      } else {
-        console.warn('Server returned no customization options for product', p.productID);
+    if (!options || !options.length) {
+      console.warn('No in-memory customization options - fetching from server as fallback');
+      try {
+        const fetched = await this.fetchCustomizationFromServer(p);
+        if (Array.isArray(fetched) && fetched.length) {
+          options = fetched;
+          (p as any).customizationOptions = fetched;
+          (p as any).CustomizationOptions = fetched;
+        } else {
+          console.warn('Server returned no customization options for product', p.productID);
+        }
+      } catch (err) {
+        console.error('fetchCustomizationFromServer failed:', err);
       }
+    }
+
+    const dialogRef = this.dialog.open(CustomizationModalComponent, {
+      width: '460px',
+      maxWidth: 'calc(100vw - 32px)',
+      panelClass: 'my-customization-dialog',
+      data: {
+        product: { ...p, customizationOptions: options }
+      }
+    });
+
+    try {
+      const result = await dialogRef.afterClosed().toPromise();
+      console.log('customization dialog closed, result:', result);
+
+      if (result == null) {
+        console.groupEnd();
+        return;
+      }
+      const customizationOptionID = result.customizationOptionID;
+      const customizationPrice = result.price || 0;
+
+     
+
+      const chosen = (options || []).find((o: any) => o.customizationOptionID === customizationOptionID);
+
+      const cartItem: CartItem = {
+        productID: p.productID,
+        productName: p.productName,
+        quantity: 1,
+        customizationOptionIds: chosen ? [chosen.customizationOptionID] : [],
+        customisations: chosen ? [chosen.name] : [],
+          unitPrice: p.basePrice + customizationPrice   // ✅ FIX
+
+      };
+
+      const key = JSON.stringify([cartItem.productID, cartItem.customizationOptionIds.slice().sort()]);
+      const existing = this.cart.find(c => JSON.stringify([c.productID, c.customizationOptionIds.slice().sort()]) === key);
+
+      if (existing) {
+        existing.quantity += cartItem.quantity;
+        console.log('Increased quantity for existing customized item');
+      } else {
+        this.cart.push(cartItem);
+        console.log('Added new customized item to cart');
+      }
+
+      this.cd.detectChanges();
+      console.log('Added customized item to cart:', cartItem);
+
     } catch (err) {
-      console.error('fetchCustomizationFromServer failed:', err);
+      console.error('Error handling customization dialog result:', err);
+    } finally {
+      console.groupEnd();
     }
   }
 
-  const dialogRef = this.dialog.open(CustomizationModalComponent, {
-    width: '460px',
-    maxWidth: 'calc(100vw - 32px)',
-    panelClass: 'my-customization-dialog',
-    data: {
-      product: { ...p, customizationOptions: options }
-    }
-  });
+ get cartPreviewTotal(): number {
+  if (!this.cart || this.cart.length === 0) return 0;
 
-  try {
-    const result = await dialogRef.afterClosed().toPromise();
-    console.log('customization dialog closed, result:', result);
-
-    if (result == null) { 
-      console.groupEnd(); 
-      return; 
-    }
-
-    // ✅ FIX: The dialog returns an object with customizationOptionID AND price
-    const customizationOptionID = result.customizationOptionID;
-    const customizationPrice = result.price || 0;
-    
-    console.log('💰 Price breakdown:', {
-      basePrice: p.price,
-      customizationPrice: customizationPrice,
-      totalUnitPrice: p.price + customizationPrice
-    });
-
-    // ✅ FIX: Calculate the correct unit price (base + customization)
-    const unitPrice = p.price + customizationPrice;
-
-    const chosen = (options || []).find((o: any) => o.customizationOptionID === customizationOptionID);
-    
-    const cartItem: CartItem = {
-      productID: p.productID,
-      productName: p.productName,
-      quantity: 1,
-      unitPrice: unitPrice, // ✅ This now includes base price + customization price
-      customizationOptionIds: chosen ? [chosen.customizationOptionID] : [],
-      customisations: chosen ? [chosen.name] : []
-    };
-
-    const key = JSON.stringify([cartItem.productID, cartItem.customizationOptionIds.slice().sort()]);
-    const existing = this.cart.find(c => JSON.stringify([c.productID, c.customizationOptionIds.slice().sort()]) === key);
-    
-    if (existing) {
-      existing.quantity += cartItem.quantity;
-      console.log('📈 Increased quantity for existing customized item');
-    } else {
-      this.cart.push(cartItem);
-      console.log('🆕 Added new customized item to cart');
-    }
-
-    // ✅ Debug: Show final cart item pricing
-    console.log('🎯 Final cart item:', {
-      productName: cartItem.productName,
-      basePrice: p.price,
-      customizationPrice: customizationPrice,
-      totalUnitPrice: cartItem.unitPrice,
-      quantity: cartItem.quantity,
-      lineTotal: cartItem.unitPrice * cartItem.quantity
-    });
-
-    this.cd.detectChanges();
-    console.log('Added customized item to cart:', cartItem);
-    
-  } catch (err) {
-    console.error('Error handling customization dialog result:', err);
-  } finally {
-    console.groupEnd();
-  }
-}
-// Add these helper methods to your NewOrderComponent
-
-// Get the base price of a product (without customizations)
-getProductBasePrice(productID: number): number {
-  const product = this.products.find(p => p.productID === productID);
-  return product?.price || 0;
+  return this.cart.reduce((sum, c) => {
+    return sum + ((c.unitPrice ?? 0) * (c.quantity ?? 0));
+  }, 0);
 }
 
-// Calculate the customization price for a cart item
-getCustomizationPrice(cartItem: CartItem): number {
-  const basePrice = this.getProductBasePrice(cartItem.productID);
-  return cartItem.unitPrice - basePrice;
-}
 
-// Debug method to check cart pricing
-debugCartPricing(): void {
-  console.log('🛒 Cart Pricing Debug:');
-  this.cart.forEach((item, index) => {
-    const basePrice = this.getProductBasePrice(item.productID);
-    const customizationPrice = this.getCustomizationPrice(item);
-    
-    console.log(`Item ${index + 1}:`, {
-      productName: item.productName,
-      basePrice: basePrice,
-      customizationPrice: customizationPrice,
-      unitPrice: item.unitPrice,
-      quantity: item.quantity,
-      lineTotal: item.unitPrice * item.quantity,
-      customizations: item.customisations
-    });
-  });
-  
-  console.log('🎯 Cart Total:', this.total);
-}
   private async fetchCustomizationFromServer(p: Product): Promise<CustomisationOption[]> {
     if (!p || !p.productID) return [];
     const url = `${this.API}/product/${p.productID}/customizations?restaurantId=${this.restaurantId}`;
@@ -602,7 +519,7 @@ debugCartPricing(): void {
       }
       const mapped = resp.map((opt: any, i: number) => ({
         customizationOptionID: opt.customizationOptionID ?? opt.id ?? i,
-        name: opt.name ?? opt.optionName ?? `Option ${i+1}`,
+        name: opt.name ?? opt.optionName ?? `Option ${i + 1}`,
         fixedPrice: Number(opt.fixedPrice ?? opt.price ?? 0) || 0,
         selected: false
       })) as CustomisationOption[];
@@ -616,24 +533,24 @@ debugCartPricing(): void {
   }
 
   checkModalDOM() {
-    console.log('🔍 CHECKING MODAL DOM STATE');
+    console.log('CHECKING MODAL DOM STATE');
     const overlay = document.querySelector('.overlay');
     console.log('Overlay element:', overlay);
-    
+
     if (overlay) {
       console.log('Overlay found in DOM!');
       console.log('Overlay styles:', window.getComputedStyle(overlay));
       console.log('Overlay parent:', overlay.parentElement);
       console.log('Overlay children:', overlay.children);
-      
+
       const modal = overlay.querySelector('.modal');
       console.log('Modal inside overlay:', modal);
-      
+
       if (modal) {
         console.log('Modal styles:', window.getComputedStyle(modal));
       }
     } else {
-      console.log('❌ Overlay NOT found in DOM - *ngIf is false');
+      console.log(' Overlay NOT found in DOM - *ngIf is false');
     }
   }
 
@@ -647,42 +564,39 @@ debugCartPricing(): void {
     return options.length > 0;
   }
 
-  recalcModalPrice() {
-    const basePrice = this.modalProduct?.price || 0;
-    const addOn = this.getSelectedOptionsTotal();
-    this.modalLineTotal = (basePrice + addOn) * this.modalQty;
-  }
+ 
 
   closeModal() { this.showModal = false; }
 
   addToCart() {
-    if (!this.modalProduct) return;
-    const selected  = this.modalOptions.filter(o => o.selected);
-    const optionIds = selected.map(o => o.customizationOptionID);
-    const optionTxt = selected.map(o => o.name);
-    
-    const item: CartItem = {
-      productID: this.modalProduct.productID,
-      productName: this.modalProduct.productName,
-      quantity: this.modalQty,
-      unitPrice: this.modalLineTotal,
-      customizationOptionIds: optionIds,
-      customisations: optionTxt
-    };
-    
-    const key = JSON.stringify([item.productID, optionIds.slice().sort()]);
-    const existing = this.cart.find(c =>
-      JSON.stringify([c.productID, c.customizationOptionIds.slice().sort()]) === key);
-      
-    existing ? (existing.quantity += item.quantity) : this.cart.push(item);
-    this.closeModal();
-  }
+  if (!this.modalProduct) return;
+
+  const selected = this.modalOptions.filter(o => o.selected);
+  const optionPrice = selected.reduce((s, o) => s + (o.fixedPrice || 0), 0);
+
+  const item: CartItem = {
+    productID: this.modalProduct.productID,
+    productName: this.modalProduct.productName,
+    quantity: this.modalQty,
+    customizationOptionIds: selected.map(o => o.customizationOptionID),
+    customisations: selected.map(o => o.name),
+    unitPrice: this.modalProduct.basePrice + optionPrice   // ✅ FIX
+  };
+
+  const key = JSON.stringify([item.productID, item.customizationOptionIds.slice().sort()]);
+  const existing = this.cart.find(c =>
+    JSON.stringify([c.productID, c.customizationOptionIds.slice().sort()]) === key
+  );
+
+  existing ? (existing.quantity += item.quantity) : this.cart.push(item);
+  this.closeModal();
+}
+
 
   inc(c: CartItem) { c.quantity++; }
   dec(c: CartItem) { if (--c.quantity === 0) this.cart = this.cart.filter(x => x !== c); }
   remove(i: number) { this.cart.splice(i, 1); }
   clearCart() { this.cart = []; }
-  get total() { return this.cart.reduce((s, c) => s + c.quantity * c.unitPrice, 0); }
 
   async submit() {
     if (!this.selectedTable || !this.cart.length) return;
@@ -699,13 +613,11 @@ debugCartPricing(): void {
         `${this.API}/order/${this.orderID}/addItem?restaurantId=${this.restaurantId}`,
         this.cart.map(c => ({
           productID: c.productID,
-          quantity : c.quantity,
-          unitPrice: c.unitPrice,
+          quantity: c.quantity,
           customizationOptionIds: c.customizationOptionIds
         }))
       ).toPromise();
 
-      this.orderTotal = this.total;
       this.paymentStage = 1;
 
     } catch (e) {
@@ -759,7 +671,7 @@ debugCartPricing(): void {
       this.paymentId = resp?.paymentId ?? null;
 
       this.upiUri = this.buildUpiUri(this.upiId, this.upiName, this.upiAmount, this.upiTxnId, `Order #${this.orderID}`);
-      
+
       this.paymentStage = 2;
     } catch (e) {
       console.error('UPI initiation failed:', e);
@@ -781,7 +693,6 @@ debugCartPricing(): void {
     alert(message);
   }
 
-  // ✅ UPDATED: Print bill after UPI payment
   async markUPIPaid() {
     if (!this.paymentId) {
       return;
@@ -789,24 +700,22 @@ debugCartPricing(): void {
 
     this.busyPay = true;
     try {
-      // Mark UPI payment as completed
       await this.http.put(
         `${this.API}/order/pending-payments/${this.paymentId}/clear?restaurantId=${this.restaurantId}`,
         {}
       ).toPromise();
 
-      // ✅ ADD: Print bill after successful payment
       await this.printOrderBill(this.orderID);
 
-      this.orderPlaced.emit({ 
+      this.orderPlaced.emit({
         orderID: this.orderID,
         paymentStatus: 'paid',
         paymentMethod: 'UPI',
         paymentPreference: 'PayNow'
       });
-      
-      this.pushSuccessAlert(`✅ Order #${this.orderID} placed and paid via UPI! Bill printed.`);
-      
+
+      this.pushSuccessAlert(`Order #${this.orderID} placed and paid via UPI! Bill printed.`);
+
       this.resetAndClose();
     } catch (e) {
       console.error('Failed to mark UPI as paid:', e);
@@ -814,7 +723,6 @@ debugCartPricing(): void {
       this.busyPay = false;
     }
   }
-  /** Copy the generated UPI URI to clipboard (with fallback). */
   async copyUpiUri(): Promise<void> {
     const text = this.upiUri || '';
     if (!text) {
@@ -823,14 +731,11 @@ debugCartPricing(): void {
     }
 
     try {
-      // Preferred modern API
       if (navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(text);
       } else {
-        // Fallback for older browsers
         const ta = document.createElement('textarea');
         ta.value = text;
-        // Avoid scrolling to bottom
         ta.style.position = 'fixed';
         ta.style.left = '-9999px';
         document.body.appendChild(ta);
@@ -847,11 +752,9 @@ debugCartPricing(): void {
     }
   }
 
-  // ✅ UPDATED: Print bill after cash payment
   async markCashPaid() {
     this.busyPay = true;
     try {
-      // Create cash payment and mark as completed immediately
       const started: any = await this.http.post(
         `${this.API}/order/${this.orderID}/initiate-payment?method=Cash&restaurantId=${this.restaurantId}&channel=Waiter`,
         {}
@@ -865,18 +768,17 @@ debugCartPricing(): void {
         ).toPromise();
       }
 
-      // ✅ ADD: Print bill after successful payment
       await this.printOrderBill(this.orderID);
 
-      this.orderPlaced.emit({ 
+      this.orderPlaced.emit({
         orderID: this.orderID,
         paymentStatus: 'paid',
         paymentMethod: 'Cash',
         paymentPreference: 'PayNow'
       });
-      
-      this.pushSuccessAlert(`✅ Order #${this.orderID} placed and paid via Cash! Bill printed.`);
-      
+
+      this.pushSuccessAlert(` Order #${this.orderID} placed and paid via Cash! Bill printed.`);
+
       this.resetAndClose();
     } catch (e) {
       console.error('Cash payment failed:', e);
