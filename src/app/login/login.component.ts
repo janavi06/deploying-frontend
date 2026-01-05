@@ -62,7 +62,7 @@ import { AuthService } from '../services/auth.service';
       justify-content: center;
       align-items: center;
       min-height: 100vh;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, #667eea 0%, #ffffffff 100%);
       padding: 20px;
     }
     .login-card {
@@ -118,7 +118,6 @@ import { AuthService } from '../services/auth.service';
     }
   `]
 })
-// login.component.ts - ENHANCED with proper navigation
 export class LoginComponent {
   email = '';
   password = '';
@@ -146,7 +145,6 @@ export class LoginComponent {
           return;
         }
 
-        // ✅ ENHANCED: Navigate based on role with restaurant context
         this.navigateToRoleDashboard(userRestaurantId);
       },
       error: (err) => {
@@ -157,36 +155,28 @@ export class LoginComponent {
   }
 
   private navigateToRoleDashboard(restaurantId: number): void {
-    // ✅ FIXED: Handle both capitalized and lowercase roles
     const userRole = this.auth.role ? this.auth.role.toLowerCase() : null;
 
-    console.log('🔐 Login: Navigating based on role:', userRole, 'Restaurant ID:', restaurantId);
 
-    // ✅ FIXED: Handle role mapping for database compatibility
     let targetRole = userRole;
     
     // Map 'manager' to 'admin' for routing purposes
     if (userRole === 'manager') {
       targetRole = 'admin';
-      console.log('🔄 Login: Mapped manager to admin for routing');
     }
 
     switch (targetRole) {
       case 'waiter':
-        console.log('🔄 Redirecting to waiter dashboard');
         this.router.navigate(['/waiter', restaurantId]);
         break;
-      case 'admin': // ✅ Now handles both 'admin' and mapped 'manager'
+      case 'admin': 
       case 'manager':
-        console.log('🔄 Redirecting to manager dashboard');
         this.router.navigate(['/manager', restaurantId]);
         break;
       case 'kitchen':
-        console.log('🔄 Redirecting to kitchen dashboard');
         this.router.navigate(['/kitchen', restaurantId]);
         break;
       default:
-        console.log('🔄 Unknown role, redirecting to menu');
         this.router.navigate(['/menu']);
     }
   }

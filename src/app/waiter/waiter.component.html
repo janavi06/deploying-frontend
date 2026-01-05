@@ -9,18 +9,18 @@
         Orders ({{ orders.length }})
       </li>
 
-      <li (click)="selectedSection = 'pendingPayments'" [class.active]="selectedSection === 'pendingPayments'">
+      <!-- <li (click)="selectedSection = 'pendingPayments'" [class.active]="selectedSection === 'pendingPayments'">
         Pending Payments
         <span *ngIf="pendingPayments.length" class="badge">({{ pendingPayments.length }})</span>
-      </li>
+      </li> -->
 
       <li (click)="selectedSection = 'requests'" [class.active]="selectedSection === 'requests'">
         Service Requests ({{ unreadRequests.length }})
       </li>
-
+<!-- 
       <li (click)="selectedSection = 'history'" [class.active]="selectedSection === 'history'">
         History
-      </li>
+      </li> -->
 
     </ul>
 
@@ -182,8 +182,9 @@
 <div class="order-card-grid mt-3" *ngIf="selectedTableNo !== null">
   <ng-container *ngFor="let group of groupedUpcomingOrders">
     <ng-container *ngIf="group.tableNo === selectedTableNo">
-      <div class="order-mini-card" *ngFor="let order of group.orders">
-        <!-- Order Header -->
+<div class="order-mini-card small-card" 
+     [class.awaiting-payment]="order.orderStatus === 'Served' && !isOrderPaid(order)"
+     *ngFor="let order of group.orders">        <!-- Order Header -->
         <div class="order-header" style="display: flex; justify-content: space-between; align-items: center;">
           <div class="order-id">Order No: {{ order.orderNumber || order.orderID }}</div> <!-- ✅ CHANGE -->
           <div class="order-time">{{ getElapsedTime(order.createdAt) }}</div>
@@ -230,42 +231,39 @@
             </div>
             
             <!-- Amount Display -->
-            <div class="fw-bold" 
-                 [class.text-success]="order.latestPayment?.status === 'Paid' || order.latestPayment?.status === 'Success'"
-                 [class.text-primary]="!order.latestPayment || order.latestPayment.status === 'Pending'">
-              ₹{{ (order.latestPayment ? order.latestPayment.amount : order.totalAmount) | number:'1.2-2' }}
-            </div>
+         <div class="fw-bold" 
+     [class.text-success]="order.latestPayment?.status === 'Paid' || order.latestPayment?.status === 'Success'"
+     [class.text-primary]="!order.latestPayment || order.latestPayment.status === 'Pending'">
+  
+  ₹{{ (isOrderPaid(order) ? order.latestPayment?.amount : order.totalAmount) | number:'1.2-2' }}
+</div>
           </div>
         </div>
 
-       <!-- Simplified Order Actions - Combined Payment Flow -->
 <div class="order-actions mt-2">
-  <!-- Row 1: Order Management Buttons -->
   <div class="action-row mb-2">
     <div class="d-flex gap-1 flex-wrap justify-content-between">
-      <!-- Edit Button -->
+      
+      <button *ngIf="order.orderStatus === 'Pending' || order.orderStatus === 'Confirmed'" 
+              class="btn btn-success btn-sm flex-fill" 
+              (click)="serveOrder(order.orderID)">
+        <i class="bi bi-check-lg"></i> Serve
+      </button>
+
+      <button *ngIf="order.orderStatus === 'Served' && !isOrderPaid(order)"
+              class="btn btn-primary btn-sm flex-fill shadow-sm" 
+              (click)="openMarkAsPaidModal(order)">
+        <i class="bi bi-cash-coin"></i> Collect Payment
+      </button>
+
       <button *ngIf="order.orderStatus === 'Pending' || order.orderStatus === 'Confirmed'"
               class="btn btn-sm btn-outline-primary flex-fill" 
               (click)="openEditOrderModal(order)">
         <i class="bi bi-pencil"></i> Edit
       </button>
 
-      <!-- Serve Button -->
-      <button *ngIf="shouldShowServeButton(order)" 
-              class="btn btn-success btn-sm flex-fill" 
-              (click)="serveOrder(order.orderID)">
-        <i class="bi bi-check-lg"></i> Serve
-      </button>
-
-      <!-- Cancel Button -->
-      <button *ngIf="order.orderStatus === 'Pending' || order.orderStatus === 'Confirmed'"
-              class="btn btn-sm btn-outline-danger flex-fill" 
-              (click)="cancelOrder(order)">
-        <i class="bi bi-x-circle"></i> Cancel
-      </button>
     </div>
   </div>
-
   <!-- Row 2: Unified Payment Action -->
   <div class="action-row">
   <div class="d-flex gap-1 flex-wrap justify-content-end">

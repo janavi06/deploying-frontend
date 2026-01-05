@@ -262,3 +262,148 @@ tbody tr:hover {
 tbody tr:last-child td {
   border-bottom: none;
 }
+.order-items {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.item-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+}
+
+.item-name {
+  font-weight: 500;
+}
+
+.item-qty {
+  opacity: 0.7;
+}
+
+.item-price {
+  font-weight: 600;
+}
+.past-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.quick-filters button {
+  margin-right: 6px;
+}
+
+.range-label {
+  margin-left: auto;
+  font-size: 13px;
+  color: #555;
+}
+/* === FILTER BAR === */
+.past-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+/* === DROPDOWN === */
+.filter-select select {
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 6px;
+  border: 1px solid #d0d7de;
+  background: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  min-width: 160px;
+}
+
+/* === CUSTOM RANGE === */
+.custom-range {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.custom-range input {
+  height: 34px;
+  padding: 0 8px;
+  border-radius: 6px;
+  border: 1px solid #d0d7de;
+  font-size: 13px;
+}
+
+.custom-range span {
+  font-size: 13px;
+  color: #666;
+}
+
+.custom-range button {
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 6px;
+  border: none;
+  background: #2563eb;
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.custom-range button:hover {
+  background: #1d4ed8;
+}
+
+/* === RANGE LABEL === */
+.range-label {
+  font-size: 13px;
+  color: #444;
+}
+
+/* === EXPORT BUTTON === */
+.export-bar {
+  margin-left: auto;
+}
+
+.export-bar button {
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 6px;
+  border: 1px solid #d0d7de;
+  background: #fff;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.export-bar button:hover {
+  background: #f3f4f6;
+}
+.order-items {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+}
+
+.item-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.item-name {
+  flex: 1;
+  color: #111;
+}
+
+.item-qty {
+  color: #666;
+}
+
+.item-price {
+  font-weight: 500;
+}

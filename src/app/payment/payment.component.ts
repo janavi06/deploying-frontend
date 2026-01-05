@@ -36,7 +36,6 @@ private readonly API_BASE = environment.apiUrl;
   }
 
   orderCompleted(): void {
-    // Use the complete endpoint to update the order status to "Completed".
     this.http.put(`${this.API_BASE}/order/${this.orderID}/complete`, {}, { headers: { 'Content-Type': 'application/json' } })
       .subscribe({
         next: (response: any) => {

@@ -166,7 +166,7 @@ export class NewOrderComponent implements OnInit, OnDestroy {
         }))
       };
 
-      console.log('🔄 Submitting waiter order with payment preference:', this.paymentPreference);
+      console.log(' Submitting waiter order with payment preference:', this.paymentPreference);
 
       const gen: any = await this.http.post(
         `${this.API}/order/generate?tableNo=${this.selectedTable}&restaurantId=${this.restaurantId}&source=waiter&paymentPreference=${this.paymentPreference}`,
@@ -180,9 +180,9 @@ this.orderTotal = gen.totalAmount ?? 0;
         {}
       ).toPromise();
 
-      console.log('🔥 Order confirmed → KOT should print now');
+      console.log(' Order confirmed → KOT should print now');
 
-      console.log('✅ Order created with details:', {
+      console.log(' Order created with details:', {
         orderID: this.orderID,
         paymentPreference: this.paymentPreference,
         orderStatus: gen.orderStatus,
@@ -210,7 +210,7 @@ this.orderTotal = gen.totalAmount ?? 0;
       }
 
     } catch (e: any) {
-      console.error('❌ Error placing waiter order:', e);
+      console.error(' Error placing waiter order:', e);
       this.busy = false;
     }
   }
@@ -222,16 +222,16 @@ this.orderTotal = gen.totalAmount ?? 0;
   }
   private async printOrderBill(orderId: number): Promise<void> {
     try {
-      console.log('🖨️ Requesting backend to print bill for order:', orderId);
+      console.log(' Requesting backend to print bill for order:', orderId);
 
       await this.http.post(
         `${this.API}/order/${orderId}/print-bill?restaurantId=${this.restaurantId}`,
         {}
       ).toPromise();
 
-      console.log('✅ Backend accepted print request');
+      console.log(' Backend accepted print request');
     } catch (error) {
-      console.error('❌ Backend print failed:', error);
+      console.error(' Backend print failed:', error);
     }
   }
 
@@ -255,7 +255,7 @@ this.orderTotal = gen.totalAmount ?? 0;
         quantity: item.quantity,
         customizationOptionIds: [],
         customisations: [],
-              unitPrice: item.price   // ✅ FIX
+              unitPrice: item.price   
 
       });
     }
@@ -311,11 +311,8 @@ this.orderTotal = gen.totalAmount ?? 0;
     return this.http.get<any[]>(`${this.API}/product?restaurantId=${this.restaurantId}`)
       .toPromise().then(apiProducts => {
         if (!apiProducts) {
-          console.log('❌ No products returned from API');
           return;
         }
-
-        console.log(`✅ Loaded ${apiProducts.length} products from API`);
 
         this.products = apiProducts.map(m => {
           const customizationOptions = m.customizationOptions || m.CustomizationOptions || [];
@@ -341,7 +338,6 @@ this.orderTotal = gen.totalAmount ?? 0;
           };
 
           if (customizationOptions.length > 0) {
-            console.log(` Product "${product.productName}" has ${customizationOptions.length} customization options:`, customizationOptions);
           }
 
           return product;
@@ -398,7 +394,7 @@ this.orderTotal = gen.totalAmount ?? 0;
 
     this.products.forEach((product, index) => {
       const options = product.customizationOptions || [];
-      console.log(`🍽️ [${index + 1}] Product: "${product.productName}"`, {
+      console.log(`[${index + 1}] Product: "${product.productName}"`, {
         productID: product.productID,
         hasCustomizationOptions: !!product.customizationOptions,
         optionsCount: options.length,
@@ -414,8 +410,6 @@ this.orderTotal = gen.totalAmount ?? 0;
       p.customizationOptions && p.customizationOptions.length > 0
     );
 
-    console.log(` Summary: ${productsWithCustomizations.length} products have customization options`);
-    console.log('=== End Debug ===');
   }
 
   async openCustomisation(p: Product) {
@@ -473,7 +467,7 @@ this.orderTotal = gen.totalAmount ?? 0;
         quantity: 1,
         customizationOptionIds: chosen ? [chosen.customizationOptionID] : [],
         customisations: chosen ? [chosen.name] : [],
-          unitPrice: p.basePrice + customizationPrice   // ✅ FIX
+          unitPrice: p.basePrice + customizationPrice   
 
       };
 
@@ -482,14 +476,11 @@ this.orderTotal = gen.totalAmount ?? 0;
 
       if (existing) {
         existing.quantity += cartItem.quantity;
-        console.log('Increased quantity for existing customized item');
       } else {
         this.cart.push(cartItem);
-        console.log('Added new customized item to cart');
       }
 
       this.cd.detectChanges();
-      console.log('Added customized item to cart:', cartItem);
 
     } catch (err) {
       console.error('Error handling customization dialog result:', err);
@@ -510,7 +501,6 @@ this.orderTotal = gen.totalAmount ?? 0;
   private async fetchCustomizationFromServer(p: Product): Promise<CustomisationOption[]> {
     if (!p || !p.productID) return [];
     const url = `${this.API}/product/${p.productID}/customizations?restaurantId=${this.restaurantId}`;
-    console.log('fetchCustomizationFromServer ->', url);
     try {
       const resp: any = await this.http.get<any[]>(url).toPromise();
       if (!resp || !Array.isArray(resp) || resp.length === 0) {
@@ -533,24 +523,16 @@ this.orderTotal = gen.totalAmount ?? 0;
   }
 
   checkModalDOM() {
-    console.log('CHECKING MODAL DOM STATE');
     const overlay = document.querySelector('.overlay');
-    console.log('Overlay element:', overlay);
 
     if (overlay) {
-      console.log('Overlay found in DOM!');
-      console.log('Overlay styles:', window.getComputedStyle(overlay));
-      console.log('Overlay parent:', overlay.parentElement);
-      console.log('Overlay children:', overlay.children);
+
 
       const modal = overlay.querySelector('.modal');
-      console.log('Modal inside overlay:', modal);
 
       if (modal) {
-        console.log('Modal styles:', window.getComputedStyle(modal));
       }
     } else {
-      console.log(' Overlay NOT found in DOM - *ngIf is false');
     }
   }
 
@@ -580,7 +562,7 @@ this.orderTotal = gen.totalAmount ?? 0;
     quantity: this.modalQty,
     customizationOptionIds: selected.map(o => o.customizationOptionID),
     customisations: selected.map(o => o.name),
-    unitPrice: this.modalProduct.basePrice + optionPrice   // ✅ FIX
+    unitPrice: this.modalProduct.basePrice + optionPrice   
   };
 
   const key = JSON.stringify([item.productID, item.customizationOptionIds.slice().sort()]);

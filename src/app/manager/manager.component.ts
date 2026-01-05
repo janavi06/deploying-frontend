@@ -33,7 +33,6 @@ readonly OFFER_API = `${environment.apiUrl}/offer`;
   activeMenuTab: 'items' | 'categories' | 'subcategories' = 'items';
 
 
-  // NEW: Expense Tracking
   expenses: any[] = [];
   expenseSummary: any[] = [];
   budgets: any[] = [];
@@ -53,20 +52,16 @@ readonly OFFER_API = `${environment.apiUrl}/offer`;
   awaitingServiceOrders: any[] = [];
   pendingPaymentOrders: any[] = [];
 
-  // ✨ START: NEW DASHBOARD DATA
   oldestPendingOrder: any = null;
   kitchenBacklogItems: number = 0;
   unacknowledgedNotifications: any[] = [];
   waiterRequests: any[] = [];
   todayStats: { revenue: number, aov: number, cancelled: number } = { revenue: 0, aov: 0, cancelled: 0 };
-// ✨ END: NEW DASHBOARD DATA
 
 restaurantId: number = 0; 
 
-  // Section management
 selectedSection: 'dashboard' | 'history' | 'inventory'|'editMenu' |'reports' | 'settings'|   'expenses' |  'offers' = 'dashboard';  isSidebarOpen = false;
 
-  // Product management
   products: any[] = [];
   filteredProducts: any[] = [];
   subcategories: any[] = [];
@@ -78,7 +73,6 @@ selectedSection: 'dashboard' | 'history' | 'inventory'|'editMenu' |'reports' | '
 
 
 
-  // Add these properties
 activeOffers: any[] = [];
 offerStats: any = {
   totalOffers: 0,
@@ -102,7 +96,6 @@ newOffer: any = {
 
 currentYear = new Date().getFullYear();
 
-  // Filters
   filterDateOption: 'today' | 'yesterday' | 'last7' | 'last30' | 'thismonth' | 'lastmonth' | 'custom' = 'last7';
   customStartDate: string = '';
   customEndDate: string = '';
@@ -119,13 +112,11 @@ showBillModal: boolean = false;
 
 
 
-// Category and Subcategory modals
 showCategoryModal: boolean = false;
 showSubcategoryModal: boolean = false;
 isEditCategoryMode: boolean = false;
 isEditSubcategoryMode: boolean = false;
 
-// Modal data models
 modalCategory: any = {
   categoryName: '',
   categoryDescription: '',
@@ -147,34 +138,27 @@ modalSubcategory: any = {
   }
 
   ngOnInit(): void {
-    // ✅ FIXED: Get restaurantId from route parameter instead of URL query
     this.route.params.subscribe(params => {
-      this.restaurantId = +params['restaurantId']; // Convert to number
-      
+      this.restaurantId = +params['restaurantId']; 
       if (this.restaurantId && this.restaurantId > 0) {
-        console.log('✅ Manager Component: Restaurant ID from route:', this.restaurantId);
         this.initializeComponent();
       } else {
-        console.error('❌ Invalid restaurantId from route');
+        console.error(' Invalid restaurantId from route');
         this.redirectToLogin();
       }
     });
   }
 
 private initializeComponent(): void {
-  // Save to localStorage for consistency
   localStorage.setItem('restaurantId', this.restaurantId.toString());
   localStorage.setItem('userRole', this.authService.role || '');
   
-  console.log('✅ Manager Component: Initializing for restaurant:', this.restaurantId);
-  console.log('✅ Manager Component: User role:', this.authService.role);
+
     
-    // Load all data
     this.loadSubCategories();
     this.loadCategories();
     this.loadProducts();
 
-    // Load additional features
     this.loadExpenseData();
     this.loadOffersData();
 
@@ -188,20 +172,15 @@ private initializeComponent(): void {
   }
 
 viewOrderDetails(orderID: number) {
-  // Implement order details viewing logic
-  console.log('Viewing details for order:', orderID);
 }
 
 
-// ✨ NEW: Load Operational KPIs (Kitchen Backlog & Notifications)
   loadOperationalKpis(): void {
-    // Kitchen Backlog
     this.http.get<any>(`${this.ORDER_API}/dashboard/kitchen-backlog?restaurantId=${this.restaurantId}`).subscribe({
       next: (res) => this.kitchenBacklogItems = res.totalPendingItems,
       error: (err) => console.error('Error loading kitchen backlog:', err)
     });
 
-    // Waiter Notifications (Awaiting Service)
     this.http.get<any[]>(`${this.ORDER_API}/waiter/notifications?restaurantId=${this.restaurantId}`).subscribe({
       next: (res) => this.unacknowledgedNotifications = res.map(n => ({
         ...n,
@@ -211,7 +190,6 @@ viewOrderDetails(orderID: number) {
     });
   }
 
-// ✨ NEW: Load Waiter Call Requests
   loadWaiterRequests(): void {
     this.http.get<any>(`${this.ORDER_API}/waiter-requests?restaurantId=${this.restaurantId}`).subscribe({
       next: (res) => this.waiterRequests = res.data.map((r: any) => ({
@@ -229,10 +207,6 @@ viewOrderDetails(orderID: number) {
     return diffMin > minutes;
   }
 
-
-
-
-// Add these methods
 loadOffersData(): void {
   this.loadActiveOffers();
   this.loadOfferStats();
@@ -266,17 +240,13 @@ loadOfferPerformance(): void {
   });
 }
 
-
-// Add this helper method to close modals
 closeModalById(modalId: string): void {
   const modal = document.getElementById(modalId);
   if (modal) {
-    // Remove show class and backdrop
     modal.classList.remove('show');
     modal.style.display = 'none';
     document.body.classList.remove('modal-open');
     
-    // Remove backdrop
     const backdrop = document.querySelector('.modal-backdrop');
     if (backdrop) {
       backdrop.remove();
@@ -292,14 +262,12 @@ deleteOffer(offerID: number): void {
       },
       error: (err) => {
         console.error('Error deleting offer:', err);
-        alert('Failed to delete offer');
       }
     });
   }
 }
 
 prepareOfferPerformanceChart(performanceData: any): void {
-  // Use safe data access with fallbacks
   const labels = performanceData?.labels || ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
   const orders = performanceData?.orders || [0, 0, 0, 0];
   const discounts = performanceData?.discounts || [0, 0, 0, 0];
@@ -327,8 +295,6 @@ prepareOfferPerformanceChart(performanceData: any): void {
   };
 }
 
-
-// Update the selectSection method to load offers data
 selectSection(section: any) {
   this.selectedSection = section;
   this.isSidebarOpen = false;
@@ -336,8 +302,6 @@ selectSection(section: any) {
     this.loadOffersData();
   }
 }
-
-
 
 viewBill(orderId: number): void {
   this.http.get(`${this.ORDER_API}/${orderId}/bill-html`, { responseType: 'text' }).subscribe({
@@ -347,7 +311,6 @@ viewBill(orderId: number): void {
     },
     error: err => {
       console.error('Failed to load bill:', err);
-      alert('Failed to load bill.');
     }
   });
 }
@@ -361,22 +324,16 @@ reprintBill(orderID: number) {
 }
 
 viewOrderTimeline(orderID: number) {
-  // Implement timeline viewing logic
-  console.log('Viewing timeline for order:', orderID);
+
 }
 
 
-
-// Add this property to make Math available in template
 Math = Math;
 
-  // UI Methods
   toggleSidebar() {
     this.isSidebarOpen = !this.isSidebarOpen;
   }
 
-
-  // Product Management Methods
   onSearchChange() {
     const q = this.searchText.trim().toLowerCase();
     this.filteredProducts = this.products.filter(p =>
@@ -437,9 +394,6 @@ downloadBill(orderId: number): void {
   }
 
 
-
-
-// Get payment badge class
 getPaymentBadgeClass(paymentMethod: string): string {
   switch (paymentMethod?.toLowerCase()) {
     case 'cash':
@@ -453,8 +407,6 @@ getPaymentBadgeClass(paymentMethod: string): string {
   }
 }
 
-
-// Category Management Methods
 openAddCategoryModal(): void {
   this.isEditCategoryMode = false;
   this.modalCategory = {
@@ -517,7 +469,6 @@ deleteCategory(categoryID: number): void {
     next: () => this.loadCategories(),
     error: err => {
       console.error('Delete category failed:', err);
-      alert('Cannot delete category with existing items. Please move or delete items first.');
     }
   });
 }
@@ -532,7 +483,6 @@ toggleCategoryAvailability(category: any): void {
   });
 }
 
-// Subcategory Management Methods
 openAddSubcategoryModal(): void {
   this.isEditSubcategoryMode = false;
   this.modalSubcategory = {
@@ -598,7 +548,6 @@ deleteSubcategory(subCategoryID: number): void {
     next: () => this.loadSubCategories(),
     error: err => {
       console.error('Delete subcategory failed:', err);
-      alert('Cannot delete subcategory with existing items. Please move or delete items first.');
     }
   });
 }
@@ -613,7 +562,6 @@ toggleSubcategoryAvailability(subcategory: any): void {
   });
 }
 
-// Helper Methods
 getCategoryName(categoryID: number): string {
   const category = this.categories.find(c => c.categoryID === categoryID);
   return category ? category.categoryName : '—';
@@ -631,16 +579,11 @@ getCategoryItemCount(categoryID: number): number {
 getSubcategoryItemCount(subCategoryID: number): number {
   return this.products.filter(p => p.subCategoryID === subCategoryID).length;
 }
-// Add this helper method for safe number display
 safeNumber(value: any, defaultValue: number = 0): number {
   return Number(value) || defaultValue;
 }
 
 
-
-
-
-// Enhanced order duration calculation
 getOrderDuration(order: any): string {
   if (!order.closedAt) return 'Ongoing';
   
@@ -654,8 +597,6 @@ getOrderDuration(order: any): string {
   const mins = durationMins % 60;
   return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
 }
-
-
 
 getFormattedDateRange(): string {
   if (this.filterDateOption === 'custom' && this.customStartDate && this.customEndDate) {
@@ -676,19 +617,10 @@ getFormattedDateRange(): string {
   return rangeMap[this.filterDateOption] || 'Custom Range';
 }
 
-
-
 getRestaurantName(): string {
-  // You can get this from your restaurant service or use a default
-  // For now, using a default name - you can enhance this by fetching actual restaurant data
   return 'Restaurant';
 }
 
-
-
-
-
-// Update resetFilters to remove status filter
 resetFilters(): void {
   this.filterDateOption = 'last7';
   this.filterTableNo = null;
@@ -705,7 +637,6 @@ private downloadFile(data: string, type: string, filename: string) {
   a.click();
   window.URL.revokeObjectURL(url);
 }
-// Add this method to your ManagerComponent class
 safeString(value: any, fallback: string = ''): string {
   if (value === null || value === undefined) {
     return fallback;
@@ -717,9 +648,6 @@ safeString(value: any, fallback: string = ''): string {
   }
 }
 
-
-
-// ✨ NEW: Acknowledge Waiter Request
 acknowledgeWaiterRequest(id: number): void {
   this.http.put(`${this.ORDER_API}/waiter-requests/${id}/accept`, {}).subscribe({
     next: () => {
@@ -732,9 +660,6 @@ acknowledgeWaiterRequest(id: number): void {
     }
   });
 }
-
-
-  // Utility Methods
   calculateOrderTotal(order: any): number {
     return order.totalAmount || 
       (order.subtotal || 0) + 
@@ -757,14 +682,14 @@ acknowledgeWaiterRequest(id: number): void {
       case 'Served':
         return 'bg-success';
       case 'Awaiting Service':
-        return 'bg-info'; // New status
+        return 'bg-info'; 
       case 'Pending Payment':
-        return 'bg-success'; // New status
+        return 'bg-success'; 
       case 'Confirmed':
       case 'Ready':
         return 'bg-primary';
       case 'In Progress':
-        return 'bg-warning'; // New status
+        return 'bg-warning'; 
       case 'Pending':
         return 'bg-warning';
       case 'Cancelled':
@@ -777,8 +702,6 @@ acknowledgeWaiterRequest(id: number): void {
   private formatDate(date: Date): string {
     return date.toISOString().split('T')[0];
   }
-
-  // Data Loading Methods
 
   loadCategories() {
     this.http.get<any[]>(`${this.CATEGORY_URL}?restaurantId=${this.restaurantId}`).subscribe({
@@ -795,14 +718,6 @@ acknowledgeWaiterRequest(id: number): void {
   }
 
 
- 
-
- 
-
-
-
-
-  // NEW: Expense Tracking Methods
   loadExpenseData(): void {
     this.http.get<any>(`${this.EXPENSE_API}?restaurantId=${this.restaurantId}`).subscribe({
       next: (res) => {
@@ -845,9 +760,6 @@ acknowledgeWaiterRequest(id: number): void {
     });
   }
 
-
-  
-
   showModal(modalId: string): void {
     const modal = document.getElementById(modalId);
     if (modal) {
@@ -855,14 +767,11 @@ acknowledgeWaiterRequest(id: number): void {
       modal.style.display = 'block';
       document.body.classList.add('modal-open');
       
-      // Add backdrop
       const backdrop = document.createElement('div');
       backdrop.className = 'modal-backdrop fade show';
       document.body.appendChild(backdrop);
     }
   }
-
-  // Helper method to hide modal
   hideModal(modalId: string): void {
     const modal = document.getElementById(modalId);
     if (modal) {
@@ -870,7 +779,6 @@ acknowledgeWaiterRequest(id: number): void {
       modal.style.display = 'none';
       document.body.classList.remove('modal-open');
       
-      // Remove backdrop
       const backdrop = document.querySelector('.modal-backdrop');
       if (backdrop) {
         backdrop.remove();

@@ -22,8 +22,8 @@ export class SignalRService {
 
     this.hubConnection
       .start()
-      .then(() => console.log('✅ SignalR Connected to', `${environment.baseUrl}/hubs/order`))
-      .catch(err => console.error('❌ SignalR Error:', err));
+      .then(() => console.log(' SignalR Connected to', `${environment.baseUrl}/hubs/order`))
+      .catch(err => console.error(' SignalR Error:', err));
   }
 
   onNewOrder(callback: (orderId: number) => void): void {

@@ -10,7 +10,7 @@ import { Router } from '@angular/router';
   template: `
     <div class="unauthorized-container">
       <div class="error-card">
-        <div class="error-icon">🚫</div>
+        <div class="error-icon"></div>
         <h1>Access Denied</h1>
         <p>You don't have permission to access this page.</p>
         <div class="action-buttons">

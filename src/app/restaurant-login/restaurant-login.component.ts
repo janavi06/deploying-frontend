@@ -118,7 +118,6 @@ import { AuthService } from '../services/auth.service';
     }
   `]
 })
-// restaurant-login.component.ts - FIXED navigation
 export class RestaurantLoginComponent {
   email = '';
   password = '';
@@ -141,7 +140,6 @@ export class RestaurantLoginComponent {
           return;
         }
 
-        // ✅ FIXED: Use the enhanced navigation logic
         this.navigateToRoleDashboard(userRestaurantId);
       },
       error: (err) => {
@@ -152,36 +150,28 @@ export class RestaurantLoginComponent {
   }
 
   private navigateToRoleDashboard(restaurantId: number): void {
-    // ✅ FIXED: Handle both capitalized and lowercase roles
     const userRole = this.auth.role ? this.auth.role.toLowerCase() : null;
 
-    console.log('🔐 RestaurantLogin: Navigating based on role:', userRole, 'Restaurant ID:', restaurantId);
+    console.log(' RestaurantLogin: Navigating based on role:', userRole, 'Restaurant ID:', restaurantId);
 
-    // ✅ FIXED: Handle role mapping for database compatibility
     let targetRole = userRole;
     
-    // Map 'manager' to 'admin' for routing purposes
     if (userRole === 'manager') {
       targetRole = 'admin';
-      console.log('🔄 RestaurantLogin: Mapped manager to admin for routing');
     }
 
     switch (targetRole) {
       case 'waiter':
-        console.log('🔄 Redirecting to waiter dashboard');
         this.router.navigate(['/waiter', restaurantId]);
         break;
-      case 'admin': // ✅ Now handles both 'admin' and mapped 'manager'
+      case 'admin': 
       case 'manager':
-        console.log('🔄 Redirecting to manager dashboard');
         this.router.navigate(['/manager', restaurantId]);
         break;
       case 'kitchen':
-        console.log('🔄 Redirecting to kitchen dashboard');
         this.router.navigate(['/kitchen', restaurantId]);
         break;
       default:
-        console.log('🔄 Unknown role, redirecting to menu');
         this.router.navigate(['/menu']);
     }
   }

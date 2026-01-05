@@ -1,93 +1,147 @@
 <div class="reports-container">
 
-  <!-- 🔝 TOP SCROLLING NAVBAR -->
+  <!-- 🔝 NAVBAR -->
   <div class="reports-navbar">
-    <button (click)="setSection('overview')" [class.active]="activeSection==='overview'">
-      Overview
-    </button>
-    <button (click)="setSection('sales')" [class.active]="activeSection==='sales'">
-      Sales
-    </button>
-    <button (click)="setSection('orders')" [class.active]="activeSection==='orders'">
-      Orders
-    </button>
-    <button (click)="setSection('items')" [class.active]="activeSection==='items'">
-      Items
-    </button>
-    <button (click)="setSection('categories')" [class.active]="activeSection==='categories'">
-      Categories
-    </button>
+    <button (click)="setSection('live')" [class.active]="activeSection==='live'">Live Orders</button>
+    <button (click)="setSection('past')" [class.active]="activeSection==='past'">Past Orders</button>
+    <button (click)="setSection('categories')" [class.active]="activeSection==='categories'">Categories</button>
   </div>
 
   <!-- 📅 DATE FILTER -->
-  <div class="date-filter" *ngIf="activeSection !== 'overview'">
+<div class="date-filter"
+     *ngIf="activeSection !== 'overview'
+         && activeSection !== 'live'
+         && activeSection !== 'past'">
     <input type="date" [(ngModel)]="startDate">
     <input type="date" [(ngModel)]="endDate">
     <button (click)="setSection(activeSection)">Apply</button>
   </div>
 
-  <!-- 📊 CONTENT -->
+  <!-- LIVE ORDERS -->
+ <section *ngIf="activeSection === 'live'" class="table-box">
+  <table>
+    <thead>
+      <tr>
+        <th>Order #</th>
+        <th>Table</th>
+        <th>Items</th>
+        <th>Status</th>
+        <th>Total</th>
+        <th>Time</th>
+      </tr>
+    </thead>
 
-  <!-- OVERVIEW -->
-  <section *ngIf="activeSection === 'overview'" class="cards">
-    <div class="card">
-      <label>Live Orders</label>
-      <span>{{ overview.liveOrders }}</span>
-    </div>
-    <div class="card">
-      <label>Today Revenue</label>
-      <span>₹{{ overview.todayRevenue }}</span>
-    </div>
-    <div class="card">
-      <label>Orders Today</label>
-      <span>{{ overview.todayOrders }}</span>
-    </div>
-    <div class="card">
-      <label>Avg Order Value</label>
-      <span>₹{{ overview.avgOrderValue }}</span>
-    </div>
-  </section>
+    <tbody>
+      <tr *ngFor="let o of liveOrders">
+        <td>#{{ o.orderNumber }}</td>
+        <td>{{ o.table }}</td>
 
-  <!-- SALES -->
-  <section *ngIf="activeSection === 'sales'" class="table-box">
-    <table>
-      <tr><td>Total Orders</td><td>{{ sales.totalOrders }}</td></tr>
-      <tr><td>Gross Revenue</td><td>₹{{ sales.grossRevenue }}</td></tr>
-      <tr><td>Discount</td><td>₹{{ sales.discount }}</td></tr>
-      <tr><td>Tax</td><td>₹{{ sales.tax }}</td></tr>
-      <tr><td>Net Revenue</td><td>₹{{ sales.netRevenue }}</td></tr>
-    </table>
-  </section>
+        <!-- ITEMS -->
+        <td>
+          <div class="order-items">
+            <div *ngFor="let i of o.items" class="item-row">
+              <span class="item-name">{{ i.itemName }}</span>
+              <span class="item-qty">×{{ i.quantity }}</span>
+            </div>
+          </div>
+        </td>
 
-  <!-- ORDERS -->
-  <section *ngIf="activeSection === 'orders'" class="table-box">
-    <table>
-      <tr><td>Total Orders</td><td>{{ orders.totalOrders }}</td></tr>
-      <tr><td>Completed</td><td>{{ orders.completedOrders }}</td></tr>
-      <tr><td>Cancelled</td><td>{{ orders.cancelledOrders }}</td></tr>
-      <tr><td>Avg Duration (min)</td><td>{{ orders.avgOrderMinutes }}</td></tr>
-    </table>
-  </section>
+        <td>{{ o.status }}</td>
+        <td><strong>₹{{ o.total }}</strong></td>
+        <td>{{ o.minutesAgo }} min</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
 
-  <!-- ITEMS -->
-  <section *ngIf="activeSection === 'items'" class="table-box">
-    <table>
-      <thead>
-        <tr>
-          <th>Item</th>
-          <th>Qty Sold</th>
-          <th>Revenue</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let i of items">
-          <td>{{ i.itemName }}</td>
-          <td>{{ i.quantitySold }}</td>
-          <td>₹{{ i.revenue }}</td>
-        </tr>
-      </tbody>
-    </table>
-  </section>
+
+
+
+ 
+<!-- PAST ORDERS -->
+<section *ngIf="activeSection === 'past'" class="table-box">
+
+  <!-- FILTER BAR -->
+  <div class="past-filter-bar">
+
+    <!-- FILTER DROPDOWN -->
+    <div class="filter-select">
+      <select [(ngModel)]="dateFilterMode" (change)="onFilterChange()">
+        <option value="all">All Orders</option>
+        <option value="today">Today</option>
+        <option value="month">This Month</option>
+        <option value="custom">Custom Range</option>
+      </select>
+    </div>
+
+    <!-- CUSTOM RANGE -->
+    <div class="custom-range" *ngIf="dateFilterMode === 'custom'">
+      <input type="date" [(ngModel)]="startDate">
+      <span>to</span>
+      <input type="date" [(ngModel)]="endDate">
+      <button (click)="applyCustomRange()">Apply</button>
+    </div>
+
+    <!-- RANGE LABEL -->
+    <div class="range-label">
+      Showing: <strong>{{ rangeLabel }}</strong>
+    </div>
+
+    <!-- EXPORT -->
+    <div class="export-bar">
+      <button (click)="exportToCSV(pastOrders, 'past-orders')">
+        ⬇ Export CSV
+      </button>
+    </div>
+
+  </div>
+
+  <!-- ORDERS TABLE -->
+  <table>
+    <thead>
+      <tr>
+        <th>Order #</th>
+        <th>Date</th>
+        <th>Table</th>
+        <th>Status</th>
+        <th>Items</th>
+        <th>Total</th>
+        <th>Payment</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      <tr *ngFor="let o of pastOrders">
+        <td>#{{ o.orderNumber }}</td>
+        <td>{{ o.date | date:'short' }}</td>
+        <td>{{ o.table }}</td>
+        <td>{{ o.status }}</td>
+
+        <!-- ITEMS -->
+        <td>
+          <div class="order-items">
+            <div *ngFor="let i of o.items" class="item-row">
+              <span class="item-name">{{ i.itemName }}</span>
+              <span class="item-qty">×{{ i.quantity }}</span>
+            </div>
+          </div>
+        </td>
+
+        <td><strong>₹{{ o.total }}</strong></td>
+        <td>{{ o.paymentMode }}</td>
+      </tr>
+
+      <!-- EMPTY STATE -->
+      <tr *ngIf="!pastOrders?.length">
+        <td colspan="7" style="text-align:center; padding:20px; color:#777;">
+          No orders found
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+</section>
+
 
   <!-- CATEGORIES -->
   <section *ngIf="activeSection === 'categories'" class="table-box">

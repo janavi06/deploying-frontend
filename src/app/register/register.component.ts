@@ -24,7 +24,7 @@ export class RegisterComponent {
   constructor(private http: HttpClient, private router: Router) {}
 
   register(): void {
-    const restaurantId = localStorage.getItem('restaurantId'); // ✅ GET restaurantId
+    const restaurantId = localStorage.getItem('restaurantId'); 
 
     if (!restaurantId) {
       alert('Restaurant ID not found. Please log in again.');
@@ -40,7 +40,7 @@ export class RegisterComponent {
           email:       this.email,
           passwordHash:this.password,
           phoneNumber: this.phoneNumber || undefined,
-          restaurantId: restaurantId            // ✅ INCLUDE in request payload
+          restaurantId: restaurantId          
         }
       )
       .subscribe({

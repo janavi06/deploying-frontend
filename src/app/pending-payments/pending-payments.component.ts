@@ -18,19 +18,16 @@ export class PendingPaymentsComponent {
   private readonly API_BASE = `${environment.apiUrl}`;
   private httpOptions = { headers: new HttpHeaders() };
 
-  private restaurantId: string = ''; // ✅ Add this line
-
+  private restaurantId: string = ''; 
   constructor(private http: HttpClient) {
     const token = localStorage.getItem('jwt');
-    this.restaurantId = localStorage.getItem('restaurantId') || ''; // ✅ Load restaurantId
-
+    this.restaurantId = localStorage.getItem('restaurantId') || ''; 
     if (token) {
       this.httpOptions.headers = this.httpOptions.headers.set('Authorization', `Bearer ${token}`);
     }
   }
 
   markAsPaid(paymentId: number): void {
-  console.log('🔍 Marking payment as paid - PaymentID:', paymentId); // Debug log
   
   if (!this.restaurantId) {
     this.error = 'Restaurant ID missing.';
@@ -43,19 +40,17 @@ export class PendingPaymentsComponent {
     return;
   }
 
-  // ✅ FIXED: Use the correct parameter name that matches your backend
   this.http.put(
     `${this.API_BASE}/order/pending-payments/${paymentId}/clear?restaurantId=${this.restaurantId}`,
     null,
     this.httpOptions
   ).subscribe({
     next: () => {
-      console.log('✅ Payment cleared successfully:', paymentId);
       this.payments = this.payments.filter(p => p.paymentId !== paymentId);
       this.paymentCleared.emit(paymentId);
     },
     error: err => {
-      console.error('❌ Error marking payment:', err);
+      console.error('❌Error marking payment:', err);
       this.error = 'Error clearing payment: ' + (err.error?.message || 'Unknown error');
     }
   });

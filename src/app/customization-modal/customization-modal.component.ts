@@ -20,7 +20,7 @@ interface Product {
   selector: 'app-customization-modal',
   templateUrl: './customization-modal.component.html',
   styleUrls: ['./customization-modal.component.css'],
-    encapsulation: ViewEncapsulation.None,   // 🔴 THIS IS REQUIRED
+    encapsulation: ViewEncapsulation.None,   
 
   standalone: true,
   imports: [
@@ -38,10 +38,8 @@ export class CustomizationModalComponent {
     @Inject(MAT_DIALOG_DATA) public data: { product: Product }
   ) {
     this.product = data.product;
-      this.selectedOption = null; // select None by default
+      this.selectedOption = null; 
 
-
-    // Auto-select the first option if it exists
     if (
       this.product.customizationOptions &&
       this.product.customizationOptions.length > 0
@@ -56,19 +54,14 @@ export class CustomizationModalComponent {
   }
 confirm(): void {
   this.dialogRef.close({
-    customizationOptionID: this.selectedOption, // null for None
+    customizationOptionID: this.selectedOption, 
     price: this.getSelectedPrice()
   });
 }
 
-
-  /** 
-   * Returns the computed price based on which option is selected. 
-   * If no option is selected, fall back to the base price.
-   */
 getSelectedPrice(): number {
   if (this.selectedOption === null) {
-    return this.product.price; // base price without customization
+    return this.product.price;
   }
 
   if (!this.product.customizationOptions) {

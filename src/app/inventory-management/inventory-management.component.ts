@@ -50,10 +50,10 @@ enum StockTransactionType {
   selector: 'app-inventory-management',
   templateUrl: './inventory-management.component.html',
   styleUrls: ['./inventory-management.component.css'],
-      encapsulation: ViewEncapsulation.None,   // 🔴 THIS IS REQUIRED
+      encapsulation: ViewEncapsulation.None,   
 
-  imports: [CommonModule, FormsModule], // Add required imports here
-  providers: [DecimalPipe, DatePipe] // Add pipe providers
+  imports: [CommonModule, FormsModule], 
+  providers: [DecimalPipe, DatePipe] 
 })
 export class InventoryManagementComponent implements OnInit {
   activeTab: 'items' | 'transactions' | 'recipes' = 'items';
@@ -82,7 +82,7 @@ export class InventoryManagementComponent implements OnInit {
   currentTransaction: StockTransaction = this.getEmptyTransaction();
   editingItem: boolean = false;
   
-  private restaurantId: number = 1; // This should come from auth service
+  private restaurantId: number = 1; 
 
   constructor(
     private http: HttpClient,

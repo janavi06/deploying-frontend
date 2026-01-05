@@ -4,11 +4,11 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders, HttpClientModule } from '@angular/common/http';
 import { Router, ActivatedRoute, NavigationStart } from '@angular/router';
 import { environment } from '../../environments/environment';
-import { PendingPaymentsComponent } from '../pending-payments/pending-payments.component';  // ← import it!
+import { PendingPaymentsComponent } from '../pending-payments/pending-payments.component';  
 import { NewOrderComponent } from '../new-order/new-order.component';
 import { QRCodeComponent } from 'angularx-qrcode';
-import { firstValueFrom } from 'rxjs'; // ✅ ADD THIS IMPORT
-import { AuthService } from '../services/auth.service'; // <-- ADD IMPORT
+import { firstValueFrom } from 'rxjs'; 
+import { AuthService } from '../services/auth.service'; 
 
 export enum OrderStatus {
   Pending = "Pending",
@@ -21,15 +21,14 @@ export enum KitchenStatus {
   Pending = "Pending",
   Preparing = "Preparing",
   Ready = "Ready"
-  // Remove Served status
 }
 export interface OrderItem {
   productID: number;
   productName?: string;
   quantity: number;
-  customizations?: any[]; // ✅ FIX: Add this property
+  customizations?: any[]; 
   unitPrice?: number;
-  orderItemID?: number; // ✅ ADD THIS - crucial for updates
+  orderItemID?: number; 
 
 }
 
@@ -38,12 +37,12 @@ export interface PaymentInfo {
   status: string;
   amount: number;
   paidAt?: Date | null;
-  paymentID?: any; // Add these optional properties
+  paymentID?: any; 
   paymentId?: any;
 }
 export interface Order {
   orderID: number;
-  orderNumber: number; // ✅ ADD THIS LINE
+  orderNumber: number;
   userID?: number;
   orderStatus: OrderStatus;
   waiterUserID?: number;
@@ -52,11 +51,11 @@ export interface Order {
   items?: OrderItem[];
   createdAt?: Date;
   closedAt?: Date;
-  latestPayment?: PaymentInfo;   // ✅ ADD THIS LINE
-  kitchenStatus?: KitchenStatus;  // Add this line
-  totalAmount?: number; // ✅ ADD THIS LINE
-  paymentMethod?: string; // ✅ ADD THIS
-  paymentStatus?: string; // ✅ ADD THIS
+  latestPayment?: PaymentInfo;   
+  kitchenStatus?: KitchenStatus;  
+  totalAmount?: number; 
+  paymentMethod?: string; 
+  paymentStatus?: string; 
 
 }
 export interface RestaurantDetails {
@@ -64,17 +63,14 @@ export interface RestaurantDetails {
   address: string;
   upiId?: string;
   upiName?: string;
-  // Add other properties you need
 }
 export interface WaiterRequest {
   waiterRequestID: number;
   message: string;
   tableNumber: number;
   requestTime: string;
-  isAccepted?: boolean; // <-- add this
-
+  isAccepted?: boolean;
 }
-// Add to your existing properties
 
 @Component({
   selector: 'app-waiter',
@@ -103,12 +99,12 @@ export class WaiterComponent implements OnInit {
   };
   readyNotifications: any[] = [];
   readyOrderMessages: { notificationId: number; orderNumber: number; message: string; orderId: number; tableNo: number; timestamp: number }[] = [];
-  KitchenStatus = KitchenStatus;   // ✅ ADD THIS LINE
+  KitchenStatus = KitchenStatus;  
   error = '';
   isSidebarOpen = false;
   selectedSection: 'orders' | 'requests' | 'history' | 'pendingPayments' | 'readyOrders' | 'newOrder' = 'orders';
   pendingPayments: any[] = [];
-  restaurantId: number = 0; // ✅ public + numeric
+  restaurantId: number = 0; 
   showProductList = false;
   productSearch = '';
   selectedCategory = '';
@@ -119,8 +115,7 @@ export class WaiterComponent implements OnInit {
   private readyOrderSound = new Audio('assets/sounds/ready-order.mp3');
   private paymentSound = new Audio('assets/sounds/payment-pending.mp3');
   activeAlerts: { type: 'order' | 'ready' | 'payment', message: string, timestamp: number }[] = [];
-  orderNumberMap: { [orderID: number]: number } = {}; // ✅ ADD THIS PROPERTY
-
+  orderNumberMap: { [orderID: number]: number } = {}; 
   viewMode: 'grid' | 'list' = 'grid';
   selectedStatus = 'all';
   statusFilters = ['all', 'pending', 'confirmed', 'served'];
@@ -131,7 +126,6 @@ export class WaiterComponent implements OnInit {
     upiId: '',
     upiName: ''
   };
-  // readyNotifications: any[] = [];
   groupedUpcomingOrders: { tableNo: number; orders: Order[]; expanded: boolean }[] = [];
   readyTables: { tableNo: number, orders: Order[] }[] = [];
   selectedReadyTable: number | null = null;
@@ -139,8 +133,8 @@ export class WaiterComponent implements OnInit {
   lastSeenOrderID: number = Number(localStorage.getItem('lastSeenOrderID') || 0);
   selectedTableNo: number | null = null;
   historyFilter: 'today' | '2days' | 'all' = 'today';
-  allHistoryOrders: Order[] = [];  // full copy to preserve
-  availableTables: any[] = []; // ✅ ADD: To store the list of tables
+  allHistoryOrders: Order[] = [];  
+  availableTables: any[] = []; 
 
   selectedOrderForEdit: any = null;
   showEditOrderModal = false;
@@ -148,7 +142,6 @@ export class WaiterComponent implements OnInit {
   orderChangeHistory: any[] = [];
   showChangeHistoryModal = false;
   selectedProductCategory: string = '';
-  // Add these properties to your component class
   originalOrderData: any = null;
   isSavingChanges = false;
   pendingChanges: {
@@ -168,7 +161,7 @@ export class WaiterComponent implements OnInit {
     selectedMethod: 'Cash' as 'Cash' | 'UPI',
     busy: false,
     paymentId: 0,
-    orderNumber: 0 // ✅ ADD THIS
+    orderNumber: 0
 
   };
 
@@ -184,7 +177,7 @@ export class WaiterComponent implements OnInit {
     amount: 0,
     upiUri: '',
     tab: 'UPI' as 'UPI' | 'CASH',
-    orderNumber: 0 // ✅ ADD THIS
+    orderNumber: 0 
 
   };
 
@@ -203,22 +196,20 @@ export class WaiterComponent implements OnInit {
   private httpOptions: { headers: HttpHeaders } = { headers: new HttpHeaders() };
 
   constructor(private http: HttpClient, private router: Router, private route: ActivatedRoute, private auth: AuthService) {
-    this.setupRouterEvents(); // ✅ ADD THIS
+    this.setupRouterEvents(); 
 
   }
-  // ✅✅✅ THIS IS THE FIX ✅✅✅
+
   ngOnInit(): void {
-    // ✅ FIX: Subscribe to 'params' (from the URL /waiter/1)
-    // instead of 'queryParams' (from the URL /waiter?restaurantId=1)
+ 
     this.route.params.subscribe(params => {
       const routeRestaurantId = params['restaurantId'];
 
       if (routeRestaurantId) {
         this.restaurantId = +routeRestaurantId;
-        this.initializeDashboard(); // ✅ Good: Initialize dashboard *after* getting ID
+        this.initializeDashboard(); 
       } else {
-        // This block should not be reached if the AuthGuard is working,
-        // but we'll leave the error here as a fallback.
+
         this.showRestaurantError();
       }
     });
@@ -229,31 +220,25 @@ export class WaiterComponent implements OnInit {
   }
 
   getShareableUrl(): string {
-    // ✅ FIX: Use pathname which will be /waiter/1
     const baseUrl = window.location.origin + window.location.pathname;
-    return baseUrl; // The URL itself is now shareable
+    return baseUrl; 
   }
 
   refreshUrl(): void {
-    // This method might not be needed anymore, but we'll leave it
     this.updateUrlWithRestaurantId();
   }
   private updateUrlWithRestaurantId(): void {
     const currentUrl = this.router.url;
 
-    // Check if URL already has restaurantId
     if (!currentUrl.includes('restaurantId=') && this.restaurantId) {
-      // Navigate to same route with restaurantId parameter
       this.router.navigate([], {
         relativeTo: this.route,
         queryParams: { restaurantId: this.restaurantId },
-        queryParamsHandling: 'merge', // This preserves other query params
-        replaceUrl: true // This replaces current history entry
+        queryParamsHandling: 'merge', 
+        replaceUrl: true 
       });
     }
   }
-
-  // ✅ ADD: Method to handle navigation with restaurantId
   private navigateWithRestaurantId(commands: any[]): void {
     if (this.restaurantId) {
       const navigationExtras = {
@@ -268,16 +253,14 @@ export class WaiterComponent implements OnInit {
 
 
   private initializeFromPersistedData(): void {
-    // Try to get restaurantId from localStorage first
     const persistedRestaurantId = localStorage.getItem('waiter_restaurantId');
     if (persistedRestaurantId) {
       this.restaurantId = +persistedRestaurantId;
       this.initializeDashboard();
-      this.updateUrlWithRestaurantId(); // ✅ ADD THIS
+      this.updateUrlWithRestaurantId(); 
       return;
     }
 
-    // Fallback to user data
     const userData = localStorage.getItem('userData');
     if (userData) {
       const user = JSON.parse(userData);
@@ -285,10 +268,9 @@ export class WaiterComponent implements OnInit {
     }
 
     if (this.restaurantId) {
-      // Persist for future refreshes
       localStorage.setItem('waiter_restaurantId', this.restaurantId.toString());
       this.initializeDashboard();
-      this.updateUrlWithRestaurantId(); // ✅ ADD THIS
+      this.updateUrlWithRestaurantId(); 
     } else {
       this.showRestaurantError();
     }
@@ -307,27 +289,20 @@ export class WaiterComponent implements OnInit {
     }
   }
 
-  // Call this in your ngOnInit
   private initializeDashboard(): void {
-    console.log('✅ Initializing waiter dashboard for restaurant:', this.restaurantId);
 
-    // Persist restaurantId immediately
     localStorage.setItem('waiter_restaurantId', this.restaurantId.toString());
     this.updateUrlWithRestaurantId();
-    // Restore UI state
     this.restoreUIState();
 
-    // Update page title
     document.title = `Waiter Dashboard - Restaurant ${this.restaurantId}`;
 
-    // Simple headers without authentication
     this.httpOptions = {
       headers: new HttpHeaders({
         'Content-Type': 'application/json'
       })
     };
 
-    // ✅ ADD: Load restaurant details
     this.loadRestaurantDetails();
 
     // Initialize all data
@@ -338,7 +313,6 @@ export class WaiterComponent implements OnInit {
     this.setupRequestPolling();
     this.setupPaymentPolling();
 
-    // Set up intervals
     setInterval(() => {
       if (this.selectedSection === 'history') {
         this.refreshHistoryOnly();
@@ -353,29 +327,24 @@ export class WaiterComponent implements OnInit {
     console.error(this.error);
   }
 
-  // ✅ ADD: Method to validate and correct URL on component load
   private validateUrl(): void {
     const currentUrl = new URL(window.location.href);
     const urlParams = new URLSearchParams(currentUrl.search);
     const urlRestaurantId = urlParams.get('restaurantId');
 
-    // If URL has different restaurantId than current, update current
     if (urlRestaurantId && +urlRestaurantId !== this.restaurantId) {
       this.restaurantId = +urlRestaurantId;
       localStorage.setItem('waiter_restaurantId', this.restaurantId.toString());
     }
 
-    // If current restaurantId exists but URL doesn't have it, update URL
     if (this.restaurantId && !urlRestaurantId) {
       this.updateUrlWithRestaurantId();
     }
   }
-  // ✅ ADD method to copy URL to clipboard
   copyShareableUrl(): void {
     navigator.clipboard.writeText(this.getShareableUrl()).then(() => {
     });
   }
-  // ✅ ADD: Method to handle any external navigation while preserving restaurantId
   private setupRouterEvents(): void {
     this.router.events.subscribe(event => {
       // If we're navigating away from this component but restaurantId exists,
@@ -427,7 +396,6 @@ export class WaiterComponent implements OnInit {
       try {
         const uiState = JSON.parse(saved);
 
-        // Only restore if not too old (e.g., within last 2 hours)
         if (Date.now() - (uiState.lastUpdated || 0) < 2 * 60 * 60 * 1000) {
           this.selectedSection = uiState.selectedSection || 'orders';
           this.selectedTableNo = uiState.selectedTableNo;
@@ -443,21 +411,17 @@ export class WaiterComponent implements OnInit {
   switchPayTab(tab: 'verify' | 'collect') {
     if (this.selectedPayTab === tab) return;
     this.selectedPayTab = tab;
-    this.persistUIState(); // ✅ Persist tab selection
+    this.persistUIState(); 
 
     this.loadPendingByTab();
   }
 
-  // ✅ FIXED: Add missing methods with proper implementation
   async placeWaiterOrder(paymentPreference: 'PayNow' | 'PayLater' = 'PayLater'): Promise<void> {
     try {
-      // Get cart items from the embedded new-order component
       const orderPayload = {
-        // You'll need to get this from the embedded component
-        // For now, using empty payload - you'll need to implement this
+        
       };
 
-      // Create order with payment preference
       const response: any = await firstValueFrom(
         this.http.post(
           `${this.API_BASE}/order/generate?restaurantId=${this.restaurantId}&source=waiter&paymentPreference=${paymentPreference}`,
@@ -467,63 +431,54 @@ export class WaiterComponent implements OnInit {
       );
 
       if (paymentPreference === 'PayNow') {
-        // this.pushAlert('order', `✅ Order #${response.orderID} placed and paid!`);
-        // Order goes directly to history
+    
       } else {
-        // this.pushAlert('order', `✅ Order #${response.orderID} placed - Payment Pending`);
-        // Order goes to pending payments
+   
       }
 
-      this.getOrders(); // Refresh orders list
+      this.getOrders(); 
     } catch (error) {
       console.error('Error placing waiter order:', error);
     }
   }
 
   private setupPaymentPolling(): void {
-    // Initial load
     this.fetchPendingPayments();
 
-    // Set up intervals for automatic refresh
     setInterval(() => {
       if (this.selectedSection === 'pendingPayments') {
         this.fetchPendingPayments();
       }
-    }, 10000); // Full refresh every 10 seconds
+    }, 10000); 
 
-    // Check for new payments more frequently
     setInterval(() => {
       if (this.selectedSection === 'pendingPayments') {
         this.checkForNewPendingPayments();
       }
-    }, 5000); // Check for new payments every 5 seconds
+    }, 5000); 
   }
   private loadPendingByTab(): void {
-    // If your backend supports ?channel=Customer|Waiter, use the two fetch* methods below.
-    // Otherwise, we’ll split on the client (fallback) using common fields.
+
     this.fetchPendingPayments();
   }
 
-  // ✅ UPDATE: Enhanced splitPending to include order numbers
   private splitPending(payments: any[]) {
-    // Customer payments (paymentChannel === 0 OR source=Customer) need verification
     this.verifyPayments = payments.filter(p =>
       p.paymentChannel === 0 ||
       p.source?.toLowerCase() === 'customer' ||
       (p.paymentChannel === undefined && p.source?.toLowerCase() !== 'waiter')
     ).map(p => ({
       ...p,
-      orderNumber: p.orderNumber || p.orderID // ✅ ENSURE ORDER NUMBER
+      orderNumber: p.orderNumber || p.orderID 
     }));
 
-    // Waiter payments (paymentChannel === 1 OR source=Waiter) need collection
     this.collectPayments = payments.filter(p =>
       p.paymentChannel === 1 ||
       p.source?.toLowerCase() === 'waiter' ||
       (p.paymentChannel === undefined && p.source?.toLowerCase() === 'waiter')
     ).map(p => ({
       ...p,
-      orderNumber: p.orderNumber || p.orderID // ✅ ENSURE ORDER NUMBER
+      orderNumber: p.orderNumber || p.orderID 
     }));
 
     console.log('Verify Payments:', this.verifyPayments);
@@ -531,22 +486,22 @@ export class WaiterComponent implements OnInit {
   }
   selectTableForOrders(tableNo: number): void {
     this.selectedTableNo = tableNo;
-    this.persistUIState(); // ✅ Persist table selection
+    this.persistUIState(); 
 
   }
 
   private setupPendingPaymentPolling(): void {
-    this.fetchPendingPayments(); // initial
+    this.fetchPendingPayments(); 
     setInterval(() => this.fetchPendingPayments(), 10000);
   }
 
   navigateToNewOrder(): void {
-    this.selectedSection = 'newOrder'; // ✅ no router nav
+    this.selectedSection = 'newOrder'; 
   }
 
   onNewOrderPlaced(e: {
     orderID: number;
-    orderNumber?: number; // ✅ ADD ORDER NUMBER
+    orderNumber?: number; 
 
     paymentStatus?: string;
     paymentMethod?: string;
@@ -554,22 +509,17 @@ export class WaiterComponent implements OnInit {
   }) {
     if (e.paymentPreference === 'PayNow') {
       if (e.paymentStatus === 'created') {
-        // this.pushAlert('order', `🆕 Order #${e.orderID} created - Complete payment to confirm`);
       } else if (e.paymentStatus === 'paid') {
-        // this.pushAlert('order', `✅ Order #${e.orderID} placed and paid via ${e.paymentMethod}! Check Orders section.`);
       }
     } else {
-      // PayLater orders
-      // this.pushAlert('order', ` Order #${e.orderID} placed - Payment pending in Collect tab`);
+     
     }
-
-    // Refresh orders to show the new order in the correct section
     this.getOrders();
   }
 
   onNewOrderClosed() {
     this.selectedSection = 'orders';
-    this.getOrders(); // refresh list after closing
+    this.getOrders(); 
   }
 
   private refreshHistoryOnly(): void {
@@ -580,7 +530,7 @@ export class WaiterComponent implements OnInit {
         next: res => {
           const all = this.unwrapArray<any>(res.orders).map(o => ({
             orderID: o.orderID,
-            orderNumber: o.orderNumber || o.orderID, // ✅ ADD ORDER NUMBER
+            orderNumber: o.orderNumber || o.orderID, 
             tableNo: o.tableNo,
             totalAmount: o.totalAmount,
             orderStatus: this.mapOrderStatus(o.orderStatus),
@@ -589,7 +539,7 @@ export class WaiterComponent implements OnInit {
               productID: i.productID,
               productName: i.productName,
               quantity: i.quantity,
-              unitPrice: i.unitPrice ?? 0 // required field
+              unitPrice: i.unitPrice ?? 0 
             })),
             createdAt: o.createdAt ? new Date(o.createdAt) : undefined,
             closedAt: o.closedAt ? new Date(o.closedAt) : undefined,
@@ -598,7 +548,7 @@ export class WaiterComponent implements OnInit {
               status: o.latestPayment.status,
               amount: o.latestPayment.amount,
               paidAt: o.latestPayment.paidAt ? new Date(o.latestPayment.paidAt) : null
-            } : undefined // Changed from null to undefined
+            } : undefined 
           }));
 
           this.allHistoryOrders = all.filter(o =>
@@ -630,7 +580,7 @@ export class WaiterComponent implements OnInit {
       );
     }
 
-    this.persistUIState(); // ✅ Persist filter changes
+    this.persistUIState(); 
   }
   updateReadyTables(): void {
     this.readyTables = this.groupByTable(this.readyToServeOrders);
@@ -654,9 +604,6 @@ export class WaiterComponent implements OnInit {
     );
   }
 
-
-
-  // ✅ UPDATED: Include restaurantId in request polling
   private setupRequestPolling(): void {
     this.requestPollingInterval = setInterval(() => {
       if (this.restaurantId) {
@@ -697,39 +644,28 @@ export class WaiterComponent implements OnInit {
     return table?.orders || [];
   }
 
-
-
-
-
-  // ✅ ADD THIS METHOD TO FIX THE ERROR
   clearAllNotifications() {
     this.http.delete('/api/WaiterRequest/clear-all').subscribe(() => {
       this.waiterRequests = [];
     });
   }
 
-  // FIXED markPaymentPaid method
-  markPaymentPaid(payment: any): void {  // Change parameter to accept the payment object
-    // Debug log to see what we're receiving
-    console.log('Payment object received:', payment);
+  markPaymentPaid(payment: any): void { 
 
-    // Try different possible property names for payment ID
+
     const paymentID = payment.paymentID || payment.paymentId || payment.id || payment.PaymentID;
 
-    console.log('Extracted payment ID:', paymentID);
 
     if (!paymentID) {
       console.error('Invalid paymentID: undefined. Full payment object:', payment);
       return;
     }
 
-    console.log('Clearing payment with ID:', paymentID);
 
     this.http.put(`${this.API_BASE}/order/pending-payments/${paymentID}/clear?restaurantId=${this.restaurantId}`, null, this.httpOptions)
       .subscribe({
         next: (response: any) => {
           alert(response.message);
-          // Remove from all payment arrays using the correct ID
           this.pendingPayments = this.pendingPayments.filter(p =>
             (p.paymentID || p.paymentId || p.id || p.PaymentID) !== paymentID
           );
@@ -740,7 +676,6 @@ export class WaiterComponent implements OnInit {
             (p.paymentID || p.paymentId || p.id || p.PaymentID) !== paymentID
           );
 
-          // Refresh data
           this.fetchPendingPayments();
         },
         error: (err) => {
@@ -750,7 +685,7 @@ export class WaiterComponent implements OnInit {
   }
   logout(): void {
     if (confirm('Are you sure you want to log out?')) {
-      this.auth.logout(); // The auth service will handle redirecting to /login
+      this.auth.logout(); 
     }
   }
 
@@ -758,7 +693,6 @@ export class WaiterComponent implements OnInit {
 
 
   setupNotificationPolling(): void {
-    // Check for ready notifications every 30 seconds
     this.notificationCheckInterval = setInterval(() => {
       this.checkForReadyNotifications();
     }, 30000);
@@ -777,17 +711,16 @@ export class WaiterComponent implements OnInit {
               const exists = this.readyOrderMessages.some(m => m.notificationId === n.notificationId);
               if (!exists) {
                 const orderNumber = n.orderNumber || n.orderId;
-                const msg = `✅ Order #${orderNumber} for Table ${n.tableNo} is ready to serve.`;
+                const msg = ` Order #${orderNumber} for Table ${n.tableNo} is ready to serve.`;
 
                 this.readyOrderSound.play().catch(() => { });
                 this.vibrate();
-                // this.pushAlert('ready', msg);
 
                 this.readyOrderMessages.push({
                   notificationId: n.notificationId,
                   message: msg,
                   orderId: n.orderId,
-                  orderNumber: orderNumber, // ✅ ADD ORDER NUMBER
+                  orderNumber: orderNumber, 
                   tableNo: n.tableNo,
                   timestamp: Date.now()
                 });
@@ -815,14 +748,14 @@ export class WaiterComponent implements OnInit {
     notifications.forEach(n => {
       const exists = this.readyOrderMessages.some(m => m.orderId === n.orderId);
       if (!exists) {
-        const orderNumber = n.orderNumber || n.orderId; // ✅ GET ORDER NUMBER
+        const orderNumber = n.orderNumber || n.orderId; 
         const message = `Table ${n.tableNo} → Order #${orderNumber} is ready to serve!`;
 
         this.readyOrderMessages.push({
           notificationId: n.notificationId,
           message: message,
           orderId: n.orderId,
-          orderNumber: orderNumber, // ✅ ADD ORDER NUMBER
+          orderNumber: orderNumber, 
           tableNo: n.tableNo,
           timestamp: Date.now()
         });
@@ -835,10 +768,6 @@ export class WaiterComponent implements OnInit {
       }
     });
   }
-
-
-
-
   dismissReadyNotification(index: number): void {
     this.readyOrderMessages.splice(index, 1);
   }
@@ -873,25 +802,21 @@ export class WaiterComponent implements OnInit {
   }
 
   async markOrderAsPaid(order: Order): Promise<void> {
-    // Redirect to the new modal approach
     this.openMarkAsPaidModal(order);
   }
   private ensureRestaurantDetails(): Promise<void> {
     return new Promise(async (resolve) => {
-      // If we already have valid restaurant details, resolve immediately
       if (this.restaurantDetails.name && this.restaurantDetails.name !== 'Restaurant' &&
         this.restaurantDetails.address && this.restaurantDetails.address !== 'Address not available') {
         resolve();
         return;
       }
 
-      // Otherwise, load restaurant details
       await this.loadRestaurantDetails();
       resolve();
     });
   }
 
-  /** Helper to unwrap a JSON-NET wrapper or return the array directly */
   private unwrapArray<T>(maybeWrapped: any): T[] {
     if (Array.isArray(maybeWrapped)) {
       return maybeWrapped;
@@ -914,13 +839,11 @@ export class WaiterComponent implements OnInit {
     this.collectModal.tab = 'UPI';
     this.busyCollect = false;
   }
-  // In your initiateUpi method
   async initiateUpi() {
     if (!this.restaurantId) return;
 
     this.busyCollect = true;
     try {
-      // Ensure restaurant details are loaded for UPI info
       if (!this.restaurantDetails.upiId) {
         await this.loadRestaurantDetails();
       }
@@ -952,32 +875,30 @@ export class WaiterComponent implements OnInit {
 
   fetchPendingPayments(): void {
     if (!this.restaurantId) {
-      console.log('❌ No restaurant ID available for fetching payments');
+      console.log(' No restaurant ID available for fetching payments');
       return;
     }
 
-    console.log('🔄 Fetching pending payments...');
 
     this.http.get<any[]>(`${this.API_BASE}/order/pending-payments?restaurantId=${this.restaurantId}`, this.httpOptions)
       .subscribe({
         next: (payments) => {
-          console.log('📦 Raw payments from API:', payments);
 
           this.pendingPayments = (payments || []).map(p => ({
             ...p,
             paymentId: p.paymentID || p.paymentId || p.id,
-            orderNumber: p.orderNumber || p.orderID // ✅ ADD ORDER NUMBER
+            orderNumber: p.orderNumber || p.orderID 
           }));
 
           this.splitPending(this.pendingPayments);
-          console.log('✅ Payments updated:', {
+          console.log(' Payments updated:', {
             total: this.pendingPayments.length,
             verify: this.verifyPayments.length,
             collect: this.collectPayments.length
           });
         },
         error: err => {
-          console.error('❌ Error fetching pending payments:', err);
+          console.error(' Error fetching pending payments:', err);
           this.error = 'Failed to load pending payments';
         }
       });
@@ -989,17 +910,13 @@ export class WaiterComponent implements OnInit {
       .subscribe({
         next: (newPayments) => {
           if (newPayments.length > 0) {
-            console.log('🆕 New pending payments detected:', newPayments.length);
 
-            // Play sound for new payments
             this.paymentSound.play().catch(() => { });
             this.vibrate();
 
-            // Add new payments to the beginning of the list
             this.pendingPayments = [...newPayments, ...this.pendingPayments];
             this.splitPending(this.pendingPayments);
 
-            // Mark as notified
             newPayments.forEach(payment => {
               const paymentId = payment.paymentID || payment.paymentId;
               if (paymentId) {
@@ -1011,7 +928,6 @@ export class WaiterComponent implements OnInit {
               }
             });
 
-            this.pushAlert('payment', `💰 ${newPayments.length} new payment(s) pending`);
           }
         },
         error: err => console.error('Error checking new payments:', err)
@@ -1022,19 +938,15 @@ export class WaiterComponent implements OnInit {
   async testPaymentEndpoints(): Promise<void> {
     if (!this.collectModal.paymentId) return;
 
-    console.log('🔧 Testing payment endpoints for payment ID:', this.collectModal.paymentId);
 
     try {
-      // Test GET endpoint
       const status: any = await firstValueFrom(
         this.http.get(
           `${this.API_BASE}/order/payments/${this.collectModal.paymentId}/status?restaurantId=${this.restaurantId}`,
           this.httpOptions
         )
       );
-      console.log('✅ GET status works:', status);
 
-      // Test PUT endpoint
       const complete: any = await firstValueFrom(
         this.http.put(
           `${this.API_BASE}/order/payments/${this.collectModal.paymentId}/complete?restaurantId=${this.restaurantId}`,
@@ -1042,10 +954,9 @@ export class WaiterComponent implements OnInit {
           this.httpOptions
         )
       );
-      console.log('✅ PUT complete works:', complete);
 
     } catch (error: any) {
-      console.error('❌ Endpoint test failed:', error);
+      console.error(' Endpoint test failed:', error);
       console.log('Error details:', {
         status: error.status,
         statusText: error.statusText,
@@ -1105,7 +1016,7 @@ export class WaiterComponent implements OnInit {
 
   toggleSidebar(): void {
     this.isSidebarOpen = !this.isSidebarOpen;
-    this.persistUIState(); // ✅ Persist sidebar state
+    this.persistUIState(); 
 
   }
 
@@ -1125,26 +1036,22 @@ export class WaiterComponent implements OnInit {
   pushAlert(type: 'order' | 'ready' | 'payment', message: string): void {
     const now = Date.now();
 
-    // Avoid duplicates
     if (this.activeAlerts.some(a => a.message === message)) return;
 
     this.activeAlerts.push({ type, message, timestamp: now });
 
     setTimeout(() => {
       this.activeAlerts = this.activeAlerts.filter(a => a.timestamp !== now);
-    }, 2000); // auto-dismiss after 20s
+    }, 2000); 
   }
 
-  // Enhanced UPI payment method
   async markUpiAsPaid(): Promise<void> {
     this.busyCollect = true;
     try {
       const orderReference = this.collectModal.orderNumber ?
         `Order #${this.collectModal.orderNumber}` :
         `Order #${this.collectModal.orderId}`;
-      console.log('💰 Processing UPI payment for order:', this.collectModal.orderId);
 
-      // Get the specific payment data for this modal
       const paymentData = this.collectPayments.find(p =>
         (p.paymentID || p.paymentId) === this.collectModal.paymentId
       );
@@ -1155,8 +1062,6 @@ export class WaiterComponent implements OnInit {
         throw new Error('Payment data not found');
       }
 
-      // 1. Mark payment as completed
-      console.log('📝 Marking payment as completed...');
       await firstValueFrom(
         this.http.put(
           `${this.API_BASE}/order/payments/${this.collectModal.paymentId}/complete?restaurantId=${this.restaurantId}`,
@@ -1165,46 +1070,33 @@ export class WaiterComponent implements OnInit {
         )
       );
 
-      // 2. Print bill using payment data
-      console.log('🖨️ Printing bill...');
       await this.printOrderBill(this.collectModal.orderId);
 
-      // 3. Success handling
-      console.log('✅ Payment completed successfully');
       this.onPaymentCleared(this.collectModal.paymentId);
       this.closeCollectModal();
-      this.pushAlert('payment', `✅ UPI payment received for Order #${this.collectModal.orderId}`);
 
-      // 4. Refresh orders
       this.getOrders();
 
     } catch (error: any) {
-      console.error('❌ Error marking UPI as paid:', error);
-      alert('Failed to process UPI payment. Please try again.');
+      console.error(' Error marking UPI as paid:', error);
     } finally {
       this.busyCollect = false;
     }
   }
 
-  // Enhanced Cash payment method
   async markCashReceived() {
     this.busyCollect = true;
     try {
       const orderReference = this.collectModal.orderNumber ?
         `Order #${this.collectModal.orderNumber}` :
         `Order #${this.collectModal.orderId}`;
-      console.log('💰 Processing Cash payment for order:', this.collectModal.orderId);
 
-      // Get the specific payment data for this modal
       const paymentData = this.collectPayments.find(p =>
         (p.paymentID || p.paymentId) === this.collectModal.paymentId
       );
 
-      console.log('🔍 Payment data for Cash:', paymentData);
 
-      // 1. Create payment record if not exists
       if (!this.collectModal.paymentId) {
-        console.log('📝 Creating new cash payment record...');
         const started: any = await firstValueFrom(
           this.http.post(
             `${this.API_BASE}/order/payments/initiate?orderId=${this.collectModal.orderId}&restaurantId=${this.restaurantId}&channel=Waiter&method=Cash`,
@@ -1215,14 +1107,12 @@ export class WaiterComponent implements OnInit {
 
         if (started?.paymentId) {
           this.collectModal.paymentId = started.paymentId;
-          console.log('✅ Created payment with ID:', this.collectModal.paymentId);
         } else {
           throw new Error('Failed to create cash payment record');
         }
       }
 
       // 2. Mark cash payment as completed
-      console.log('📝 Marking cash payment as completed...');
       await firstValueFrom(
         this.http.put(
           `${this.API_BASE}/order/payments/${this.collectModal.paymentId}/complete?restaurantId=${this.restaurantId}`,
@@ -1232,13 +1122,10 @@ export class WaiterComponent implements OnInit {
       );
 
       // 3. Print bill
-      console.log('🖨️ Printing bill...');
       await this.printOrderBill(this.collectModal.orderId);
 
       // 4. Success handling
-      console.log('✅ Cash payment completed successfully');
       this.closeCollectModal();
-      this.pushAlert('payment', `✅ Cash payment received! Order #${this.collectModal.orderId}`);
 
       // 5. Refresh data
       setTimeout(() => {
@@ -1247,21 +1134,18 @@ export class WaiterComponent implements OnInit {
       }, 1000);
 
     } catch (error: any) {
-      console.error('❌ Error marking cash received:', error);
-      alert('Failed to process cash payment. Please try again.');
+      console.error(' Error marking cash received:', error);
     } finally {
       this.busyCollect = false;
     }
   }
 
-  // Debug method to check payment data structure
   debugPaymentData(): void {
     console.log('=== PAYMENT DATA DEBUG ===');
     console.log('Collect Payments:', this.collectPayments);
     console.log('Verify Payments:', this.verifyPayments);
     console.log('Pending Payments:', this.pendingPayments);
 
-    // Check a specific payment
     if (this.collectPayments.length > 0) {
       const samplePayment = this.collectPayments[0];
       console.log('Sample Payment Structure:', {
@@ -1274,27 +1158,19 @@ export class WaiterComponent implements OnInit {
       });
     }
 
-    console.log('=== END DEBUG ===');
   }
 
   openCollectModal(p: any) {
-    console.log('📋 Opening collect modal with payment:', p);
 
-    // Debug the payment structure
-    console.log('Payment object keys:', Object.keys(p));
-    console.log('Payment items:', p.items);
-    console.log('Payment amount:', p.amount);
-    console.log('Payment tableNo:', p.tableNo);
 
     this.collectModal.open = true;
     this.collectModal.orderId = p.orderID;
-    this.collectModal.orderNumber = p.orderNumber || p.orderID; // ✅ ADD ORDER NUMBER
+    this.collectModal.orderNumber = p.orderNumber || p.orderID; 
     this.collectModal.amount = p.amount;
     this.collectModal.paymentId = p.paymentID || p.paymentId || 0;
     this.collectModal.upiUri = '';
     this.collectModal.tab = 'UPI';
 
-    // Debug all payment data
     this.debugPaymentData();
   }
 
@@ -1312,10 +1188,8 @@ export class WaiterComponent implements OnInit {
         )
       );
 
-      this.pushAlert('order', `🖨️ Bill sent to printer for Order #${orderId}`);
     } catch (error) {
-      console.error('❌ Print failed:', error);
-      this.pushAlert('order', `⚠️ Printing failed for Order #${orderId}`);
+      console.error('Print failed:', error);
     }
   }
 
@@ -1326,15 +1200,9 @@ export class WaiterComponent implements OnInit {
         console.warn('No restaurant ID available for loading details');
         return;
       }
-
-      console.log('🔄 Loading restaurant details for ID:', this.restaurantId);
-
-      // ✅ FIX: Use the correct endpoint path
       const response: any = await firstValueFrom(
         this.http.get(`${this.API_BASE}/order/restaurant/${this.restaurantId}/details`, this.httpOptions)
       );
-
-      console.log('📥 Restaurant details response:', response);
 
       if (response) {
         this.restaurantDetails = {
@@ -1343,13 +1211,11 @@ export class WaiterComponent implements OnInit {
           upiId: response.upiId || response.upi_ID,
           upiName: response.upiName || response.upi_Name || response.name
         };
-        console.log('✅ Restaurant details loaded:', this.restaurantDetails);
       } else {
-        console.warn('⚠️ No restaurant details in response');
+        console.warn(' No restaurant details in response');
       }
     } catch (error) {
-      console.error('❌ Error loading restaurant details:', error);
-      // Use fallback values
+      console.error(' Error loading restaurant details:', error);
       this.restaurantDetails = {
         name: 'Restaurant',
         address: 'Address not available',
@@ -1359,68 +1225,53 @@ export class WaiterComponent implements OnInit {
     }
   }
   
-
-
-
-  // Helper method to truncate long text for thermal printer
   private truncateText(text: string, maxLength: number): string {
     if (!text) return '';
     return text.length <= maxLength ? text : text.substring(0, maxLength - 3) + '...';
   }
 
 
-  // Helper method to get table number
   getTableNoFromOrder(orderId: number): number {
     const order = this.orders.find(o => o.orderID === orderId);
     return order?.tableNo || 0;
   }
 
-  // Set modal tab
   setCollectModalTab(tab: 'UPI' | 'CASH'): void {
     this.collectModal.tab = tab;
   }
-  // In waiter.component.ts
 
-  private async getOrders(): Promise<void> {
-    if (!this.restaurantId) return;
+private async getOrders(): Promise<void> {
+  if (!this.restaurantId) return;
 
-    try {
-      const res = await firstValueFrom(
-        this.http.get<any>(`${this.API_BASE}/order/with-waiter?restaurantId=${this.restaurantId}`, this.httpOptions)
-      );
+  try {
+    const res = await firstValueFrom(
+      this.http.get<any>(`${this.API_BASE}/order/with-waiter?restaurantId=${this.restaurantId}`, this.httpOptions)
+    );
 
-      const all = this.unwrapArray<any>(res.orders).map(o => this.mapOrderFromApi(o));
+    const all = this.unwrapArray<any>(res.orders).map(o => this.mapOrderFromApi(o));
 
-      this.orders = all.filter(o =>
-        o.orderStatus === OrderStatus.Pending ||
-        o.orderStatus === OrderStatus.Confirmed ||
-        o.orderStatus === OrderStatus.Served
-      );
+  
+    this.orders = all.filter(o =>
+      o.orderStatus === OrderStatus.Pending ||
+      o.orderStatus === OrderStatus.Confirmed ||
+      (o.orderStatus === OrderStatus.Served && !this.isOrderPaid(o)) 
+    );
 
-      this.allHistoryOrders = all.filter(o =>
-        o.orderStatus === OrderStatus.Completed ||
-        (o.orderStatus === OrderStatus.Served &&
-          o.latestPayment?.status === 'Success')
-      );
+    this.allHistoryOrders = all.filter(o =>
+      o.orderStatus === OrderStatus.Completed ||
+      o.orderStatus === OrderStatus.Cancelled ||
+      (o.orderStatus === OrderStatus.Served && this.isOrderPaid(o))
+    );
 
-      this.applyHistoryFilter();
-      this.groupedUpcomingOrders = this.groupOrdersByTable(this.orders);
+    this.applyHistoryFilter();
+    this.groupedUpcomingOrders = this.groupOrdersByTable(this.orders);
+    this.runTableSelectionLogic();
+    this.updateReadyTables();
 
-      // --- THIS BLOCK ---
-      // if (!this.selectedTableNo && this.groupedUpcomingOrders.length > 0) {
-      //   this.selectedTableNo = this.groupedUpcomingOrders[0].tableNo;
-      // }
-      // --- IS REPLACED BY THIS ---
-      this.runTableSelectionLogic(); // ✅ Use the new helper function
-
-      this.updateReadyTables();
-
-      console.log('✅ Orders refreshed. Total active orders:', this.orders.length);
-
-    } catch (err) {
-      console.error('Error fetching orders:', err);
-    }
+  } catch (err) {
+    console.error('Error fetching orders:', err);
   }
+}
 private mapOrderFromApi(o: any): Order {
   let latestPayment: PaymentInfo | undefined = undefined;
 
@@ -1437,7 +1288,6 @@ private mapOrderFromApi(o: any): Order {
     };
   }
 
-  // ✅ STORE ORDER NUMBER MAPPING
   if (o.orderNumber) {
     this.orderNumberMap[o.orderID] = o.orderNumber;
   }
@@ -1452,7 +1302,6 @@ private mapOrderFromApi(o: any): Order {
       ? this.mapKitchenStatus(o.kitchenStatus)
       : KitchenStatus.Pending,
 
-    // 🔥🔥🔥 CRITICAL FIX IS HERE 🔥🔥🔥
     items: this.unwrapArray<any>(o.items).map((i: any) => {
       const customizationTotal =
         (i.customizations || []).reduce(
@@ -1465,7 +1314,6 @@ private mapOrderFromApi(o: any): Order {
         productID: i.productID,
         productName: i.productName,
         quantity: i.quantity,
-        // ✅ FINAL unit price = base price + customization price
         unitPrice: (i.unitPrice ?? 0) + customizationTotal,
         orderItemID:
           i.orderItemID || i.orderItemId || i.id || i.OrderItemID,
@@ -1503,7 +1351,7 @@ private mapOrderFromApi(o: any): Order {
       );
     }
 
-    this.persistUIState(); // ✅ Persist filter changes
+    this.persistUIState(); 
   }
 
   toggleTableGroup(tableGroup: any): void {
@@ -1512,7 +1360,6 @@ private mapOrderFromApi(o: any): Order {
 
 
 
-  // Add this new helper method
   private mapKitchenStatus(status: any): KitchenStatus {
     if (typeof status === 'number') {
       return [
@@ -1546,7 +1393,6 @@ private mapOrderFromApi(o: any): Order {
     }));
   }
 
-  // ✅ UPDATED: Include restaurantId in waiter requests
   getWaiterRequests(): void {
     if (!this.restaurantId) return;
 
@@ -1571,44 +1417,34 @@ private mapOrderFromApi(o: any): Order {
   }
 
 
-  // In your waiter.component.ts
   get readyToServeOrders(): Order[] {
-    // If you still want to show ready orders, base it purely on order status
     return this.orders.filter(o =>
       o.orderStatus === OrderStatus.Confirmed
-      // ✅ No kitchen status dependency
     );
   }
   async serveOrder(orderID: number): Promise<void> {
     if (!this.restaurantId) return;
 
-    // Find the order to check payment status and get order number
     const order = this.orders.find(o => o.orderID === orderID);
 
     if (!order) return;
 
     try {
-      // Call the serve endpoint
       await firstValueFrom(
         this.http.put(`${this.API_BASE}/Order/${orderID}/serve?restaurantId=${this.restaurantId}`, null, this.httpOptions)
       );
 
-      // Refresh orders to reflect the change
       this.getOrders();
 
       const orderReference = order.orderNumber ? `Order #${order.orderNumber}` : `Order #${orderID}`;
-      this.pushAlert('order', `✅ ${orderReference} marked as served`);
 
-      // Print bill when serving (if not already printed)
       this.printOrderBill(orderID);
     } catch (error: any) {
       console.error('Error serving order:', error);
       const orderReference = order.orderNumber ? `Order #${order.orderNumber}` : `Order #${orderID}`;
-      this.pushAlert('order', `❌ Failed to serve ${orderReference}: ${error.error?.message || error.message}`);
     }
   }
 
-  // Alternative method if main endpoint has restrictions
   alternativeServeOrder(orderID: number): void {
     const payload = {
       orderStatus: OrderStatus.Served,
@@ -1623,11 +1459,9 @@ private mapOrderFromApi(o: any): Order {
     ).subscribe({
       next: () => {
         this.getOrders();
-        this.pushAlert('order', `✅ Order #${orderID} served (alternative method)`);
       },
       error: err => {
         console.error('Alternative serve also failed:', err);
-        alert('Failed to serve order. Please try manual status update.');
       }
     });
   }
@@ -1644,11 +1478,9 @@ private mapOrderFromApi(o: any): Order {
     return Object.entries(map).map(([tableNo, orders]) => ({
       tableNo: +tableNo,
       orders,
-      expanded: false  // ✅ Add this
+      expanded: false  
     }));
   }
-
-
 
   acceptRequest(requestId: number): void {
     if (!this.restaurantId) return;
@@ -1675,17 +1507,12 @@ private mapOrderFromApi(o: any): Order {
     });
   }
 
-
-
-
-
   completeRequest(requestId: number): void {
     this.http.delete(
       `${this.API_BASE}/order/waiter-requests/${requestId}`,
       this.httpOptions
     ).subscribe({
       next: () => {
-        // Remove from the displayed list
         this.waiterRequests = this.waiterRequests.filter(req => req.waiterRequestID !== requestId);
       },
       error: err => console.error('Error completing request:', err)
@@ -1697,16 +1524,12 @@ private mapOrderFromApi(o: any): Order {
     return mins < 60 ? `${mins} min ago` : `${Math.floor(mins / 60)}h ${mins % 60}m ago`;
   }
 
-
-
-
   updateOrderItemQuantity(item: any, newQuantity: number): void {
-    console.log('🔄 Updating item quantity:', item, newQuantity);
 
     const orderItemID = item.orderItemID || item.orderItemId || item.id || item.OrderItemID || item.itemId;
 
     if (!orderItemID) {
-      console.error('❌ No valid order item ID found for item:', item);
+      console.error(' No valid order item ID found for item:', item);
       return;
     }
 
@@ -1720,10 +1543,8 @@ private mapOrderFromApi(o: any): Order {
       return;
     }
 
-    // Store the change in pending changes instead of making API call immediately
     this.pendingChanges.quantityUpdates.set(orderItemID, newQuantity);
 
-    // Update the UI immediately for better UX
     const itemIndex = this.selectedOrderForEdit.items.findIndex((i: any) =>
       (i.orderItemID || i.orderItemId || i.id || i.OrderItemID || i.itemId) === orderItemID
     );
@@ -1733,7 +1554,6 @@ private mapOrderFromApi(o: any): Order {
     }
 this.selectedOrderForEdit.totalAmount =
   this.recalculateOrderTotal(this.selectedOrderForEdit);
-    this.pushAlert('order', `📝 Quantity updated for ${item.productName} to ${newQuantity} (Pending Save)`);
   }
 
 
@@ -1755,7 +1575,6 @@ this.selectedOrderForEdit.totalAmount =
     ).subscribe({
       next: () => {
         this.getOrders();
-        this.pushAlert('order', `✅ Added ${product.productName} to order`);
         this.showEditOrderModal = false;
       },
       error: (err) => {
@@ -1763,7 +1582,6 @@ this.selectedOrderForEdit.totalAmount =
       }
     });
   }
-  // ✅ UPDATE: Enhanced cancelOrder to use order numbers
   cancelOrder(order: any): void {
     if (this.isOrderLocked()) {
       return;
@@ -1771,7 +1589,7 @@ this.selectedOrderForEdit.totalAmount =
 
     const orderReference = order.orderNumber ? `Order #${order.orderNumber}` : `Order #${order.orderID}`;
     const reason = prompt(`Reason for cancelling ${orderReference}:`);
-    if (reason === null) return; // User cancelled
+    if (reason === null) return; 
 
     const payload = {
       reason: reason || 'No reason provided',
@@ -1787,7 +1605,6 @@ this.selectedOrderForEdit.totalAmount =
     ).subscribe({
       next: () => {
         this.getOrders();
-        this.pushAlert('order', `❌ ${orderReference} cancelled`);
         this.showEditOrderModal = false;
       },
       error: (err) => {
@@ -1811,7 +1628,6 @@ this.selectedOrderForEdit.totalAmount =
   }
 
   private getCurrentUserId(): number {
-    // Implement based on your auth system
     const userData = localStorage.getItem('userData');
     if (userData) {
       const user = JSON.parse(userData);
@@ -1827,11 +1643,9 @@ this.selectedOrderForEdit.totalAmount =
   }
   switchSection(section: 'orders' | 'requests' | 'history' | 'pendingPayments' | 'readyOrders' | 'newOrder'): void {
     this.selectedSection = section;
-    this.isSidebarOpen = false; // optional: auto-close sidebar after selecting
-    this.persistUIState(); // ✅ Persist on section change
-
+    this.isSidebarOpen = false; 
+    this.persistUIState(); 
   }
-  // Original close method
   closeEditOrderModal(): void {
     this.showEditOrderModal = false;
     this.resetPendingChanges();
@@ -1851,7 +1665,6 @@ this.selectedOrderForEdit.totalAmount =
     }
   }
 
-  // In waiter.component.ts
 async saveOrderChanges(): Promise<void> {
   if (this.isSavingChanges || !this.hasUnsavedChanges()) {
     return;
@@ -1862,8 +1675,7 @@ async saveOrderChanges(): Promise<void> {
   try {
     let successCount = 0;
 
-    const tableHasChanged =
-      this.selectedOrderForEdit.tableNo !== this.originalOrderData.tableNo;
+    const tableHasChanged = this.selectedOrderForEdit.tableNo !== this.originalOrderData.tableNo;
 
     const totalChanges =
       this.pendingChanges.quantityUpdates.size +
@@ -1871,162 +1683,105 @@ async saveOrderChanges(): Promise<void> {
       this.pendingChanges.itemsToAdd.length +
       (tableHasChanged ? 1 : 0);
 
-    // ===============================
-    // 1️⃣ TABLE CHANGE
-    // ===============================
     if (tableHasChanged) {
       const payload = {
         newTableNo: +this.selectedOrderForEdit.tableNo,
         changedByUserId: this.getCurrentUserId()
       };
-
       await firstValueFrom(
-        this.http.put(
-          `${this.API_BASE}/order/${this.selectedOrderForEdit.orderID}/change-table?restaurantId=${this.restaurantId}`,
-          payload,
-          this.httpOptions
-        )
+        this.http.put(`${this.API_BASE}/order/${this.selectedOrderForEdit.orderID}/change-table?restaurantId=${this.restaurantId}`, payload, this.httpOptions)
       );
       successCount++;
     }
 
-    // ===============================
-    // 2️⃣ QUANTITY UPDATES
-    // ===============================
     for (const [orderItemID, newQuantity] of this.pendingChanges.quantityUpdates) {
       const payload = {
         quantity: newQuantity,
         changedByUserId: this.getCurrentUserId()
       };
-
       await firstValueFrom(
-        this.http.put(
-          `${this.API_BASE}/order/${this.selectedOrderForEdit.orderID}/update-item/${orderItemID}?restaurantId=${this.restaurantId}`,
-          payload,
-          this.httpOptions
-        )
+        this.http.put(`${this.API_BASE}/order/${this.selectedOrderForEdit.orderID}/update-item/${orderItemID}?restaurantId=${this.restaurantId}`, payload, this.httpOptions)
       );
       successCount++;
     }
 
-    // ===============================
-    // 3️⃣ REMOVALS
-    // ===============================
     for (const orderItemID of this.pendingChanges.itemsToRemove) {
       const payload = {
         quantity: 0,
         changedByUserId: this.getCurrentUserId()
       };
-
       await firstValueFrom(
-        this.http.put(
-          `${this.API_BASE}/order/${this.selectedOrderForEdit.orderID}/update-item/${orderItemID}?restaurantId=${this.restaurantId}`,
-          payload,
-          this.httpOptions
-        )
+        this.http.put(`${this.API_BASE}/order/${this.selectedOrderForEdit.orderID}/update-item/${orderItemID}?restaurantId=${this.restaurantId}`, payload, this.httpOptions)
       );
       successCount++;
     }
 
-    // ===============================
-    // 4️⃣ ADD NEW ITEMS
-    // ===============================
-    for (const product of this.pendingChanges.itemsToAdd) {
+    for (const item of this.pendingChanges.itemsToAdd) {
       const payload = {
-        productID: product.productID,
-        quantity: product.quantity,
+        productID: item.productID,
+        quantity: item.quantity,
         changedByUserId: this.getCurrentUserId()
       };
-
       await firstValueFrom(
-        this.http.post(
-          `${this.API_BASE}/order/${this.selectedOrderForEdit.orderID}/add-item?restaurantId=${this.restaurantId}`,
-          payload,
-          this.httpOptions
-        )
+        this.http.post(`${this.API_BASE}/order/${this.selectedOrderForEdit.orderID}/add-item?restaurantId=${this.restaurantId}`, payload, this.httpOptions)
       );
       successCount++;
     }
 
-    // ===============================
-    // ✅ FINALIZE
-    // ===============================
     if (successCount === totalChanges) {
-      // ✅ FINAL TOTAL RECALC (CRITICAL)
-      this.selectedOrderForEdit.totalAmount =
-        this.recalculateOrderTotal(this.selectedOrderForEdit);
+      const newTotal = this.recalculateOrderTotal(this.selectedOrderForEdit);
+      this.selectedOrderForEdit.totalAmount = newTotal;
 
-      // ✅ Update main orders list locally
-      const index = this.orders.findIndex(
-        o => o.orderID === this.selectedOrderForEdit.orderID
-      );
-
+      const index = this.orders.findIndex(o => o.orderID === this.selectedOrderForEdit.orderID);
       if (index !== -1) {
-        this.orders[index] = JSON.parse(
-          JSON.stringify(this.selectedOrderForEdit)
-        );
+        this.orders[index] = JSON.parse(JSON.stringify(this.selectedOrderForEdit));
+
+        if (this.orders[index].latestPayment && this.orders[index].latestPayment?.status === 'Pending') {
+          this.orders[index].latestPayment!.amount = newTotal;
+        }
       }
 
-      // ✅ Refresh grouping + UI
       this.groupedUpcomingOrders = this.groupOrdersByTable(this.orders);
       this.runTableSelectionLogic();
 
       this.resetPendingChanges();
       this.showEditOrderModal = false;
+      
+      setTimeout(() => this.getOrders(), 1500);
 
-      this.pushAlert(
-        'order',
-        `✅ Order #${this.selectedOrderForEdit.orderNumber || this.selectedOrderForEdit.orderID} updated successfully`
-      );
     } else {
-      throw new Error('Some changes failed to save');
+      throw new Error('Some changes could not be saved');
     }
 
   } catch (error: any) {
-    console.error('❌ Error saving order changes:', error);
-    this.pushAlert('order', `❌ Failed to save changes`);
+    console.error(' Error saving order changes:', error);
   } finally {
     this.isSavingChanges = false;
   }
 }
-
   
 
   private async refreshOrdersAfterEdit(): Promise<void> {
     try {
-      // ✅ ADD: A short delay (e.g., 500ms) to allow the server's database
-      // to commit the changes before we re-fetch the data.
       await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Now, force the complete refresh of orders data
       await this.getOrders();
-
-      // (The rest of this function is now redundant, as getOrders() handles everything)
 
     } catch (error) {
       console.error('Error refreshing orders after edit:', error);
     }
   }
-  // In waiter.component.ts
-
   private runTableSelectionLogic(): void {
-    // Check if the currently selected table still has orders
     const selectedTableHasOrders = this.groupedUpcomingOrders.some(g => g.tableNo === this.selectedTableNo);
-
-    // if not, or if no table is selected, pick a new one.
     if (!this.selectedTableNo || !selectedTableHasOrders) {
       if (this.groupedUpcomingOrders.length > 0) {
-        // Default to the first table that has orders
         this.selectedTableNo = this.groupedUpcomingOrders[0].tableNo;
       } else {
-        // No active orders left, show nothing
         this.selectedTableNo = null;
       }
     }
 
-    this.persistUIState(); // ✅ Good to persist this choice
+    this.persistUIState(); 
   }
-  // ✅ ADD: Method to fetch a single order by ID
   private async fetchOrderById(orderId: number): Promise<Order | null> {
     try {
       const response: any = await firstValueFrom(
@@ -2052,7 +1807,6 @@ async saveOrderChanges(): Promise<void> {
       );
 
       if (method === 'Cash') {
-        // Mark cash payment as completed immediately
         await firstValueFrom(
           this.http.put(
             `${this.API_BASE}/order/payments/${response.paymentId}/complete?restaurantId=${this.restaurantId}`,
@@ -2062,7 +1816,6 @@ async saveOrderChanges(): Promise<void> {
         );
         this.pushAlert('payment', `Cash payment collected for Order #${orderId}`);
       } else {
-        // UPI payment - show QR code
         this.openCollectModal({
           orderID: orderId,
           paymentID: response.paymentId,
@@ -2076,7 +1829,6 @@ async saveOrderChanges(): Promise<void> {
   closeChangeHistoryModal(): void {
     this.showChangeHistoryModal = false;
   }
-  // Add this new method to your WaiterComponent class
   switchCollectModalTab(tab: 'UPI' | 'CASH'): void {
     this.collectModal.tab = tab;
   }
@@ -2102,7 +1854,6 @@ async saveOrderChanges(): Promise<void> {
   }
   
   isOrderLocked(): boolean {
-    // Prevent editing if order is served, completed, or cancelled
     const lockedStatuses = [OrderStatus.Served, OrderStatus.Completed, OrderStatus.Cancelled];
     return lockedStatuses.includes(this.selectedOrderForEdit?.orderStatus);
   }
@@ -2131,7 +1882,6 @@ async saveOrderChanges(): Promise<void> {
       return matchesSearch && matchesCategory;
     });
 
-    // Extract unique categories
     this.productCategories = [...new Set(this.availableProducts
       .map(p => p.category)
       .filter(c => c))] as string[];
@@ -2161,67 +1911,53 @@ async saveOrderChanges(): Promise<void> {
     return count;
   }
 private recalculateOrderTotal(order: any): number {
-  if (!order?.items?.length) return 0;
+  if (!order || !order.items) return 0;
 
   return order.items.reduce((sum: number, item: any) => {
     const price = item.unitPrice ?? 0;
     const qty = item.quantity ?? 0;
-    return sum + price * qty;
+    return sum + (price * qty);
   }, 0);
 }
 
  
 
-  addSelectedProductsToOrder(): void {
-    if (this.isOrderLocked()) {
-      return;
-    }
+addSelectedProductsToOrder(): void {
+  if (this.isOrderLocked()) return;
 
-    const productsToAdd: any[] = [];
-
-    this.productQuantities.forEach((quantity, productId) => {
-      if (quantity > 0) {
-        const product = this.availableProducts.find(p => p.productID === productId);
-        if (product) {
-          productsToAdd.push({
-            productID: productId,
-            quantity: quantity,
-            productName: product.productName,
-              unitPrice: product.price, // 🔥 CRITICAL FIX
-
-            tempId: Date.now() + productId
-          });
-        }
+  const productsToAdd: any[] = [];
+  this.productQuantities.forEach((quantity, productId) => {
+    if (quantity > 0) {
+      const product = this.availableProducts.find(p => p.productID === productId);
+      if (product) {
+        productsToAdd.push({
+          productID: productId,
+          quantity: quantity,
+          productName: product.productName,
+          unitPrice: product.price, 
+          customizations: [] 
+        });
       }
-    });
-
-    if (productsToAdd.length === 0) {
-      return;
     }
+  });
 
-    // Add to pending changes and update UI
+  if (productsToAdd.length > 0) {
     this.pendingChanges.itemsToAdd.push(...productsToAdd);
-
-    // Add to UI immediately for better UX
     this.selectedOrderForEdit.items.push(...productsToAdd);
-    this.selectedOrderForEdit.totalAmount =
-  this.recalculateOrderTotal(this.selectedOrderForEdit);
-
-    this.pushAlert('order', `✅ Added ${productsToAdd.length} items to order (Pending Save)`);
-
-    // Clear selection
+    
+    this.selectedOrderForEdit.totalAmount = this.recalculateOrderTotal(this.selectedOrderForEdit);
+    
     this.productQuantities.clear();
     this.showProductList = false;
   }
-
+}
 removeOrderItem(item: any): void {
-  console.log('🗑️ Marking item for removal:', item);
 
   const orderItemID =
     item.orderItemID || item.orderItemId || item.id || item.OrderItemID || item.itemId;
 
   if (!orderItemID) {
-    console.error('❌ No valid order item ID found for item:', item);
+    console.error(' No valid order item ID found for item:', item);
     return;
   }
 
@@ -2234,45 +1970,31 @@ removeOrderItem(item: any): void {
       `Remove ${item.productName} from order?\nThis change will be saved when you click "Save Changes".`
     )
   ) {
-    // ✅ Mark for removal
     this.pendingChanges.itemsToRemove.push(orderItemID);
 
-    // ✅ Remove from UI immediately
     this.selectedOrderForEdit.items =
       this.selectedOrderForEdit.items.filter((i: any) =>
         (i.orderItemID || i.orderItemId || i.id || i.OrderItemID || i.itemId) !== orderItemID
       );
 
-    // ✅ RECALCULATE TOTAL IMMEDIATELY
     this.selectedOrderForEdit.totalAmount =
       this.recalculateOrderTotal(this.selectedOrderForEdit);
 
-    this.pushAlert(
-      'order',
-      `❌ Marked ${item.productName} for removal (Pending Save)`
-    );
   }
 }
-
-
-
- 
-
-  // Enhanced openEditOrderModal method
   openEditOrderModal(order: any): void {
-    this.selectedOrderForEdit = JSON.parse(JSON.stringify(order)); // Deep copy
-    this.originalOrderData = JSON.parse(JSON.stringify(order)); // Store original for comparison
+    this.selectedOrderForEdit = JSON.parse(JSON.stringify(order)); 
+    this.originalOrderData = JSON.parse(JSON.stringify(order)); 
     this.showProductList = false;
     this.productSearch = '';
     this.selectedCategory = '';
     this.productQuantities.clear();
-    this.resetPendingChanges(); // Reset changes when opening modal
+    this.resetPendingChanges(); 
     this.loadAvailableProducts();
-    this.loadAvailableTables(); // ✅ ADD THIS LINE
+    this.loadAvailableTables(); 
 
     this.showEditOrderModal = true;
   }
-  // Reset pending changes
   resetPendingChanges(): void {
     this.pendingChanges = {
       quantityUpdates: new Map<number, number>(),
@@ -2280,39 +2002,35 @@ removeOrderItem(item: any): void {
       itemsToAdd: []
     };
   }
-  // ✅ ADD: New method to fetch all available tables for the restaurant
   loadAvailableTables(): void {
     if (!this.restaurantId) return;
     this.http.get<any[]>(`${this.API_BASE}/restauranttables?restaurantId=${this.restaurantId}`)
       .subscribe({
         next: (tables) => {
           this.availableTables = tables.sort((a, b) => a.tableName.localeCompare(b.tableName, undefined, { numeric: true }));
-          console.log('✅ Loaded available tables:', this.availableTables);
         },
         error: (err) => {
-          console.error('❌ Error loading available tables:', err);
-          this.availableTables = []; // Reset on error to prevent issues
+          console.error(' Error loading available tables:', err);
+          this.availableTables = []; 
         }
       });
   }
-  // Check if there are unsaved changes
   hasUnsavedChanges(): boolean {
     const tableChanged = this.selectedOrderForEdit?.tableNo !== this.originalOrderData?.tableNo;
 
     return this.pendingChanges.quantityUpdates.size > 0 ||
       this.pendingChanges.itemsToRemove.length > 0 ||
       this.pendingChanges.itemsToAdd.length > 0 ||
-      tableChanged; // ✅ ADD THIS CHECK
+      tableChanged; 
   }
 
 
-  // Enhanced loadAvailableProducts method
   loadAvailableProducts(): void {
     this.http.get<any[]>(`${environment.apiUrl}/product?restaurantId=${this.restaurantId}`)
       .subscribe({
         next: (products) => {
           this.availableProducts = products.filter(p => p.isAvailable);
-          this.filterProducts(); // Initialize filtered products
+          this.filterProducts(); 
         },
         error: (err) => {
           console.error('Error loading products:', err);
@@ -2329,9 +2047,7 @@ removeOrderItem(item: any): void {
 
 
   openMarkAsPaidModal(order: Order): void {
-    console.log('💰 Opening unified payment modal for order:', order);
 
-    // Find the payment ID from various sources
     let paymentId = 0;
 
     if (order.latestPayment) {
@@ -2339,7 +2055,6 @@ removeOrderItem(item: any): void {
         (order.latestPayment as any).paymentId || 0;
     }
 
-    // If not found in latestPayment, search in pending payments
     if (!paymentId) {
       const collectPayment = this.collectPayments.find(p => p.orderID === order.orderID);
       if (collectPayment) {
@@ -2350,16 +2065,15 @@ removeOrderItem(item: any): void {
     this.markAsPaidModal = {
       open: true,
       orderId: order.orderID,
-      orderNumber: order.orderNumber || order.orderID, // ✅ ADD ORDER NUMBER
+      orderNumber: order.orderNumber || order.orderID, 
       tableNo: order.tableNo || 0,
       amount: order.totalAmount || 0,
-      selectedMethod: order.latestPayment?.method === 'UPI' ? 'UPI' : 'Cash', // Default based on existing method
+      selectedMethod: order.latestPayment?.method === 'UPI' ? 'UPI' : 'Cash',
       busy: false,
       paymentId: paymentId
     };
   }
 
-  // Enhanced confirmMarkAsPaid to handle both new payments and existing payments
   async confirmMarkAsPaid(): Promise<void> {
     if (!this.restaurantId) return;
 
@@ -2368,9 +2082,7 @@ removeOrderItem(item: any): void {
     try {
       let paymentId = this.markAsPaidModal.paymentId;
 
-      // If no payment ID exists, create a new payment record
       if (!paymentId) {
-        console.log('🆕 Creating new payment record for order:', this.markAsPaidModal.orderId);
 
         const response: any = await firstValueFrom(
           this.http.post(
@@ -2388,7 +2100,6 @@ removeOrderItem(item: any): void {
         }
       }
 
-      console.log('Marking payment as completed:', paymentId);
       await firstValueFrom(
         this.http.put(
           `${this.API_BASE}/order/payments/${paymentId}/complete?restaurantId=${this.restaurantId}`,
@@ -2403,8 +2114,6 @@ removeOrderItem(item: any): void {
         `Order #${this.markAsPaidModal.orderNumber}` :
         `Order #${this.markAsPaidModal.orderId}`;
 
-      this.pushAlert('payment', `${this.markAsPaidModal.selectedMethod} payment received for Order #${this.markAsPaidModal.orderId}`);
-
       this.closeMarkAsPaidModal();
       this.getOrders();
       this.fetchPendingPayments();
@@ -2414,16 +2123,13 @@ removeOrderItem(item: any): void {
       const orderReference = this.markAsPaidModal.orderNumber ?
         `Order #${this.markAsPaidModal.orderNumber}` :
         `Order #${this.markAsPaidModal.orderId}`;
-      this.pushAlert('payment', `Failed to mark as paid: ${error.error?.message || error.message}`);
     } finally {
       this.markAsPaidModal.busy = false;
     }
   }
 
-  // New method to create payment if none exists
   private async createPaymentForOrder(order: Order): Promise<void> {
     try {
-      console.log(' Creating new payment record for order:', order.orderID);
 
       const response: any = await firstValueFrom(
         this.http.post(
@@ -2444,7 +2150,6 @@ removeOrderItem(item: any): void {
           )
         );
 
-        this.pushAlert('payment', `Created and marked Order #${order.orderID} as paid`);
         this.getOrders();
         this.printOrderBill(order.orderID);
       } else {
@@ -2464,8 +2169,6 @@ removeOrderItem(item: any): void {
           this.httpOptions
         )
       );
-
-      this.pushAlert('payment', `Cash payment received for Order #${orderId}`);
       this.printOrderBill(orderId);
     } catch (error: any) {
       console.error('Error marking cash payment:', error);
@@ -2511,13 +2214,11 @@ removeOrderItem(item: any): void {
         )
       );
 
-      console.log('Payment Status Response:', statusResponse);
 
       const paidStatuses = ['Paid', 'Completed', 'Success', 'Success'];
       if (paidStatuses.includes(statusResponse?.status)) {
         this.onPaymentCleared(this.collectModal.paymentId);
         this.closeCollectModal();
-        this.pushAlert('payment', `✅ UPI payment received for Order #${this.collectModal.orderId}`);
         this.getOrders();
       } else {
       }

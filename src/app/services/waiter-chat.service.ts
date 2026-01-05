@@ -12,7 +12,7 @@ export class WaiterChatService {
 askQuestion(question: string, restaurantId: number): Observable<{ answer: string }> {
   return this.http.post<{ answer: string }>(
     `/api/chatbot/ask?restaurantId=${restaurantId}`,
-    { question } // wrap it in an object
+    { question } 
   );
 }
 

@@ -371,7 +371,7 @@ async loadRestaurantInfoFromTableNo(tableNo: number, restaurantId: number): Prom
     }
 
     this.restaurantID = data.restaurantID;
-    this.restaurantTableID = data.restaurantTableID; // The actual table ID
+    this.restaurantTableID = data.restaurantTableID; 
     this.restaurantName = data.name || '';
     this.restaurantDescription = data.description || '';
     
@@ -389,7 +389,7 @@ async loadRestaurantInfoFromTableNo(tableNo: number, restaurantId: number): Prom
     window.history.replaceState({}, '', updatedURL);
 
   } catch (error) {
-    console.error('❌ Failed to load restaurant info from table number and restaurant ID:', error);
+    console.error(' Failed to load restaurant info from table number and restaurant ID:', error);
     throw error;
   }
 }
@@ -415,7 +415,6 @@ fetchOffers(): void {
   this.http.get<Offer[]>(`${this.API_BASE}/offer/restaurant/${this.restaurantID}`).subscribe({
     next: (data) => {
       this.offers = data;
-      console.log('🟡 Raw offers from API:', this.offers);
       this.evaluateOffers();
     },
     error: (err) => {
@@ -455,10 +454,9 @@ evaluateOffers(): void {
   }
   this.appliedOffer = bestOffer;
   this.discountAmount = maxDiscount;
-console.log('🟠 Evaluating offers — Subtotal:', subtotal);
-console.log('🟢 Valid offers found:', validOffers);
 
-  console.log('✅ Applied Offer:', this.appliedOffer);
+
+
 
 }
 getFormattedDate(date: Date | string | null): string {
@@ -608,7 +606,7 @@ private restoreOrderState(): boolean {
     this.userID = state.userID;
     this.confirmedCart = state.confirmedCart || [];
     this.newCart = state.newCart || [];
-    console.log('✅ Successfully restored order state');
+    console.log(' Successfully restored order state');
     return true;
   } catch (err) {
     console.warn('Error parsing saved state', err);
@@ -725,16 +723,14 @@ async processPayment(): Promise<void> {
         )
       );
 
-      // Generate UPI links with the response data
       const orderReference = this.orderNumber ? `Order #${this.orderNumber}` : `Order ${this.orderID}`;
       this.paymentLinks = this.generateUPILinks(
         response.upiId,
         response.upiName,
         response.amount,
-        orderReference // ✅ USE ORDER NUMBER IN PAYMENT NOTE
+        orderReference 
       );
 
-      // Generate QR code data
       this.paymentQrData = `upi://pay?pa=${encodeURIComponent(response.upiId)}&pn=${encodeURIComponent(response.upiName)}&am=${response.amount.toFixed(2)}&tn=${encodeURIComponent(orderReference)}&cu=INR`;
 
       this.showUPIOptions = true;
@@ -751,10 +747,8 @@ openPaymentApp(app: string): void {
 
   const link = this.paymentLinks[app] || this.paymentLinks.universal;
   
-  // Try to open in new tab (best for desktop/mobile browser)
   const newWindow = window.open(link, '_blank');
 
-  // Fallback for strict browsers or blocked pop-ups
   if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
     window.location.href = link;
   }
@@ -765,10 +759,8 @@ openPaymentApp(app: string): void {
     if (!this.orderID) return;
     
     try {
-      // 1. Create payment intent on server
 const intent = await firstValueFrom(this.paymentService.initiateUPIPayment(this.orderID!));
       
-      // 2. Store payment details
       this.paymentLinks = {
         upiId: intent.upiId,
         upiName: intent.upiName,
@@ -778,14 +770,12 @@ const intent = await firstValueFrom(this.paymentService.initiateUPIPayment(this.
         links: intent.deepLinks
       };
       
-      // 3. Show UPI options
       this.showUPIOptions = true;
       
-      // 4. Start secure polling
 this.paymentService.startPaymentPolling(this.orderID!, (paid) => {
         if (paid) {
           this.paymentSuccess = true;
-          this.currentStep = 5; // Move to rating page
+          this.currentStep = 5;
         }
       });
       
@@ -802,14 +792,12 @@ this.paymentService.startPaymentPolling(this.orderID!, (paid) => {
       try { window.removeEventListener('keydown', this.keydownHandler); } catch {}
       document.body.style.overflow = '';
 
-      // ✅ Stop all pollers
       this.stopPaymentPolling(); 
       this.stopStatusPolling();
   }
 goToStep(step: OrderStep): void {
   console.log(`[Navigation] Attempting to go from step ${this.currentStep} to step ${step}`);
   
-  // ✅ STOP all pollers first
   this.stopStatusPolling();
   this.stopPaymentPolling(); 
 
@@ -822,7 +810,6 @@ goToStep(step: OrderStep): void {
   ] as const;
 
   if (validSteps.includes(step as any)) {
-    console.log(`[Navigation] Valid step transition to ${step}`);
     this.currentStep = step as (typeof validSteps)[number];
     
     const newUrl = `?tableNo=${this.restaurantTableID}&restaurantId=${this.restaurantID}&step=${step}`;
@@ -840,42 +827,34 @@ goToStep(step: OrderStep): void {
     console.warn(`[Navigation] Invalid step transition attempted: ${step}`);
   }
 
-  // --- Start pollers based on the new step ---
 
   if (step === OrderStep.MENU) {
-    console.log('[Navigation] Returning to menu. Resetting UI quantities to ZERO for fresh ordering.');
     this.newCart = [];
     this.syncUIQuantitiesWithConfirmedCart();
     this.quantityMap = {};
   }
 
   if (step === OrderStep.ORDER_SUMMARY) {
-    console.log('[Navigation] Loading order summary for step 2');
     this.getOrderSummary();
-    this.startStatusPolling(); // To check for new items added
-    this.startPaymentPolling(); // ✅ ADDED: To check if waiter marked as paid
+    this.startStatusPolling(); 
+    this.startPaymentPolling(); 
     this.fetchMenuItems();
   }
   
   if (step === OrderStep.PAYMENT) {
-    console.log('[Navigation] Preparing payment step');
     this.getOrderSummary();
-    this.startPaymentPolling(); // ✅ ADDED: To check for payment
+    this.startPaymentPolling(); 
     this.fetchMenuItems();
   }
 }
 
-// ✅ FIXED: Reset UI quantities to ZERO when going back to menu
 private syncUIQuantitiesWithConfirmedCart(): void {
   this.cartItems.forEach(ci => {
-    // ✅ Set UI quantity to ZERO (fresh start for new ordering)
     ci.quantity = 0;
     ci.price = ci.basePrice ?? ci.price;
   });
   
-  // Also update the main menuItems for consistency
   this.menuItems.forEach(mi => {
-    // ✅ Set UI quantity to ZERO (fresh start for new ordering)
     mi.quantity = 0;
     mi.price = mi.basePrice ?? mi.price;
   });
@@ -887,32 +866,16 @@ private createPendingPayment(method: 'UPI' | 'Cash'): Observable<any> {
   return this.http.post(`${this.API_BASE}/order/${this.orderID}/pending`, payload);
 }
 
-
-// processPayment(): void {
-//   if (!this.selectedPaymentMethod || !this.orderID) return;
-  
-//   if (this.selectedPaymentMethod === 'cash') {
-//     this.createPendingPayment('Cash');
-//     this.currentStep = 5; // ✅ Show rating page
-//   } else if (this.selectedPaymentMethod === 'upi') {
-//     this.initiateUPIPayment();
-//   }
-// }
-
-
-
 selectCategory(catId: number): void {
   this.selectedCategoryID = catId;
   this.showCategorySelector = false;
   this.searchQuery = '';
   this.selectedFilter = null;
 
-  // Push to browser history so back button can be detected
   window.history.pushState({ categorySelected: true }, '', window.location.href);
 }
 
 
-  // brings you back to the category chooser
   changeCategory() {
     this.showCategorySelector = true;
     this.searchQuery = '';
@@ -947,8 +910,8 @@ alertWaiter(message: string): void {
 
   const waiterRequest = {
     message: message,
-    restaurantTableID: this.restaurantTableID, // ✅ Match model exactly
-    tableNumber: this.restaurantTableID        // ✅ Optional: if backend uses it
+    restaurantTableID: this.restaurantTableID,
+    tableNumber: this.restaurantTableID        
   };
 
   const url = `${this.API_BASE}/order/call-waiter?restaurantId=${this.restaurantID}`;
@@ -959,7 +922,7 @@ alertWaiter(message: string): void {
         console.log("✅ Waiter request sent successfully:", response);
       },
       error: (error) => {
-        console.error("❌ Error sending waiter request:", error);
+        console.error(" Error sending waiter request:", error);
         alert("Failed to notify waiter. Please try again.");
       }
     });
@@ -969,13 +932,12 @@ alertWaiter(message: string): void {
 onPopState = (event: PopStateEvent) => {
   if (this.currentStep === OrderStep.MENU && !this.showCategorySelector && this.selectedCategoryID) {
     console.log('[Back Navigation] Going back to category selector');
-    this.changeCategory(); // ← reset to show category selector
-    this.updateUrlWithCurrentStep(); // ← maintain proper URL
+    this.changeCategory(); 
+    this.updateUrlWithCurrentStep(); 
   }
 };
 
 private fetchRestaurantInfo(): void {
-  // Use the new endpoint that requires both tableNo and restaurantId
   const url = `${this.API_BASE}/RestaurantTable/bynumber?tableNo=${this.restaurantTableID}&restaurantId=${this.restaurantID}`;
   
   this.http.get<any>(url).subscribe({
@@ -988,7 +950,6 @@ private fetchRestaurantInfo(): void {
       
       localStorage.setItem('restaurantId', String(this.restaurantID));
 
-      // Logo setup
       if (info.logoPath) {
         const cleanPath = info.logoPath.replace(/^\/+/, '');
         this.restaurantLogoUrl = cleanPath.includes('uploads/')
@@ -998,14 +959,11 @@ private fetchRestaurantInfo(): void {
         this.restaurantLogoUrl = 'assets/images/default-logo.png';
       }
 
-      console.log('Constructed logo URL:', this.restaurantLogoUrl);
 
-      // ✅ Now that restaurantID is set, fetch offers
       this.fetchOffers();
     },
     error: err => {
       console.error('Could not load restaurant info', err);
-      // Fallback to the old endpoint
       this.fallbackFetchRestaurantInfo();
     }
   });
@@ -1023,7 +981,6 @@ private fallbackFetchRestaurantInfo(): void {
         
         localStorage.setItem('restaurantId', String(this.restaurantID));
 
-        // Logo setup
         if (info.logoPath) {
           const cleanPath = info.logoPath.replace(/^\/+/, '');
           this.restaurantLogoUrl = cleanPath.includes('uploads/')
@@ -1033,7 +990,6 @@ private fallbackFetchRestaurantInfo(): void {
           this.restaurantLogoUrl = 'assets/images/default-logo.png';
         }
 
-        // Update URL with correct restaurant ID
         const updatedURL = `${window.location.pathname}?tableNo=${this.restaurantTableID}&restaurantId=${this.restaurantID}`;
         window.history.replaceState({}, '', updatedURL);
 
@@ -1045,17 +1001,12 @@ private fallbackFetchRestaurantInfo(): void {
     });
 }
 
-
-  // Toggle filter behavior: if the selected filter is already active, disable it.
   toggleFilter(filter: 'veg' | 'nonveg'): void {
     if (this.selectedFilter === filter) {
-      // Toggle off the filter; show all items.
       this.selectedFilter = null;
-      this.fetchMenuItems(); // Load all products.
+      this.fetchMenuItems(); 
     } else {
-      // Apply the selected filter.
       this.selectedFilter = filter;
-      // Convert to a boolean; 'veg' = true, 'nonveg' = false.
       const isVeg = filter === 'veg';
       this.fetchFilteredMenuItems(isVeg);
     }
@@ -1110,7 +1061,7 @@ const url = `${this.API_BASE}/product/filter?isVeg=${isVeg}&restaurantId=${this.
 
 getImageUrl(imagePath: string | undefined): string {
   if (!imagePath || imagePath.trim() === '') {
-    return ''; // prevents image rendering if path is empty
+    return ''; 
   }
 
   if (imagePath.startsWith('http')) {
@@ -1134,7 +1085,6 @@ getImageUrl(imagePath: string | undefined): string {
         next: (summary) => {
         summary.orderStatus = this.mapStatus(summary.orderStatus);
        this.orderSummaryDetails = summary;
-          // Populate confirmedCart so step 2 can display items:
           this.confirmedCart = summary.orderItems.map(i => ({
             orderID: this.orderID!,
             productID: i.productID,
@@ -1185,7 +1135,6 @@ getImageUrl(imagePath: string | undefined): string {
   }
 
 
-
 fetchCategories(): void {
   this.http.get<any>(`${this.API_BASE}/categories?restaurantId=${this.restaurantID}`).subscribe({
     next: (data) => {
@@ -1207,10 +1156,7 @@ fetchCategories(): void {
               : [])
       }));
 
-    
-
-      // ✅ KEEP subcategory toggle states
-      this.categories.forEach(cat =>
+          this.categories.forEach(cat =>
         cat.subCategories.forEach(sub =>
           this.subCategoryStates.set(sub.subCategoryID, true)
         )
@@ -1224,20 +1170,15 @@ fetchCategories(): void {
   });
 }
 
-// Add this to your MenuComponent class
 confirmUPIPayment(): void {
   if (!this.orderID) return;
 
-  // Close the UPI modal
   this.showUPIModal = false;
   
-  // Mark payment as successful
   this.paymentSuccess = true;
   
-  // Move to rating step
   this.currentStep = OrderStep.RATING;
   
-  // Optionally: Send confirmation to backend
   this.http.post(`${this.API_BASE}/order/${this.orderID}/complete-payment`, { 
     method: 'UPI' 
   }).subscribe({
@@ -1250,10 +1191,10 @@ async selectPaymentMethod(method: 'cash' | 'upi') {
   this.selectedPaymentMethod = method;
 
   if (method === 'upi') {
-    await this.initiateUPIPayment(); // Generate UPI QR data
+    await this.initiateUPIPayment(); 
   }
 
-  this.showPaymentConfirmModal = true; // Show confirmation modal only
+  this.showPaymentConfirmModal = true; 
 }
 
 async confirmPaymentMethod(): Promise<void> {
@@ -1277,9 +1218,9 @@ async confirmPaymentMethod(): Promise<void> {
 
 
 fetchSubCategories(): void {
-  if (!this.restaurantID || this.restaurantID === 0) return; // ✅ Guard
+  if (!this.restaurantID || this.restaurantID === 0) return; 
 
-  const url = `${this.API_BASE}/subcategories?restaurantId=${this.restaurantID}`; // ✅ FIXED URL
+  const url = `${this.API_BASE}/subcategories?restaurantId=${this.restaurantID}`; 
 
   this.http.get<any>(url).subscribe({
     next: (data) => {
@@ -1301,7 +1242,6 @@ fetchSubCategories(): void {
 }
 
 
-  // Update getFilteredMenuItems to handle the filter.
   getFilteredMenuItems(categoryID?: number, subCategoryID?: number): Product[] {
     let filteredItems = this.menuItems;
 
@@ -1310,12 +1250,10 @@ fetchSubCategories(): void {
       filteredItems = filteredItems.filter(item => item.categoryID === categoryID);
     }
 
-    // Filter by subcategory if provided.
     if (subCategoryID) {
       filteredItems = filteredItems.filter(item => item.subCategoryID === subCategoryID);
     }
 
-    // Filter based on the search query.
     if (this.searchQuery.trim()) {
       const query = this.searchQuery.toLowerCase();
       filteredItems = filteredItems.filter(item =>
@@ -1324,7 +1262,6 @@ fetchSubCategories(): void {
       );
     }
 
-    // Apply Veg/Non-Veg filter.
     if (this.selectedFilter === 'veg') {
       filteredItems = filteredItems.filter(item => item.isVeg);
     } else if (this.selectedFilter === 'nonveg') {
@@ -1335,14 +1272,11 @@ fetchSubCategories(): void {
   }
 
 
-  // Returns true if the category or any of its subcategories have items after filtering
   shouldDisplayCategory(category: Category): boolean {
-    // Check if any products in the category match the filter criteria.
     const categoryItems = this.getFilteredMenuItems(category.categoryID);
     if (categoryItems.length > 0) {
       return true;
     }
-    // If the category has subcategories, check if any of them have matching items.
     if (category.subCategories && category.subCategories.length) {
       return category.subCategories.some(sub => {
         return this.getFilteredMenuItems(undefined, sub.subCategoryID).length > 0;
@@ -1351,7 +1285,6 @@ fetchSubCategories(): void {
     return false;
   }
 
-  // Returns true if the subcategory has any items after filtering
   shouldDisplaySubCategory(subCategory: SubCategory): boolean {
     return this.getFilteredMenuItems(undefined, subCategory.subCategoryID).length > 0;
   }
@@ -1368,12 +1301,11 @@ fetchMenuItems(): void {
         this.menuItems = raw.map((item: Product) => ({
           ...item,
           quantity: 0,
-          basePrice: item.price, // Store original price
-          price: item.price, // Current price (may include customizations)
-          customizationOptionIds: [] // Initialize empty
+          basePrice: item.price, 
+          price: item.price, 
+          customizationOptionIds: [] 
         }));
 
-        // ✅ FIX: Ensure cartItems are proper copies with basePrice
         this.cartItems = this.menuItems.map(item => ({ 
           ...item,
           basePrice: item.price,
@@ -1425,7 +1357,6 @@ loadCategories() {
   this.isLoading = true;
   this.http.get<any[]>(`${environment.apiUrl}/api/categories`).subscribe({
     next: (response) => {
-      console.log("✅ Categories loaded from backend:", response);
       this.categories = response;
 
       // Force UI to show them
@@ -1433,13 +1364,13 @@ loadCategories() {
 
       // Add fallback in case response is valid but empty
       if (this.categories.length === 0) {
-        console.warn("⚠️ Categories fetched but array is empty");
+        console.warn(" Categories fetched but array is empty");
       }
 
       this.isLoading = false;
     },
     error: (error) => {
-      console.error('❌ Error loading categories', error);
+      console.error(' Error loading categories', error);
       this.isLoading = false;
     }
   });
@@ -1450,43 +1381,35 @@ private updateNewCart(
   unitPriceForOrder?: number,
   customizationIds?: number[]
 ): void {
-  // Use the calculated price or fall back to the item's current price (which includes customizations)
   const finalUnitPrice = unitPriceForOrder ?? item.price;
   
-  // Find existing item in the temporary cart
   const existingItemIndex = this.newCart.findIndex(ci => ci.productID === item.productID);
 
   if (existingItemIndex > -1) {
-    // If quantity is zero, remove it
     if (item.quantity === 0) {
       this.newCart.splice(existingItemIndex, 1);
     } else {
-      // Otherwise, update the existing item's details
       const existingItem = this.newCart[existingItemIndex];
       existingItem.quantity = item.quantity;
-      existingItem.unitPrice = finalUnitPrice; // ✅ Update with the correct price
+      existingItem.unitPrice = finalUnitPrice;
       existingItem.customizationOptionIds = customizationIds || item.customizationOptionIds || [];
     }
   } else if (item.quantity > 0) {
-    // If it's a new item, add it to the cart
     this.newCart.push({
       productID: item.productID,
       quantity: item.quantity,
-      unitPrice: finalUnitPrice, // ✅ Set the correct price
+      unitPrice: finalUnitPrice, 
       customizationOptionIds: customizationIds || item.customizationOptionIds || []
     });
   }
 
-  // Use the quantity map for UI display consistency
   this.quantityMap[item.productID] = item.quantity;
-  console.log('🛒 Updated newCart:', this.newCart);
 }
 
 
 async updateQuantityForNewItems(item: Product, change: number): Promise<void> {
   clearTimeout(this.quantityDebounceTimer);
 
-  // DECREMENT LOGIC
   if (change < 0) {
     const newQuantity = Math.max(0, (item.quantity || 0) - 1);
     item.quantity = newQuantity;
@@ -1494,18 +1417,16 @@ async updateQuantityForNewItems(item: Product, change: number): Promise<void> {
     return;
   }
 
-  // INCREMENT LOGIC
   const basePrice = item.basePrice ?? item.price;
   let finalUnitPrice = basePrice;
   let selectedOption: CustomizationOption | null = null;
   let customizationOptionIds: number[] = [];
 
-  // 1. Handle Customizations if they exist
   if (item.customizationOptions && item.customizationOptions.length > 0) {
     const modalResult = await this.openCustomizationModal(item);
 
     if (modalResult === null) {
-      return; // User cancelled
+      return; 
     }
 
     if (modalResult.customizationOptionID) {
@@ -1514,29 +1435,24 @@ async updateQuantityForNewItems(item: Product, change: number): Promise<void> {
       ) ?? null;
 
       if (selectedOption) {
-        // ✅ CORE FIX: Correctly add customization price to base price
         finalUnitPrice = basePrice + selectedOption.fixedPrice;
         customizationOptionIds = [selectedOption.customizationOptionID];
         
-        // ✅ CRITICAL FIX: Update both the main menu item AND the cart item
         item.price = finalUnitPrice;
         item.customizationOptionIds = customizationOptionIds;
         
-        // ✅ ALSO update the corresponding item in cartItems
         const cartItem = this.cartItems.find(ci => ci.productID === item.productID);
         if (cartItem) {
           cartItem.price = finalUnitPrice;
           cartItem.customizationOptionIds = customizationOptionIds;
         }
         
-        console.log(`💰 Price calc: ${basePrice} (base) + ${selectedOption.fixedPrice} (custom) = ${finalUnitPrice}`);
       }
     } else {
       // User selected "None" - reset to base price
       item.price = basePrice;
       item.customizationOptionIds = [];
       
-      // Also update cart item
       const cartItem = this.cartItems.find(ci => ci.productID === item.productID);
       if (cartItem) {
         cartItem.price = basePrice;
@@ -1545,7 +1461,6 @@ async updateQuantityForNewItems(item: Product, change: number): Promise<void> {
     }
   }
 
-  // 2. Update UI and Cart
   item.quantity = (item.quantity || 0) + 1;
   this.updateNewCart(item, finalUnitPrice, customizationOptionIds);
 }
@@ -1576,9 +1491,7 @@ private openCustomizationModal(product: Product): Promise<{ customizationOptionI
     let newOrder: any = null;
 
     try {
-      // ✅ STEP 1: CREATE ORDER IF NEEDED
       if (!this.orderID) {
-        console.log('[Order Flow] No existing order, creating new one...');
         const url = `${this.API_BASE}/order/generate?tableNo=${tableID}&restaurantId=${this.restaurantID}`;
         const body = { userID: this.userID };
 
@@ -1586,24 +1499,19 @@ private openCustomizationModal(product: Product): Promise<{ customizationOptionI
 
         if (newOrder) {
           this.orderID = newOrder.orderID;
-          this.orderNumber = newOrder.orderNumber; // ✅ SET ORDER NUMBER FROM RESPONSE
+          this.orderNumber = newOrder.orderNumber; 
           this.orderStatus = newOrder.orderStatus;
           this.orderCreatedAt = new Date(newOrder.createdAt);
         }
-        console.log('[Order Flow] New order created with ID:', this.orderID, 'Number:', this.orderNumber);
       } else {
-        console.log('[Order Flow] Existing order found, checking status...');
         const statusResp = await firstValueFrom(
           this.http.get<any>(`${this.API_BASE}/order/status/${this.orderID}?restaurantId=${this.restaurantID}`)
         );
         this.orderStatus = statusResp.status;
-        console.log('[Order Flow] Current order status:', this.orderStatus);
       }
 
-      // ✅ STEP 2: ADD/UPDATE CART ITEMS
       await this.addNewItemsToOrder();
 
-      // ✅ STEP 3: CONFIRM ORDER IF NOT ALREADY
       if (this.orderStatus !== 'Confirmed') {
         await firstValueFrom(
           this.http.post(`${this.API_BASE}/order/${this.orderID}/confirm?restaurantId=${this.restaurantID}`, {})
@@ -1611,7 +1519,6 @@ private openCustomizationModal(product: Product): Promise<{ customizationOptionI
         this.orderStatus = 'Confirmed';
       }
 
-      // ✅ STEP 4: Move to summary and refresh - WAIT for getOrderSummary to complete
       await this.getOrderSummary(); // Wait for this to complete
       this.goToStep(OrderStep.ORDER_SUMMARY);
       this.saveOrderState();
@@ -1624,21 +1531,14 @@ private openCustomizationModal(product: Product): Promise<{ customizationOptionI
     }
   }
 rebuildNewCart() {
-  console.log('🧩 cartItems:', this.cartItems);
-  console.log('📦 quantityMap:', this.quantityMap);
-  console.log('✅ confirmedCart:', this.confirmedCart);
-
   this.newCart = [];
 
   this.cartItems.forEach(item => {
     const currentUIQuantity = this.quantityMap[item.productID] || item.quantity || 0;
     
-    console.log(`🔄 Product ${item.productID}: UI=${currentUIQuantity}, Price=${item.price}, Customizations=${item.customizationOptionIds}`);
     
-    // ✅ Only add to newCart if current UI quantity is greater than 0
     if (currentUIQuantity > 0) {
-      // ✅ CRITICAL FIX: Use the item's current price (which includes customizations)
-      // and check if we have a more recent price in the main menuItems
+
       const mainMenuItem = this.menuItems.find(mi => mi.productID === item.productID);
       const finalPrice = mainMenuItem?.price || item.price;
       const finalCustomizations = mainMenuItem?.customizationOptionIds || item.customizationOptionIds || [];
@@ -1646,13 +1546,12 @@ rebuildNewCart() {
       this.newCart.push({
         productID: item.productID,
         quantity: currentUIQuantity,
-        unitPrice: finalPrice, // ✅ Use the price that includes customizations
+        unitPrice: finalPrice, 
         customizationOptionIds: finalCustomizations
       });
     }
   });
 
-  console.log('🧾 Rebuilt newCart:', this.newCart);
 }
 private getConfirmedQuantity(productID: number): number {
   if (!this.confirmedCart || this.confirmedCart.length === 0) return 0;
@@ -1662,7 +1561,6 @@ private getConfirmedQuantity(productID: number): number {
 }
 addNewItemsToOrder(): Promise<void> {
   return new Promise((resolve, reject) => {
-    // Ensure newCart is prepared with proper quantities
     this.rebuildNewCart();
 
     if (this.newCart.length === 0) {
@@ -1671,7 +1569,6 @@ addNewItemsToOrder(): Promise<void> {
       return;
     }
 
-    console.log('[Order Flow] Adding new items to existing order:', this.newCart);
 
     const itemsToSend = this.newCart.map(item => ({
       productID: item.productID,
@@ -1680,9 +1577,7 @@ addNewItemsToOrder(): Promise<void> {
       customizationOptionIds: item.customizationOptionIds || []
     }));
 
-    console.log('[Order Flow] Sending items to backend:', itemsToSend);
 
-    // Send new items to backend
     this.http.post(`${this.API_BASE}/order/${this.orderID}/addItem?restaurantId=${this.restaurantID}`, itemsToSend)
       .subscribe({
         next: (response: any) => {
@@ -1725,7 +1620,6 @@ private async createOrderID(): Promise<void> {
     this.isOrderProcessing = false;
     this.saveOrderState();
     
-    console.log('[Order Flow] Successfully created order ID:', this.orderID);
   } catch (err) {
     console.error('Error generating order ID!', err);
     this.isOrderProcessing = false;
@@ -1745,23 +1639,18 @@ private async postCartItems(): Promise<void> {
       this.http.post(`${this.API_BASE}/order/${this.orderID}/addItem`, this.newCart)
       
     );
-    console.log('Items sent to backend:', this.newCart);
     
-    console.log('[Order Flow] Items successfully added to order');
-    
-    // Clear local cart
     this.newCart = [];
     this.menuItems.forEach(item => {
       item.quantity = 0;
       item.price = item.basePrice ?? item.price;
     });
     
-    // Confirm the order
     await this.sendOrderToKitchen();
     
   } catch (error) {
     console.error('[Order Flow] Error posting cart items:', error);
-    throw error; // Re-throw to be caught by calling function
+    throw error; 
   }
 }
 
@@ -1769,7 +1658,7 @@ private async postCartItems(): Promise<void> {
   async getOrderSummary(): Promise<void> {
     return new Promise<void>(async (resolve, reject) => {
       if (!this.orderID || !this.restaurantID) {
-        console.warn('⚠️ Missing orderID or restaurantID to fetch summary');
+        console.warn(' Missing orderID or restaurantID to fetch summary');
         reject('Missing orderID or restaurantID');
         return;
       }
@@ -1777,24 +1666,20 @@ private async postCartItems(): Promise<void> {
       this.isLoading = true;
 
       try {
-        const timestamp = new Date().getTime(); // Prevents cache
+        const timestamp = new Date().getTime(); 
         const summary = await firstValueFrom(
           this.http.get<OrderSummary>(
             `${this.API_BASE}/order/${this.orderID}/summary?restaurantId=${this.restaurantID}&timestamp=${timestamp}`
           )
         );
 
-        console.log("✅ Summary fetched from backend:", summary);
 
-        // Optional status mapping (if you use internal UI mappings)
         summary.orderStatus = this.mapStatus(summary.orderStatus);
 
         this.orderSummaryDetails = summary;
         
-        // ✅ SET ORDER NUMBER FROM SUMMARY RESPONSE
         this.orderNumber = summary.orderNumber || this.orderID;
 
-        // ✅ FIXED: Clear and rebuild confirmedCart from fresh backend data
         this.confirmedCart = [];
         summary.orderItems.forEach(item => {
           this.confirmedCart.push({
@@ -1805,15 +1690,13 @@ private async postCartItems(): Promise<void> {
           });
         });
 
-        console.log("✅ confirmedCart updated from backend:", this.confirmedCart);
 
-        // ✅ Evaluate offers (if your system supports them)
         this.evaluateOffers();
 
         resolve();
 
       } catch (error) {
-        console.error('❌ Error fetching order summary:', error);
+        console.error('Error fetching order summary:', error);
         reject(error); 
       } finally {
         this.isLoading = false;
@@ -1861,8 +1744,6 @@ private async sendOrderToKitchen(): Promise<void> {
     console.warn('[Order Flow] Cannot send to kitchen - no orderID');
     return;
   }
-
-  console.log('[Order Flow] Sending order to kitchen...');
   
   try {
     await firstValueFrom(
@@ -1870,7 +1751,6 @@ private async sendOrderToKitchen(): Promise<void> {
     );
     
     this.orderConfirmationTime = new Date();
-    console.log('[Order Flow] Order successfully confirmed and sent to kitchen');
     
   } catch (error) {
     console.error('[Order Flow] Error sending order to kitchen:', error);
@@ -1892,7 +1772,6 @@ private async sendOrderToKitchen(): Promise<void> {
       a.click();
       window.URL.revokeObjectURL(url);
     }, error => {
-      alert('Failed to generate bill. Please try again or ask staff for help.');
     });
   }
 }         
