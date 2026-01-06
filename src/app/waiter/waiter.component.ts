@@ -1251,17 +1251,18 @@ private async getOrders(): Promise<void> {
     const all = this.unwrapArray<any>(res.orders).map(o => this.mapOrderFromApi(o));
 
   
-    this.orders = all.filter(o =>
-      o.orderStatus === OrderStatus.Pending ||
-      o.orderStatus === OrderStatus.Confirmed ||
-      (o.orderStatus === OrderStatus.Served && !this.isOrderPaid(o)) 
-    );
+this.orders = all.filter(o =>
+  o.orderStatus === OrderStatus.Pending ||
+  o.orderStatus === OrderStatus.Confirmed ||
+  o.orderStatus === OrderStatus.Served
+);
 
-    this.allHistoryOrders = all.filter(o =>
-      o.orderStatus === OrderStatus.Completed ||
-      o.orderStatus === OrderStatus.Cancelled ||
-      (o.orderStatus === OrderStatus.Served && this.isOrderPaid(o))
-    );
+
+this.allHistoryOrders = all.filter(o =>
+  o.orderStatus === OrderStatus.Completed ||
+  o.orderStatus === OrderStatus.Cancelled
+);
+
 
     this.applyHistoryFilter();
     this.groupedUpcomingOrders = this.groupOrdersByTable(this.orders);

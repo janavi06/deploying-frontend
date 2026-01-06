@@ -116,8 +116,11 @@
                 [disabled]="(p.quantity||0)===0 || !p.isAvailable">−</button>
         <span>{{ p.quantity || 0 }}</span>
 <button class="qbtn"
-        (click)="openCustomisation(p)"
+        (click)="hasCustomizationOptions(p) 
+                 ? openCustomisation(p) 
+                 : updateQuantity(p, 1)"
         [disabled]="!p.isAvailable">＋</button>
+
 
       </div>
     </div>
@@ -132,7 +135,7 @@
       <h3>Cart ({{ cart.length }})</h3>
       <div style="display:flex; align-items:center; gap:12px;">
 <strong>
-  ₹{{ (orderID ? orderTotal : cartPreviewTotal) | number:'1.2-2' }}
+₹{{ cartPreviewTotal | number:'1.2-2' }}
 </strong>
         <button class="cart-toggle" (click)="cartOpen = !cartOpen">
           {{ cartOpen ? 'Hide' : 'View' }} ▲▼

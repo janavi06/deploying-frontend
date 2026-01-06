@@ -239,8 +239,10 @@ this.orderTotal = gen.totalAmount ?? 0;
     item.quantity = Math.max(0, (item.quantity || 0) + delta);
     this.quantityMap[item.productID] = item.quantity;
 
-    const existing = this.cart.find(ci =>
-      ci.productID === item.productID && ci.customizationOptionIds.length === 0);
+const existing = this.cart.find(ci =>
+  ci.productID === item.productID &&
+  ci.customizationOptionIds.length === 0
+);
 
     if (item.quantity === 0) {
       if (existing) this.cart = this.cart.filter(c => c !== existing);
@@ -467,7 +469,7 @@ this.orderTotal = gen.totalAmount ?? 0;
         quantity: 1,
         customizationOptionIds: chosen ? [chosen.customizationOptionID] : [],
         customisations: chosen ? [chosen.name] : [],
-          unitPrice: p.basePrice + customizationPrice   
+unitPrice: p.price + customizationPrice
 
       };
 

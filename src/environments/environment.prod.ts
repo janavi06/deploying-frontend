@@ -1,7 +1,7 @@
 export const environment = {
   production: true,
 
-  apiUrl: 'https://scanui-backend.onrender.com/api',
-  baseUrl: 'https://scanui-backend.onrender.com',
-  assetsUrl: 'https://scanui-backend.onrender.com/uploads'
+  apiUrl: 'https://api.scanui.site/api',
+  baseUrl: 'https://api.scanui.site',
+  assetsUrl: 'https://api.scanui.site/uploads'
 };
