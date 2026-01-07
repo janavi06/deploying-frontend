@@ -1,13 +1,12 @@
 <div class="reports-container">
-
-  <!-- 🔝 NAVBAR -->
   <div class="reports-navbar">
-    <button (click)="setSection('live')" [class.active]="activeSection==='live'">Live Orders</button>
-    <button (click)="setSection('past')" [class.active]="activeSection==='past'">Past Orders</button>
-    <button (click)="setSection('categories')" [class.active]="activeSection==='categories'">Categories</button>
+    <!-- <button (click)="setSection('overview')" [class.active]="activeSection==='overview'">Dashboard</button> -->
+    <button (click)="setSection('live')" [class.active]="activeSection==='live'">Live Monitor</button>
+    <button (click)="setSection('past')" [class.active]="activeSection==='past'">Order History</button>
+    <button (click)="setSection('categories')" [class.active]="activeSection==='categories'">Menu Analytics</button>
   </div>
 
-  <!-- 📅 DATE FILTER -->
+  <!--  DATE FILTER -->
 <div class="date-filter"
      *ngIf="activeSection !== 'overview'
          && activeSection !== 'live'
@@ -16,6 +15,54 @@
     <input type="date" [(ngModel)]="endDate">
     <button (click)="setSection(activeSection)">Apply</button>
   </div>
+<!-- 
+  <section *ngIf="activeSection === 'overview'" class="dashboard-grid">
+    
+    <div class="stats-row">
+      <div class="stat-card">
+        <span class="label">Total Revenue</span>
+        <h2 class="value">₹{{ overview.totalRevenue || 0 }}</h2>
+      </div>
+      <div class="stat-card">
+        <span class="label">Total Orders</span>
+        <h2 class="value">{{ overview.totalOrders || 0 }}</h2>
+      </div>
+      <div class="stat-card">
+        <span class="label">Avg. Order Value (AOV)</span>
+        <h2 class="value">₹{{ overview.avgOrderValue || 0 }}</h2>
+        <span class="subtext">Per Ticket</span>
+      </div>
+     
+    </div>
+
+    
+
+    <div class="table-box">
+      <h3>Top Selling Items</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Item Name</th>
+            <th>Qty Sold</th>
+            <th>Revenue</th>
+            <th>Contribution</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of overview.topItems">
+            <td>{{ item.name }}</td>
+            <td>{{ item.qty }}</td>
+            <td>₹{{ item.revenue }}</td>
+            <td>
+              <span class="badge" [class.hot]="item.contribution > 10">
+                {{ item.contribution }}%
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section> -->
 
   <!-- LIVE ORDERS -->
  <section *ngIf="activeSection === 'live'" class="table-box">
@@ -54,10 +101,6 @@
   </table>
 </section>
 
-
-
-
- 
 <!-- PAST ORDERS -->
 <section *ngIf="activeSection === 'past'" class="table-box">
 
@@ -141,8 +184,6 @@
   </table>
 
 </section>
-
-
   <!-- CATEGORIES -->
   <section *ngIf="activeSection === 'categories'" class="table-box">
     <table>

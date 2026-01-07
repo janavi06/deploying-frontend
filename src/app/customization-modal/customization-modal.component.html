@@ -1,25 +1,20 @@
 <ng-container *ngIf="product">
   <div class="customization-modal">
-    <!-- HEADER -->
     <div class="modal-header">
       <div class="header-left">
-        <!-- ProductName • Price -->
         <span class="item-name">{{ product.productName }}</span>
         <span class="dot-separator">•</span>
-        <span class="item-price">₹{{ product.price }}</span>
+        <span class="item-price">Base: ₹{{ product.price }}</span>
       </div>
-      <!-- Close button -->
       <button class="close-btn" (click)="cancel()">×</button>
     </div>
 
     <hr class="divider" />
 
-    <!-- BODY: Quantity / Customization Options -->
     <div class="modal-body">
-      <div class="section-label">Quantity</div>
+      <div class="section-label">Select Customization</div>
 
       <div class="customization-options">
-        <!-- None Option -->
         <div class="option-item">
           <label>
             <input
@@ -29,12 +24,11 @@
               [(ngModel)]="selectedOption"
             />
             <span class="checkmark"></span>
-            <span class="option-name">None</span>
+            <span class="option-name">None (Standard)</span>
             <span class="option-price">₹0</span>
           </label>
         </div>
 
-        <!-- Existing customization options -->
         <div *ngFor="let option of product.customizationOptions" class="option-item">
           <label>
             <input
@@ -46,7 +40,7 @@
             <span class="checkmark"></span>
             <span class="option-name">{{ option.name }}</span>
             <span class="option-price">
-              ₹{{ option.fixedPrice | number:'1.0-0' }}
+              +₹{{ option.fixedPrice | number:'1.0-0' }}
             </span>
           </label>
         </div>
@@ -55,14 +49,12 @@
 
     <div class="modal-footer">
       <div class="footer-left">
-        <span class="total-price">₹{{ getSelectedPrice() }}</span>
+        <div class="price-label">Total Payable</div>
+        <span class="total-price">₹{{ getSelectedPrice() | number:'1.2-2' }}</span>
       </div>
-      <button
-        class="add-to-cart-btn"
-        (click)="confirm()"
-      >
-        Add Item to cart
+      <button class="add-to-cart-btn" (click)="confirm()">
+        Add to Cart
       </button>
     </div>
   </div>
-</ng-container>   
+</ng-container>

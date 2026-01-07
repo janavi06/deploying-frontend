@@ -407,3 +407,54 @@ tbody tr:last-child td {
 .item-price {
   font-weight: 500;
 }
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.stat-card {
+  background: #fff;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  border: 1px solid #eee;
+}
+
+.stat-card .value { font-size: 24px; color: #2d3436; margin: 10px 0; }
+.stat-card .label { color: #636e72; font-size: 14px; text-transform: uppercase; }
+
+.hourly-chart-placeholder {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  height: 150px;
+  padding-top: 20px;
+  border-bottom: 2px solid #eee;
+}
+
+.bar {
+  flex: 1;
+  background: #6c5ce7;
+  border-radius: 4px 4px 0 0;
+  position: relative;
+  min-width: 20px;
+}
+
+.bar-label {
+  position: absolute;
+  bottom: -25px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  color: #b2bec3;
+}
+
+.badge.hot {
+  background: #ffeaa7;
+  color: #d63031;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: bold;
+}

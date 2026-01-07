@@ -120,17 +120,25 @@ private formatDate(d: Date) {
   return d.toISOString().substring(0, 10);
 }
 
-  loadOverview() {
-    this.loading = true;
-    this.http.get<any>(
-      `${this.api}/order/manager/reports/overview?restaurantId=${this.restaurantId}`
-    ).subscribe({
-      next: res => this.overview = res,
-      error: err => this.handleError(err),
-      complete: () => this.loading = false
-    });
+loadOverview() {
+  this.loading = true;
+  this.http.get<any>(
+    `${this.api}/order/manager/reports/dashboard-stats?restaurantId=${this.restaurantId}`
+  ).subscribe({
+    next: res => {
+      // res should now return: { totalRevenue, totalOrders, avgOrderValue, tableTurnover, hourlySales: [], topItems: [], payments: [] }
+      this.overview = res;
+      this.calculateExtraMetrics();
+    },
+    error: err => this.handleError(err),
+    complete: () => this.loading = false
+  });
+}
+private calculateExtraMetrics() {
+  if (this.overview.totalOrders > 0) {
+    this.overview.avgOrderValue = Math.round(this.overview.totalRevenue / this.overview.totalOrders);
   }
-
+}
   loadLiveOrders() {
     this.loading = true;
     this.http.get<any[]>(
