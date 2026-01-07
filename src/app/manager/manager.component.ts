@@ -894,49 +894,47 @@ deleteExpense(expenseID: number): void {
     this.isModalOpen = false;
   }
 
-  addProductModal() {
-    const newProduct = {
-      productName: this.modalProduct.productName,
-      price: this.modalProduct.price,
-      productDescription: this.modalProduct.productDescription,
-      categoryID: this.modalProduct.categoryID,
-      subCategoryID: this.modalProduct.subCategoryID,
-      isAvailable: this.modalProduct.isAvailable,
-            restaurantId: this.restaurantId
+addProductModal() {
+  const newProduct = {
+    productName: this.modalProduct.productName,
+    price: this.modalProduct.price,
+    productDescription: this.modalProduct.productDescription,
+    categoryID: this.modalProduct.categoryID,
+    subCategoryID: this.modalProduct.subCategoryID,
+    isAvailable: this.modalProduct.isAvailable,
+    restaurantId: this.restaurantId
+  };
+  
+  if (!newProduct.productName || newProduct.price <= 0) return;
+    this.http.post(`${this.PRODUCT_URL}?restaurantId=${this.restaurantId}`, newProduct).subscribe({
+    next: () => { 
+      this.loadProducts(); 
+      this.closeModal(); 
+    },
+    error: err => console.error('Add failed:', err)
+  });
+}
 
-    };
-    
-    if (!newProduct.productName || newProduct.price <= 0) return;
-    
-    this.http.post(this.PRODUCT_URL, newProduct).subscribe({
-      next: () => { 
-        this.loadProducts(); 
-        this.closeModal(); 
-      },
-      error: err => console.error('Add failed:', err)
-    });
-  }
+updateProductModal() {
+  const payload = {
+    productID: this.modalProduct.productID,
+    productName: this.modalProduct.productName,
+    price: this.modalProduct.price,
+    productDescription: this.modalProduct.productDescription,
+    categoryID: this.modalProduct.categoryID,
+    subCategoryID: this.modalProduct.subCategoryID,
+    isAvailable: this.modalProduct.isAvailable,
+    restaurantId: this.restaurantId
+  };
 
-  updateProductModal() {
-    const payload = {
-      productID: this.modalProduct.productID,
-      productName: this.modalProduct.productName,
-      price: this.modalProduct.price,
-      productDescription: this.modalProduct.productDescription,
-      categoryID: this.modalProduct.categoryID,
-      subCategoryID: this.modalProduct.subCategoryID,
-      isAvailable: this.modalProduct.isAvailable,
-      restaurantId: this.restaurantId
-    };
-
-    this.http.put(`${this.PRODUCT_URL}/${payload.productID}`, payload).subscribe({
-      next: () => { 
-        this.loadProducts(); 
-        this.closeModal(); 
-      },
-      error: err => console.error('Update error:', err)
-    });
-  }
+  this.http.put(`${this.PRODUCT_URL}/${payload.productID}?restaurantId=${this.restaurantId}`, payload).subscribe({
+    next: () => { 
+      this.loadProducts(); 
+      this.closeModal(); 
+    },
+    error: err => console.error('Update error:', err)
+  });
+}
 
   deleteProduct(id: number) {
     if (!confirm('Delete this item?')) return;
