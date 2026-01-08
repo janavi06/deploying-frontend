@@ -1,6 +1,6 @@
 <div class="reports-container">
   <div class="reports-navbar">
-    <!-- <button (click)="setSection('overview')" [class.active]="activeSection==='overview'">Dashboard</button> -->
+     <button (click)="setSection('overview')" [class.active]="activeSection==='overview'">Dashboard</button> 
     <button (click)="setSection('live')" [class.active]="activeSection==='live'">Live Monitor</button>
     <button (click)="setSection('past')" [class.active]="activeSection==='past'">Order History</button>
     <button (click)="setSection('categories')" [class.active]="activeSection==='categories'">Menu Analytics</button>
@@ -15,7 +15,7 @@
     <input type="date" [(ngModel)]="endDate">
     <button (click)="setSection(activeSection)">Apply</button>
   </div>
-<!-- 
+
   <section *ngIf="activeSection === 'overview'" class="dashboard-grid">
     
     <div class="stats-row">
@@ -62,7 +62,7 @@
         </tbody>
       </table>
     </div>
-  </section> -->
+  </section> 
 
   <!-- LIVE ORDERS -->
  <section *ngIf="activeSection === 'live'" class="table-box">
