@@ -1085,60 +1085,53 @@ export class WaiterComponent implements OnInit {
   }
 
   async markCashReceived() {
-    this.busyCollect = true;
-    try {
-      const orderReference = this.collectModal.orderNumber ?
-        `Order #${this.collectModal.orderNumber}` :
-        `Order #${this.collectModal.orderId}`;
+  this.busyCollect = true;
+  try {
+    const orderId = this.collectModal.orderId;
+    
+    // 1. Re-initiate or ensure the payment record is set to CASH
+    // This overrides the payment method in the DB before we mark it complete
+    const started: any = await firstValueFrom(
+      this.http.post(
+        `${this.API_BASE}/order/payments/initiate?orderId=${orderId}&restaurantId=${this.restaurantId}&channel=Waiter&method=CASH`, 
+        {},
+        this.httpOptions
+      )
+    );
 
-      const paymentData = this.collectPayments.find(p =>
-        (p.paymentID || p.paymentId) === this.collectModal.paymentId
-      );
-
-
-      if (!this.collectModal.paymentId) {
-        const started: any = await firstValueFrom(
-          this.http.post(
-            `${this.API_BASE}/order/payments/initiate?orderId=${this.collectModal.orderId}&restaurantId=${this.restaurantId}&channel=Waiter&method=Cash`,
-            {},
-            this.httpOptions
-          )
-        );
-
-        if (started?.paymentId) {
-          this.collectModal.paymentId = started.paymentId;
-        } else {
-          throw new Error('Failed to create cash payment record');
-        }
-      }
-
-      // 2. Mark cash payment as completed
-      await firstValueFrom(
-        this.http.put(
-          `${this.API_BASE}/order/payments/${this.collectModal.paymentId}/complete?restaurantId=${this.restaurantId}`,
-          {},
-          this.httpOptions
-        )
-      );
-
-      // 3. Print bill
-      await this.printOrderBill(this.collectModal.orderId);
-
-      // 4. Success handling
-      this.closeCollectModal();
-
-      // 5. Refresh data
-      setTimeout(() => {
-        this.fetchPendingPayments();
-        this.getOrders();
-      }, 1000);
-
-    } catch (error: any) {
-      console.error(' Error marking cash received:', error);
-    } finally {
-      this.busyCollect = false;
+    if (started?.paymentId) {
+      this.collectModal.paymentId = started.paymentId;
+    } else {
+      throw new Error('Failed to create/update cash payment record');
     }
+
+    // 2. Mark the specific payment ID as completed
+    await firstValueFrom(
+      this.http.put(
+        `${this.API_BASE}/order/payments/${this.collectModal.paymentId}/complete?restaurantId=${this.restaurantId}`,
+        {},
+        this.httpOptions
+      )
+    );
+
+    // 3. Print bill and refresh UI
+    await this.printOrderBill(orderId);
+    
+    this.closeCollectModal();
+    
+    // Refresh data to reflect "Cash" in history immediately
+    setTimeout(() => {
+      this.fetchPendingPayments();
+      this.getOrders();
+    }, 500);
+
+  } catch (error: any) {
+    console.error('Error marking cash received:', error);
+    alert("Failed to save Cash payment. Please try again.");
+  } finally {
+    this.busyCollect = false;
   }
+}
 
   debugPaymentData(): void {
     console.log('=== PAYMENT DATA DEBUG ===');
