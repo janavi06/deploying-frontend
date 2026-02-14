@@ -1,50 +1,48 @@
 <div class="reports-container">
+
+  <!-- NAVIGATION -->
   <div class="reports-navbar">
-     <button (click)="setSection('overview')" [class.active]="activeSection==='overview'">Dashboard</button> 
+    <button (click)="setSection('overview')" [class.active]="activeSection==='overview'">Dashboard</button>
     <button (click)="setSection('live')" [class.active]="activeSection==='live'">Live Monitor</button>
     <button (click)="setSection('past')" [class.active]="activeSection==='past'">Order History</button>
     <button (click)="setSection('categories')" [class.active]="activeSection==='categories'">Menu Analytics</button>
   </div>
 
-  <!--  DATE FILTER -->
-<div class="date-filter"
-     *ngIf="activeSection !== 'overview'
-         && activeSection !== 'live'
-         && activeSection !== 'past'">
-    <input type="date" [(ngModel)]="startDate">
-    <input type="date" [(ngModel)]="endDate">
-    <button (click)="setSection(activeSection)">Apply</button>
-  </div>
-
+  <!-- OVERVIEW -->
   <section *ngIf="activeSection === 'overview'" class="dashboard-grid">
-    
+
     <div class="stats-row">
       <div class="stat-card">
-        <span class="label">Total Revenue</span>
+        <span class="label">Total Revenue (Net)</span>
         <h2 class="value">₹{{ overview.totalRevenue || 0 }}</h2>
       </div>
+
+      <div class="stat-card">
+        <span class="label">Total Discount Given</span>
+        <h2 class="value text-danger">₹{{ overview.totalDiscount || 0 }}</h2>
+      </div>
+
       <div class="stat-card">
         <span class="label">Total Orders</span>
         <h2 class="value">{{ overview.totalOrders || 0 }}</h2>
       </div>
+
       <div class="stat-card">
-        <span class="label">Avg. Order Value (AOV)</span>
+        <span class="label">Avg. Order Value</span>
         <h2 class="value">₹{{ overview.avgOrderValue || 0 }}</h2>
-        <span class="subtext">Per Ticket</span>
       </div>
-     
     </div>
 
-    
-
     <div class="table-box">
-      <h3>Top Selling Items</h3>
+      <h3>Top Selling Items (After Offers)</h3>
       <table>
         <thead>
           <tr>
-            <th>Item Name</th>
-            <th>Qty Sold</th>
-            <th>Revenue</th>
+            <th>Item</th>
+            <th>Qty</th>
+            <th>Gross</th>
+            <th>Discount</th>
+            <th>Net</th>
             <th>Contribution</th>
           </tr>
         </thead>
@@ -52,9 +50,11 @@
           <tr *ngFor="let item of overview.topItems">
             <td>{{ item.name }}</td>
             <td>{{ item.qty }}</td>
-            <td>₹{{ item.revenue }}</td>
+            <td>₹{{ item.grossRevenue }}</td>
+            <td class="text-danger">- ₹{{ item.totalDiscount }}</td>
+            <td><strong>₹{{ item.netRevenue }}</strong></td>
             <td>
-              <span class="badge" [class.hot]="item.contribution > 10">
+              <span class="badge" [ngClass]="{'hot': item.contribution > 10}">
                 {{ item.contribution }}%
               </span>
             </td>
@@ -62,84 +62,18 @@
         </tbody>
       </table>
     </div>
-  </section> 
+  </section>
 
-  <!-- LIVE ORDERS -->
- <section *ngIf="activeSection === 'live'" class="table-box">
-  <table>
-    <thead>
-      <tr>
-        <th>Order #</th>
-        <th>Table</th>
-        <th>Items</th>
-        <th>Status</th>
-        <th>Total</th>
-        <th>Time</th>
-      </tr>
-    </thead>
-
-    <tbody>
-      <tr *ngFor="let o of liveOrders">
-        <td>#{{ o.orderNumber }}</td>
-        <td>{{ o.table }}</td>
-
-        <!-- ITEMS -->
-        <td>
-          <div class="order-items">
-            <div *ngFor="let i of o.items" class="item-row">
-              <span class="item-name">{{ i.itemName }}</span>
-              <span class="item-qty">×{{ i.quantity }}</span>
-            </div>
-          </div>
-        </td>
-
-        <td>{{ o.status }}</td>
-        <td><strong>₹{{ o.total }}</strong></td>
-        <td>{{ o.minutesAgo }} min</td>
-      </tr>
-    </tbody>
-  </table>
-</section>
-
-<!-- PAST ORDERS -->
+  <!-- PAST ORDERS -->
+ <!-- PAST ORDERS -->
 <section *ngIf="activeSection === 'past'" class="table-box">
 
-  <!-- FILTER BAR -->
-  <div class="past-filter-bar">
-
-    <!-- FILTER DROPDOWN -->
-    <div class="filter-select">
-      <select [(ngModel)]="dateFilterMode" (change)="onFilterChange()">
-        <option value="all">All Orders</option>
-        <option value="today">Today</option>
-        <option value="month">This Month</option>
-        <option value="custom">Custom Range</option>
-      </select>
-    </div>
-
-    <!-- CUSTOM RANGE -->
-    <div class="custom-range" *ngIf="dateFilterMode === 'custom'">
-      <input type="date" [(ngModel)]="startDate">
-      <span>to</span>
-      <input type="date" [(ngModel)]="endDate">
-      <button (click)="applyCustomRange()">Apply</button>
-    </div>
-
-    <!-- RANGE LABEL -->
-    <div class="range-label">
-      Showing: <strong>{{ rangeLabel }}</strong>
-    </div>
-
-    <!-- EXPORT -->
-    <div class="export-bar">
-      <button (click)="exportToCSV(pastOrders, 'past-orders')">
-        ⬇ Export CSV
-      </button>
-    </div>
-
+  <div class="export-bar mb-3">
+    <button (click)="exportToCSV(pastOrders, 'past-orders')">
+      ⬇ Export CSV
+    </button>
   </div>
 
-  <!-- ORDERS TABLE -->
   <table>
     <thead>
       <tr>
@@ -147,61 +81,161 @@
         <th>Date</th>
         <th>Table</th>
         <th>Status</th>
-        <th>Items</th>
-        <th>Total</th>
+        <th>Total (Net)</th>
         <th>Payment</th>
       </tr>
     </thead>
 
     <tbody>
-      <tr *ngFor="let o of pastOrders">
+      <tr *ngFor="let o of pastOrders"
+          (click)="openOrderModal(o)"
+          style="cursor:pointer">
+
         <td>#{{ o.orderNumber }}</td>
         <td>{{ o.date | date:'short' }}</td>
         <td>{{ o.table }}</td>
         <td>{{ o.status }}</td>
-
-        <!-- ITEMS -->
-        <td>
-          <div class="order-items">
-            <div *ngFor="let i of o.items" class="item-row">
-              <span class="item-name">{{ i.itemName }}</span>
-              <span class="item-qty">×{{ i.quantity }}</span>
-            </div>
-          </div>
-        </td>
-
         <td><strong>₹{{ o.total }}</strong></td>
-        <td>{{ o.paymentMode }}</td>
+
+        <td>
+          <span class="badge"
+            [ngClass]="{
+              'full': o.paymentType === 'Full',
+              'partial': o.paymentType === 'Partial',
+              'pending': o.paymentType === 'Pending'
+            }">
+            {{ o.paymentType }}
+          </span>
+        </td>
       </tr>
 
-      <!-- EMPTY STATE -->
       <tr *ngIf="!pastOrders?.length">
-        <td colspan="7" style="text-align:center; padding:20px; color:#777;">
+        <td colspan="6" style="text-align:center;padding:20px;">
           No orders found
         </td>
       </tr>
+
     </tbody>
   </table>
-
 </section>
-  <!-- CATEGORIES -->
-  <section *ngIf="activeSection === 'categories'" class="table-box">
-    <table>
-      <thead>
-        <tr>
-          <th>Category</th>
-          <th>Quantity</th>
-          <th>Revenue</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let c of categories">
-          <td>{{ c.category }}</td>
-          <td>{{ c.totalQuantity }}</td>
-          <td>₹{{ c.revenue }}</td>
-        </tr>
-      </tbody>
-    </table>
-  </section>
+<!-- ORDER SUMMARY MODAL -->
+<div class="modal-overlay" *ngIf="selectedOrder">
+
+  <div class="modal-box large">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h4>Order #{{ selectedOrder.orderNumber }}</h4>
+      <button class="btn-close" (click)="closeOrderModal()">✖</button>
+    </div>
+
+    <!-- BASIC INFO -->
+    <div class="mb-3">
+      <strong>Date:</strong> {{ selectedOrder.date | date:'short' }} <br>
+      <strong>Table:</strong> {{ selectedOrder.table }} <br>
+      <strong>Status:</strong> {{ selectedOrder.status }}
+    </div>
+
+    <!-- ITEMS -->
+    <h5>Items</h5>
+    <div class="order-items mb-3">
+
+      <div *ngFor="let i of selectedOrder.items" class="item-row mb-2">
+
+        <div class="d-flex justify-content-between">
+          <div>
+            <strong>{{ i.itemName }}</strong>
+            <small *ngIf="i.offerName" class="text-success">
+              ({{ i.offerName }})
+            </small>
+          </div>
+          <div>×{{ i.quantity }}</div>
+        </div>
+
+        <small>
+          Gross: ₹{{ i.originalPrice }}
+          <span *ngIf="i.discountAmount > 0">
+            • Discount: -₹{{ i.discountAmount }}
+          </span>
+          • Net: ₹{{ i.finalPrice }}
+        </small>
+
+      </div>
+    </div>
+
+    <!-- BILL SUMMARY -->
+    <hr>
+
+    <h5>Bill Summary</h5>
+
+    <div class="summary-line">
+      <span>Gross Total</span>
+      <span>₹{{ selectedOrder.grossTotal }}</span>
+    </div>
+
+    <div class="summary-line text-danger">
+      <span>Total Discount</span>
+      <span>- ₹{{ selectedOrder.totalDiscount }}</span>
+    </div>
+
+    <div class="summary-line total">
+      <strong>Net Payable</strong>
+      <strong>₹{{ selectedOrder.total }}</strong>
+    </div>
+
+    <hr>
+
+<!-- PAYMENT DETAILS -->
+<h5>Payment Details</h5>
+
+<div class="summary-line">
+  <span>Cash Paid</span>
+  <span>₹{{ selectedOrder.cashPaid | number:'1.2-2' }}</span>
+</div>
+
+<div class="summary-line">
+  <span>UPI Paid</span>
+  <span>₹{{ selectedOrder.upiPaid | number:'1.2-2' }}</span>
+</div>
+
+<hr>
+
+<div class="summary-line total">
+  <strong>Total Paid</strong>
+  <strong>₹{{ selectedOrder.paid | number:'1.2-2' }}</strong>
+</div>
+
+<div class="summary-line text-warning" *ngIf="selectedOrder.remaining > 0">
+  <span>Remaining</span>
+  <span>₹{{ selectedOrder.remaining | number:'1.2-2' }}</span>
+</div>
+
+<div class="summary-line">
+  <span>Status</span>
+  <span>{{ selectedOrder.paymentType }}</span>
+</div>
+
+<hr>
+
+<!-- Detailed Payments -->
+<div *ngIf="selectedOrder.payments?.length">
+
+  <h6 class="mt-2">Payment Records</h6>
+
+  <div *ngFor="let p of selectedOrder.payments" class="summary-line small">
+    <span>
+      {{ p.paymentMethod }} 
+      ({{ p.channel }}) 
+      <span *ngIf="p.isPartial"> - Partial</span>
+    </span>
+    <span>₹{{ p.amount | number:'1.2-2' }}</span>
+  </div>
+
+</div>
+
+
+
+  </div>
+
+</div>
 
 </div>

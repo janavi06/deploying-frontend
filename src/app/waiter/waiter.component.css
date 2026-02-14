@@ -941,3 +941,27 @@ body {
     font-size: 13px;
   }
 }
+/* Clean modal layering */
+.modal {
+  z-index: 1055;
+}
+
+.modal-backdrop {
+  z-index: 1050;
+}
+/* Optimized Modal Override */
+.modal.show {
+  display: block !important; /* Required for Bootstrap modals with *ngIf */
+  background: rgba(15, 23, 42, 0.5); /* Semi-transparent overlay */
+  backdrop-filter: blur(4px);
+  z-index: 1060 !important;
+}
+
+.modal-dialog {
+  z-index: 1070 !important;
+  margin-top: 50px; /* Ensures it doesn't start at the very top */
+}
+
+.modal-backdrop {
+  z-index: 1050 !important;
+}

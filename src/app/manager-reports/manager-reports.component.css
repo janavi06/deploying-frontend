@@ -458,3 +458,47 @@ tbody tr:last-child td {
   border-radius: 4px;
   font-weight: bold;
 }
+.badge { padding: 4px 8px; border-radius: 6px; font-weight:600; font-size:12px; }
+.badge.pending { background:#fff4e5; color:#b36b00; border:1px solid #ffd7a8; }
+.badge.partial { background:#fff7f3; color:#b02a2a; border:1px solid #f8c8c8; }
+.badge.full { background:#e9fff0; color:#0a7a3f; border:1px solid #bff0c9; }
+.payment-block small { display:block; color:#666; }
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  z-index:1000;
+}
+
+.modal-box {
+  background:#fff;
+  padding:25px;
+  border-radius:10px;
+  width:600px;
+  max-height:85vh;
+  overflow:auto;
+}
+
+.modal-box.large {
+  width:700px;
+}
+
+.summary-line {
+  display:flex;
+  justify-content:space-between;
+  margin-bottom:6px;
+}
+
+.summary-line.total {
+  font-size:18px;
+}
+
+.btn-close {
+  background:none;
+  border:none;
+  font-size:18px;
+  cursor:pointer;
+}

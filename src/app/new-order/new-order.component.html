@@ -4,8 +4,6 @@
 
   <!-- Sticky top bar -->
   <div class="topbar">
-    <!-- <div class="title">New Order</div> -->
-
     <div class="right-side">
       <!-- search -->
       <div class="search">
@@ -28,35 +26,33 @@
     </div>
   </div>
 
-
   <!-- Payment Preference Selection (Waiter Flow Only) -->
-<div *ngIf="showPaymentOptions" class="payment-preference-section">
-  <h4>Payment Preference</h4>
-  <div class="preference-options">
-    <label class="preference-option">
-      <input type="radio" 
-             name="paymentPreference" 
-             [(ngModel)]="paymentPreference" 
-             value="PayNow">
-      <span class="option-content">
-        <strong>Pay Now</strong>
-        <small>Customer pays immediately</small>
-      </span>
-    </label>
-    
-    <label class="preference-option">
-      <input type="radio" 
-             name="paymentPreference" 
-             [(ngModel)]="paymentPreference" 
-             value="PayLater" 
-             checked>
-      <span class="option-content">
-        <strong>Pay Later</strong>
-        <small>Payment pending in collection</small>
-      </span>
-    </label>
+  <div *ngIf="showPaymentOptions" class="payment-preference-section">
+    <h4>Payment Preference</h4>
+    <div class="preference-options">
+      <label class="preference-option">
+        <input type="radio"
+               name="paymentPreference"
+               [(ngModel)]="paymentPreference"
+               value="PayNow">
+        <span class="option-content">
+          <strong>Pay Now</strong>
+          <small>Customer pays immediately</small>
+        </span>
+      </label>
+
+      <label class="preference-option">
+        <input type="radio"
+               name="paymentPreference"
+               [(ngModel)]="paymentPreference"
+               value="PayLater">
+        <span class="option-content">
+          <strong>Pay Later</strong>
+          <small>Payment pending in collection</small>
+        </span>
+      </label>
+    </div>
   </div>
-</div>
 
   <!-- Category chips (static wrapping) -->
   <div class="chip-scroll">
@@ -73,7 +69,6 @@
       {{ c.categoryName }}
     </button>
   </div>
-
 
   <!-- Subcategory chips (static wrapping) -->
   <div class="chip-scroll subtle" *ngIf="currentSubCategories.length">
@@ -92,91 +87,82 @@
   </div>
 
   <!-- Products grid -->
-<!-- Products grid -->
-<div class="card-grid">
-  <div class="card"
-       *ngFor="let p of getProductsForSelection()"
-       [class.dim]="!p.isAvailable">
-    <div class="line1">
-      <span class="dot" [class.veg]="p.isVeg" [class.nonveg]="!p.isVeg"></span>
-      <h4 class="name">{{ p.productName }}</h4>
-      <div class="price">₹{{ p.price }}</div>
-    </div>
+  <div class="card-grid">
+    <div class="card"
+         *ngFor="let p of getProductsForSelection()"
+         [class.dim]="!p.isAvailable">
 
-    <p class="desc" *ngIf="p.productDescription">{{ p.productDescription }}</p>
+      <div class="line1">
+        <span class="dot" [class.veg]="p.isVeg" [class.nonveg]="!p.isVeg"></span>
+        <h4 class="name">{{ p.productName }}</h4>
+        <div class="price">₹{{ p.price }}</div>
+      </div>
 
-    <!-- Customization indicator -->
+      <p class="desc" *ngIf="p.productDescription">{{ p.productDescription }}</p>
 
-    <div class="actions">
+      <div class="actions">
+        <div class="qty">
+          <button class="qbtn"
+                  (click)="updateQuantity(p,-1)"
+                  [disabled]="(p.quantity||0)===0 || !p.isAvailable">−</button>
+          <span>{{ p.quantity || 0 }}</span>
 
-
-      <div class="qty">
-        <button class="qbtn"
-                (click)="updateQuantity(p,-1)"
-                [disabled]="(p.quantity||0)===0 || !p.isAvailable">−</button>
-        <span>{{ p.quantity || 0 }}</span>
-<button class="qbtn"
-        (click)="hasCustomizationOptions(p) 
-                 ? openCustomisation(p) 
-                 : updateQuantity(p, 1)"
-        [disabled]="!p.isAvailable">＋</button>
-
-
+          <button class="qbtn"
+                  (click)="hasCustomizationOptions(p) ? openCustomisation(p) : updateQuantity(p, 1)"
+                  [disabled]="!p.isAvailable">＋</button>
+        </div>
       </div>
     </div>
   </div>
-</div>
-
-
 
   <!-- Cart (collapsible) -->
   <div class="cart" *ngIf="cart.length" [class.collapsed]="!cartOpen">
     <div class="cart-head">
       <h3>Cart ({{ cart.length }})</h3>
       <div style="display:flex; align-items:center; gap:12px;">
-<strong>
-₹{{ cartPreviewTotal | number:'1.2-2' }}
-</strong>
+        <strong>
+          Approx ₹{{ cartPreviewTotal | number:'1.2-2' }}
+        </strong>
         <button class="cart-toggle" (click)="cartOpen = !cartOpen">
           {{ cartOpen ? 'Hide' : 'View' }} ▲▼
         </button>
       </div>
     </div>
 
-<div class="cart-list">
-  <div class="cart-row" *ngFor="let c of cart; let i = index">
-    <div class="meta">
-      <div class="title">{{ c.productName }}</div>
-      <div class="chips" *ngIf="c.customisations.length">
-        <span class="chip xs" *ngFor="let chip of c.customisations">{{ chip }}</span>
-      </div>
-      
+    <div class="cart-list">
+      <div class="cart-row" *ngFor="let c of cart; let i = index">
+        <div class="meta">
+          <div class="title">{{ c.productName }}</div>
+          <div class="chips" *ngIf="c.customisations?.length">
+            <span class="chip xs" *ngFor="let chip of c.customisations">{{ chip }}</span>
+          </div>
+        </div>
 
-    </div>
+        <div class="qty">
+          <button class="qbtn sm" (click)="dec(c)">−</button>
+          <span>{{ c.quantity }}</span>
+          <button class="qbtn sm" (click)="inc(c)">＋</button>
+        </div>
 
-    <div class="qty">
-      <button class="qbtn sm" (click)="dec(c)">−</button>
-      <span>{{ c.quantity }}</span>
-      <button class="qbtn sm" (click)="inc(c)">＋</button>
-    </div>
 <div class="amt">
-  ₹{{ (c.unitPrice ?? 0) * (c.quantity ?? 0) | number:'1.2-2' }}
+  ₹{{ getItemApproxTotal(c) | number:'1.2-2' }}
 </div>
 
-    <button class="del" (click)="remove(i)">✕</button>
-  </div>
-</div>
 
-<div class="cart-actions">
-  <button class="btn ghost" (click)="goBack()">Back</button>
-  
-  <!-- Updated submit button that uses the correct method based on flow -->
-  <button class="btn primary"
-          [disabled]="!selectedTable || !cart.length || busy"
-          (click)="showPaymentOptions ? submitWithPreference() : submit()">
-    {{ busy ? 'Placing…' : (showPaymentOptions ? 'Place Order' : 'Submit') }}
-  </button>
-</div>
+        <button class="del" (click)="remove(i)">✕</button>
+      </div>
+    </div>
+
+    <div class="cart-actions">
+      <button class="btn ghost" (click)="goBack()">Back</button>
+
+      <!-- Submit chooses waiter or customer flow -->
+      <button class="btn primary"
+              [disabled]="!selectedTable || !cart.length || busy"
+              (click)="showPaymentOptions ? submitWithPreference() : submit()">
+        {{ busy ? 'Placing…' : (showPaymentOptions ? 'Place Order' : 'Submit') }}
+      </button>
+    </div>
   </div>
 </div>
 
@@ -184,12 +170,11 @@
 <div class="overlay" *ngIf="showModal">
   <div class="modal customization-modal">
     <h3>{{ modalProduct?.productName }}</h3>
-    
-    <!-- Debug info (remove in production) -->
+
     <div *ngIf="modalOptions.length === 0" class="alert alert-warning">
       ⚠️ No customization options available for this product
     </div>
-    
+
     <div class="qty-modal">
       <label>Qty</label>
       <div class="qty">
@@ -199,44 +184,32 @@
       </div>
     </div>
 
-    <!-- Customization Options -->
     <div class="customization-section" *ngIf="modalOptions.length">
       <h4>Customization Options</h4>
       <div class="options-list">
         <div class="option-item" *ngFor="let opt of modalOptions; let i = index">
           <label class="option-label">
-<input type="checkbox" 
-       [(ngModel)]="opt.selected"
-       [id]="'opt-' + i">
-
+            <input type="checkbox"
+                   [(ngModel)]="opt.selected"
+                   [id]="'opt-' + i">
             <span class="option-name">{{ opt.name }}</span>
-            <span class="option-price" *ngIf="opt.fixedPrice > 0">
-              +₹{{ opt.fixedPrice }}
-            </span>
-            <span class="option-price" *ngIf="opt.fixedPrice === 0">
-              (Free)
-            </span>
+            <span class="option-price" *ngIf="opt.fixedPrice > 0">+₹{{ opt.fixedPrice }}</span>
+            <span class="option-price" *ngIf="opt.fixedPrice === 0">(Free)</span>
           </label>
         </div>
       </div>
     </div>
 
-  <div class="price-summary">
-  <p class="text-muted small">
-    Final price will be calculated automatically
-  </p>
-</div>
-
+    <div class="price-summary">
+      <p class="text-muted small">Final price will be calculated automatically</p>
+    </div>
 
     <div class="modal-actions">
       <button class="btn ghost" (click)="closeModal()">Cancel</button>
-      <button class="btn primary" (click)="addToCart()">
-        Add {{ modalQty }} to Cart
-      </button>
+      <button class="btn primary" (click)="addToCart()">Add {{ modalQty }} to Cart</button>
     </div>
   </div>
 </div>
-
 
 <!-- Enhanced Payment Modal -->
 <div class="payment-overlay" *ngIf="paymentStage">
@@ -246,7 +219,7 @@
     <ng-container *ngIf="paymentStage === 1">
       <h3>Select Payment Method</h3>
       <p class="text-center mb-3">Total: ₹{{ orderTotal | number:'1.2-2' }}</p>
-      
+
       <div class="payment-methods">
         <button class="payment-method-btn" (click)="initiateUPIPayment()">
           <div class="method-icon">📱</div>
@@ -255,12 +228,20 @@
             <small>Scan QR code to pay</small>
           </div>
         </button>
-        
+
         <button class="payment-method-btn" (click)="initiateCashPayment()">
           <div class="method-icon">💵</div>
           <div class="method-info">
             <strong>Cash Payment</strong>
             <small>Collect cash from customer</small>
+          </div>
+        </button>
+
+        <button class="payment-method-btn partial" (click)="startPartialPayment()">
+          <div class="method-icon">🔀</div>
+          <div class="method-info">
+            <strong>Partial Payment</strong>
+            <small>UPI + Cash</small>
           </div>
         </button>
       </div>
@@ -271,7 +252,7 @@
     <!-- Stage 2: UPI QR Code -->
     <ng-container *ngIf="paymentStage === 2">
       <h3>Scan to Pay</h3>
-      
+
       <div class="upi-summary">
         <div><strong>Amount:</strong> ₹{{ upiAmount | number:'1.2-2' }}</div>
         <div><strong>UPI ID:</strong> {{ upiId }}</div>
@@ -296,7 +277,7 @@
     <!-- Stage 3: Cash Payment Confirmation -->
     <ng-container *ngIf="paymentStage === 3">
       <h3>Confirm Cash Payment</h3>
-      
+
       <div class="cash-summary">
         <div class="amount-display">₹{{ orderTotal | number:'1.2-2' }}</div>
         <p class="text-muted">Confirm that you have received cash payment from the customer.</p>
@@ -311,7 +292,26 @@
       <button class="btn ghost mt8" (click)="paymentStage = 1">Back</button>
     </ng-container>
 
+    <!-- Stage 4: Partial Payment -->
+    <ng-container *ngIf="paymentStage === 4">
+      <h3>Partial Payment</h3>
+
+      <div class="alert alert-info">Total: ₹{{ orderTotal | number:'1.2-2' }}</div>
+
+      <label>UPI Amount</label>
+      <input type="number" class="form-control" [(ngModel)]="partialUpiAmount" min="0">
+
+      <label class="mt-2">Cash Amount</label>
+      <input type="number" class="form-control" [(ngModel)]="partialCashAmount" min="0">
+
+      <div class="payment-actions mt-3">
+        <button class="btn success" [disabled]="busyPay" (click)="confirmPartialPayment()">
+          {{ busyPay ? 'Processing...' : 'Confirm Payment' }}
+        </button>
+      </div>
+
+      <button class="btn ghost mt8" (click)="paymentStage = 1">Back</button>
+    </ng-container>
+
   </div>
 </div>
-
- 

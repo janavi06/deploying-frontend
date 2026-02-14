@@ -26,7 +26,7 @@ export class ManagerComponent implements OnInit {
   readonly ORDER_API = `${environment.apiUrl}/order`;
   readonly PRODUCT_URL = `${environment.apiUrl}/product`;
   
-readonly OFFER_API = `${environment.apiUrl}/offer`;
+// readonly OFFER_API = `${environment.apiUrl}/offer`;
 
   readonly EXPENSE_API = `${environment.apiUrl}/expense`;
 
@@ -41,7 +41,7 @@ readonly OFFER_API = `${environment.apiUrl}/offer`;
 
   
   expenseBreakdownChartData: any = {};
-  showOfferModal: boolean = false;
+//   showOfferModal: boolean = false;
 
  
   newExpense: any = {};
@@ -73,26 +73,26 @@ selectedSection: 'dashboard' | 'history' | 'inventory'|'editMenu' |'reports' | '
 
 
 
-activeOffers: any[] = [];
-offerStats: any = {
-  totalOffers: 0,
-  activeOffers: 0,
-  totalDiscounts: 0,
-  ordersWithOffers: 0
-};
-offerPerformanceChartData: any = {};
-newOffer: any = {
-  offerType: 'percent',
-  discountPercent: null,
-  discountAmount: null,
-  code: '',
-  description: '',
-  minBillAmount: 0,
-  validFrom: '',
-  validTo: '',
-  autoApply: true,
-  isActive: true
-};
+// activeOffers: any[] = [];
+// offerStats: any = {
+//   totalOffers: 0,
+//   activeOffers: 0,
+//   totalDiscounts: 0,
+//   ordersWithOffers: 0
+// };
+// offerPerformanceChartData: any = {};
+// newOffer: any = {
+//   offerType: 'percent',
+//   discountPercent: null,
+//   discountAmount: null,
+//   code: '',
+//   description: '',
+//   minBillAmount: 0,
+//   validFrom: '',
+//   validTo: '',
+//   autoApply: true,
+//   isActive: true
+// };
 
 currentYear = new Date().getFullYear();
 
@@ -160,7 +160,7 @@ private initializeComponent(): void {
     this.loadProducts();
 
     this.loadExpenseData();
-    this.loadOffersData();
+//     this.loadOffersData();
 
     
  
@@ -207,38 +207,38 @@ viewOrderDetails(orderID: number) {
     return diffMin > minutes;
   }
 
-loadOffersData(): void {
-  this.loadActiveOffers();
-  this.loadOfferStats();
-  this.loadOfferPerformance();
-}
+// loadOffersData(): void {
+//   this.loadActiveOffers();
+//   this.loadOfferStats();
+//   this.loadOfferPerformance();
+// }
 
-loadActiveOffers(): void {
-  this.http.get<any>(`${this.OFFER_API}/restaurant/${this.restaurantId}`).subscribe({
-    next: (res) => {
-      this.activeOffers = res;
-    },
-    error: (err) => console.error('Error loading offers:', err)
-  });
-}
+// loadActiveOffers(): void {
+//   this.http.get<any>(`${this.OFFER_API}/restaurant/${this.restaurantId}`).subscribe({
+//     next: (res) => {
+//       this.activeOffers = res;
+//     },
+//     error: (err) => console.error('Error loading offers:', err)
+//   });
+// }
 
-loadOfferStats(): void {
-  this.http.get<any>(`${this.OFFER_API}/stats?restaurantId=${this.restaurantId}`).subscribe({
-    next: (res) => {
-      this.offerStats = res;
-    },
-    error: (err) => console.error('Error loading offer stats:', err)
-  });
-}
+// loadOfferStats(): void {
+//   this.http.get<any>(`${this.OFFER_API}/stats?restaurantId=${this.restaurantId}`).subscribe({
+//     next: (res) => {
+//       this.offerStats = res;
+//     },
+//     error: (err) => console.error('Error loading offer stats:', err)
+//   });
+// }
 
-loadOfferPerformance(): void {
-  this.http.get<any>(`${this.OFFER_API}/performance?restaurantId=${this.restaurantId}`).subscribe({
-    next: (res) => {
-      this.prepareOfferPerformanceChart(res);
-    },
-    error: (err) => console.error('Error loading offer performance:', err)
-  });
-}
+// loadOfferPerformance(): void {
+//   this.http.get<any>(`${this.OFFER_API}/performance?restaurantId=${this.restaurantId}`).subscribe({
+//     next: (res) => {
+//       this.prepareOfferPerformanceChart(res);
+//     },
+//     error: (err) => console.error('Error loading offer performance:', err)
+//   });
+// }
 
 closeModalById(modalId: string): void {
   const modal = document.getElementById(modalId);
@@ -254,53 +254,53 @@ closeModalById(modalId: string): void {
   }
 }
 
-deleteOffer(offerID: number): void {
-  if (confirm('Are you sure you want to delete this offer?')) {
-    this.http.delete(`${this.OFFER_API}/${offerID}?restaurantId=${this.restaurantId}`).subscribe({
-      next: () => {
-        this.loadOffersData();
-      },
-      error: (err) => {
-        console.error('Error deleting offer:', err);
-      }
-    });
-  }
-}
+// deleteOffer(offerID: number): void {
+//   if (confirm('Are you sure you want to delete this offer?')) {
+//     this.http.delete(`${this.OFFER_API}/${offerID}?restaurantId=${this.restaurantId}`).subscribe({
+//       next: () => {
+//         this.loadOffersData();
+//       },
+//       error: (err) => {
+//         console.error('Error deleting offer:', err);
+//       }
+//     });
+//   }
+// }
 
-prepareOfferPerformanceChart(performanceData: any): void {
-  const labels = performanceData?.labels || ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
-  const orders = performanceData?.orders || [0, 0, 0, 0];
-  const discounts = performanceData?.discounts || [0, 0, 0, 0];
+// prepareOfferPerformanceChart(performanceData: any): void {
+//   const labels = performanceData?.labels || ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
+//   const orders = performanceData?.orders || [0, 0, 0, 0];
+//   const discounts = performanceData?.discounts || [0, 0, 0, 0];
 
-  this.offerPerformanceChartData = {
-    labels: labels,
-    datasets: [
-      {
-        label: 'Orders with Offers',
-        data: orders,
-        backgroundColor: '#3b82f6',
-        yAxisID: 'y'
-      },
-      {
-        label: 'Discount Amount (₹)',
-        data: discounts,
-        backgroundColor: '#10b981',
-        type: 'line' as const,
-        yAxisID: 'y1',
-        borderColor: '#10b981',
-        borderWidth: 2,
-        fill: false
-      }
-    ]
-  };
-}
+//   this.offerPerformanceChartData = {
+//     labels: labels,
+//     datasets: [
+//       {
+//         label: 'Orders with Offers',
+//         data: orders,
+//         backgroundColor: '#3b82f6',
+//         yAxisID: 'y'
+//       },
+//       {
+//         label: 'Discount Amount (₹)',
+//         data: discounts,
+//         backgroundColor: '#10b981',
+//         type: 'line' as const,
+//         yAxisID: 'y1',
+//         borderColor: '#10b981',
+//         borderWidth: 2,
+//         fill: false
+//       }
+//     ]
+//   };
+// }
 
 selectSection(section: any) {
   this.selectedSection = section;
   this.isSidebarOpen = false;
-     if (section === 'offers') {
-    this.loadOffersData();
-  }
+//      if (section === 'offers') {
+//     this.loadOffersData();
+//   }
 }
 
 viewBill(orderId: number): void {
@@ -986,105 +986,105 @@ getTimeInStatus(timestamp: string | Date | undefined | null): string {
   const diffHr = (diffMs / (1000 * 60 * 60));
   return `${diffHr.toFixed(1)} hrs ago`;
 }
-// Open offer modal
-openOfferModal(): void {
-  this.showOfferModal = true;
-  // Prevent body scrolling when modal is open
-  document.body.classList.add('modal-open');
-}
+// // Open offer modal
+// openOfferModal(): void {
+//   this.showOfferModal = true;
+//   // Prevent body scrolling when modal is open
+//   document.body.classList.add('modal-open');
+// }
 
-// Close offer modal
-closeOfferModal(): void {
-  this.showOfferModal = false;
-  // Re-enable body scrolling
-  document.body.classList.remove('modal-open');
-  this.resetNewOffer();
-}
+// // Close offer modal
+// closeOfferModal(): void {
+//   this.showOfferModal = false;
+//   // Re-enable body scrolling
+//   document.body.classList.remove('modal-open');
+//   this.resetNewOffer();
+// }
 
-// Handle offer type changes
-onOfferTypeChange(): void {
-  // Reset the other type's value when switching
-  if (this.newOffer.offerType === 'percent') {
-    this.newOffer.discountAmount = null;
-  } else {
-    this.newOffer.discountPercent = null;
-  }
-}
+// // Handle offer type changes
+// onOfferTypeChange(): void {
+//   // Reset the other type's value when switching
+//   if (this.newOffer.offerType === 'percent') {
+//     this.newOffer.discountAmount = null;
+//   } else {
+//     this.newOffer.discountPercent = null;
+//   }
+// }
 
-// Handle offer code changes
-onOfferCodeChange(): void {
-  // If code is provided, disable auto-apply; if empty, enable it
-  if (this.newOffer.code && this.newOffer.code.trim() !== '') {
-    this.newOffer.autoApply = false;
-  } else {
-    this.newOffer.autoApply = true;
-  }
-}
+// // Handle offer code changes
+// onOfferCodeChange(): void {
+//   // If code is provided, disable auto-apply; if empty, enable it
+//   if (this.newOffer.code && this.newOffer.code.trim() !== '') {
+//     this.newOffer.autoApply = false;
+//   } else {
+//     this.newOffer.autoApply = true;
+//   }
+// }
 
-// Validate offer form
-isOfferFormValid(): boolean {
-  if (!this.newOffer.description || !this.newOffer.validFrom || !this.newOffer.validTo) {
-    return false;
-  }
+// // Validate offer form
+// isOfferFormValid(): boolean {
+//   if (!this.newOffer.description || !this.newOffer.validFrom || !this.newOffer.validTo) {
+//     return false;
+//   }
 
-  if (this.newOffer.offerType === 'percent') {
-    return !!(this.newOffer.discountPercent && this.newOffer.discountPercent > 0 && this.newOffer.discountPercent <= 100);
-  } else {
-    return !!(this.newOffer.discountAmount && this.newOffer.discountAmount > 0);
-  }
-}
+//   if (this.newOffer.offerType === 'percent') {
+//     return !!(this.newOffer.discountPercent && this.newOffer.discountPercent > 0 && this.newOffer.discountPercent <= 100);
+//   } else {
+//     return !!(this.newOffer.discountAmount && this.newOffer.discountAmount > 0);
+//   }
+// }
 
-// Update your createOffer method in manager.component.ts
-createOffer(): void {
-  if (!this.isOfferFormValid()) {
-    alert('Please fill in all required fields correctly.');
-    return;
-  }
+// // Update your createOffer method in manager.component.ts
+// createOffer(): void {
+//   if (!this.isOfferFormValid()) {
+//     alert('Please fill in all required fields correctly.');
+//     return;
+//   }
 
-  // Prepare the offer data with RestaurantID
-  const offerData = {
-    restaurantID: this.restaurantId, // ✅ CRITICAL: Add this line
-    code: this.newOffer.code?.trim() || null,
-    description: this.newOffer.description,
-    discountAmount: this.newOffer.offerType === 'amount' ? this.newOffer.discountAmount : null,
-    discountPercent: this.newOffer.offerType === 'percent' ? this.newOffer.discountPercent : null,
-    minBillAmount: this.newOffer.minBillAmount || 0,
-    validFrom: new Date(this.newOffer.validFrom).toISOString(),
-    validTo: new Date(this.newOffer.validTo).toISOString(),
-    autoApply: this.newOffer.autoApply,
-    isActive: true
-  };
+//   // Prepare the offer data with RestaurantID
+//   const offerData = {
+//     restaurantID: this.restaurantId, // ✅ CRITICAL: Add this line
+//     code: this.newOffer.code?.trim() || null,
+//     description: this.newOffer.description,
+//     discountAmount: this.newOffer.offerType === 'amount' ? this.newOffer.discountAmount : null,
+//     discountPercent: this.newOffer.offerType === 'percent' ? this.newOffer.discountPercent : null,
+//     minBillAmount: this.newOffer.minBillAmount || 0,
+//     validFrom: new Date(this.newOffer.validFrom).toISOString(),
+//     validTo: new Date(this.newOffer.validTo).toISOString(),
+//     autoApply: this.newOffer.autoApply,
+//     isActive: true
+//   };
 
-  console.log('🔍 Sending offer data:', offerData); // Debug log
+//   console.log('🔍 Sending offer data:', offerData); // Debug log
 
-  // ✅ FIX: Include restaurantId as both query parameter AND in body
-  this.http.post(`${this.OFFER_API}?restaurantId=${this.restaurantId}`, offerData).subscribe({
-    next: (res: any) => {
-      this.loadOffersData();
-      this.closeOfferModal();
-      alert('Offer created successfully!');
-    },
-    error: (err) => {
-      console.error('❌ Error creating offer:', err);
-      alert('Failed to create offer: ' + (err.error?.message || 'Unknown error'));
-    }
-  });
-}
-// Update your resetNewOffer method
-resetNewOffer(): void {
-  this.newOffer = {
-    offerType: 'percent',
-    discountPercent: null,
-    discountAmount: null,
-    code: '',
-    description: '',
-    minBillAmount: 0,
-    validFrom: '',
-    validTo: '',
-    autoApply: true,
-    isActive: true
-  };
-}
+//   // ✅ FIX: Include restaurantId as both query parameter AND in body
+//   this.http.post(`${this.OFFER_API}?restaurantId=${this.restaurantId}`, offerData).subscribe({
+//     next: (res: any) => {
+//       this.loadOffersData();
+//       this.closeOfferModal();
+//       alert('Offer created successfully!');
+//     },
+//     error: (err) => {
+//       console.error('❌ Error creating offer:', err);
+//       alert('Failed to create offer: ' + (err.error?.message || 'Unknown error'));
+//     }
+//   });
+// }
+// // Update your resetNewOffer method
+// resetNewOffer(): void {
+//   this.newOffer = {
+//     offerType: 'percent',
+//     discountPercent: null,
+//     discountAmount: null,
+//     code: '',
+//     description: '',
+//     minBillAmount: 0,
+//     validFrom: '',
+//     validTo: '',
+//     autoApply: true,
+//     isActive: true
+//   };
+// }
 
 
 

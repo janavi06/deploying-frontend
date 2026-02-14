@@ -1,0 +1,182 @@
+<section class="offers-container">
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Offers & Discounts</h2>
+    <button class="btn btn-primary" (click)="openModal()">Create Offer</button>
+  </div>
+
+  <!-- ================= OFFER LIST ================= -->
+
+  <table class="table table-bordered">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Scope</th>
+        <th>Discount</th>
+        <th>Validity</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      <tr *ngFor="let o of offers">
+        <td>{{ o.name }}</td>
+
+        <td>{{ getScopeLabel(o.scope) }}</td>
+
+        <td>
+          <ng-container *ngIf="o.discountType === 'PERCENT'">
+            {{ o.discountPercent }}%
+          </ng-container>
+
+          <ng-container *ngIf="o.discountType === 'AMOUNT'">
+            ₹{{ o.discountAmount }}
+          </ng-container>
+        </td>
+
+        <td>
+          {{ o.validFrom | date:'shortDate' }} →
+          {{ o.validTo | date:'shortDate' }}
+        </td>
+
+        <td>
+          <button
+            class="btn btn-sm btn-danger"
+            (click)="deleteOffer(o.offerID)">
+            Delete
+          </button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ================= MODAL ================= -->
+
+<div class="modal-overlay" *ngIf="showModal">
+  <div class="modal-box">
+
+    <h4>Create Offer</h4>
+
+    <!-- OFFER NAME -->
+    <input
+      class="form-control mb-2"
+      placeholder="Offer Name"
+      [(ngModel)]="newOffer.name" />
+
+    <!-- DESCRIPTION -->
+    <textarea
+      class="form-control mb-2"
+      placeholder="Description"
+      [(ngModel)]="newOffer.description">
+    </textarea>
+
+    <!-- ================= SCOPE ================= -->
+
+    <label>Offer Scope</label>
+    <select
+      class="form-select mb-2"
+      [(ngModel)]="newOffer.scope">
+
+      <option value="GLOBAL">
+        Global (No Condition)
+      </option>
+
+      <option value="MIN_BILL">
+        Minimum Bill Amount
+      </option>
+
+      <option value="PRODUCT_BASED">
+        Specific Products
+      </option>
+
+    </select>
+
+    <!-- MIN BILL INPUT -->
+    <input
+      *ngIf="newOffer.scope === 'MIN_BILL'"
+      type="number"
+      class="form-control mb-2"
+      placeholder="Minimum Bill Amount"
+      [(ngModel)]="newOffer.minBillAmount" />
+
+    <!-- PRODUCT BASED -->
+    <div *ngIf="newOffer.scope === 'PRODUCT_BASED'" class="product-list">
+      <label>Select Products</label>
+
+      <div *ngFor="let p of products">
+        <input
+          type="checkbox"
+          [checked]="newOffer.productIds.includes(p.productID)"
+          (change)="toggleProductSelection(p.productID)" />
+
+        {{ p.productName }}
+      </div>
+    </div>
+
+    <!-- ================= DISCOUNT ================= -->
+
+    <label>Discount Type</label>
+    <select
+      class="form-select mb-2"
+      [(ngModel)]="newOffer.discountType">
+
+      <option value="PERCENT">
+        Percentage
+      </option>
+
+      <option value="AMOUNT">
+        Fixed Amount
+      </option>
+
+    </select>
+
+    <!-- PERCENT INPUT -->
+    <input
+      *ngIf="newOffer.discountType === 'PERCENT'"
+      type="number"
+      class="form-control mb-2"
+      placeholder="Discount Percentage"
+      [(ngModel)]="newOffer.discountPercent" />
+
+    <!-- AMOUNT INPUT -->
+    <input
+      *ngIf="newOffer.discountType === 'AMOUNT'"
+      type="number"
+      class="form-control mb-2"
+      placeholder="Discount Amount"
+      [(ngModel)]="newOffer.discountAmount" />
+
+    <!-- ================= VALIDITY ================= -->
+
+    <label>Valid From</label>
+    <input
+      type="datetime-local"
+      class="form-control mb-2"
+      [(ngModel)]="newOffer.validFrom" />
+
+    <label>Valid To</label>
+    <input
+      type="datetime-local"
+      class="form-control mb-2"
+      [(ngModel)]="newOffer.validTo" />
+
+    <!-- ================= ACTION BUTTONS ================= -->
+
+    <div class="d-flex justify-content-end gap-2 mt-3">
+      <button
+        class="btn btn-secondary"
+        (click)="closeModal()">
+        Cancel
+      </button>
+
+      <button
+        class="btn btn-primary"
+        [disabled]="!isFormValid()"
+        (click)="createOffer()">
+        Save
+      </button>
+    </div>
+
+  </div>
+</div>

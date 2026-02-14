@@ -4,11 +4,17 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders, HttpClientModule } from '@angular/common/http';
 import { Router, ActivatedRoute, NavigationStart } from '@angular/router';
 import { environment } from '../../environments/environment';
-import { PendingPaymentsComponent } from '../pending-payments/pending-payments.component';  
+import { PendingPaymentsComponent } from '../pending-payments/pending-payments.component';
 import { NewOrderComponent } from '../new-order/new-order.component';
 import { QRCodeComponent } from 'angularx-qrcode';
-import { firstValueFrom } from 'rxjs'; 
-import { AuthService } from '../services/auth.service'; 
+import { firstValueFrom } from 'rxjs';
+import { AuthService } from '../services/auth.service';
+import { MatDialog } from '@angular/material/dialog';
+import { CustomizationModalComponent } from '../customization-modal/customization-modal.component';
+import { HttpParams } from '@angular/common/http';
+import { OffersComponent } from '../offers/offers.component';
+import { TakeawayComponent } from '../takeaway/takeaway.component';
+
 
 export enum OrderStatus {
   Pending = "Pending",
@@ -26,9 +32,9 @@ export interface OrderItem {
   productID: number;
   productName?: string;
   quantity: number;
-  customizations?: any[]; 
+  customizations?: any[];
   unitPrice?: number;
-  orderItemID?: number; 
+  orderItemID?: number;
 
 }
 
@@ -37,7 +43,7 @@ export interface PaymentInfo {
   status: string;
   amount: number;
   paidAt?: Date | null;
-  paymentID?: any; 
+  paymentID?: any;
   paymentId?: any;
 }
 export interface Order {
@@ -51,13 +57,21 @@ export interface Order {
   items?: OrderItem[];
   createdAt?: Date;
   closedAt?: Date;
-  latestPayment?: PaymentInfo;   
-  kitchenStatus?: KitchenStatus;  
-  totalAmount?: number; 
-  paymentMethod?: string; 
-  paymentStatus?: string; 
+  latestPayment?: PaymentInfo;
+  kitchenStatus?: KitchenStatus;
 
+  // 🔥 ADD THESE
+  subtotal?: number;
+  discountAmount?: number;
+  appliedOfferName?: string;
+    appliedOfferID?: number;   // 🔥 ADD THIS
+
+  totalAmount?: number;
+
+  paymentMethod?: string;
+  paymentStatus?: string;
 }
+
 export interface RestaurantDetails {
   name: string;
   address: string;
@@ -80,7 +94,17 @@ export interface WaiterRequest {
   encapsulation: ViewEncapsulation.None,
 
 
-  imports: [CommonModule, FormsModule, HttpClientModule, PendingPaymentsComponent, NewOrderComponent, QRCodeComponent],
+imports: [
+  CommonModule,
+  FormsModule,
+  HttpClientModule,
+  PendingPaymentsComponent,
+  NewOrderComponent,
+  QRCodeComponent,
+  TakeawayComponent,
+
+  OffersComponent   // ✅ ADD THIS
+],
 })
 export class WaiterComponent implements OnInit {
   orders: Order[] = [];
@@ -99,12 +123,13 @@ export class WaiterComponent implements OnInit {
   };
   readyNotifications: any[] = [];
   readyOrderMessages: { notificationId: number; orderNumber: number; message: string; orderId: number; tableNo: number; timestamp: number }[] = [];
-  KitchenStatus = KitchenStatus;  
+  KitchenStatus = KitchenStatus;
   error = '';
   isSidebarOpen = false;
-  selectedSection: 'orders' | 'requests' | 'history' | 'pendingPayments' | 'readyOrders' | 'newOrder' = 'orders';
+  selectedSection: 'orders' | 'requests' | 'history' | 'pendingPayments' | 'readyOrders' | 'offers' | 'newOrder'  | 'takeaway' = 'orders';
+
   pendingPayments: any[] = [];
-  restaurantId: number = 0; 
+  restaurantId: number = 0;
   showProductList = false;
   productSearch = '';
   selectedCategory = '';
@@ -115,7 +140,7 @@ export class WaiterComponent implements OnInit {
   private readyOrderSound = new Audio('assets/sounds/ready-order.mp3');
   private paymentSound = new Audio('assets/sounds/payment-pending.mp3');
   activeAlerts: { type: 'order' | 'ready' | 'payment', message: string, timestamp: number }[] = [];
-  orderNumberMap: { [orderID: number]: number } = {}; 
+  orderNumberMap: { [orderID: number]: number } = {};
   viewMode: 'grid' | 'list' = 'grid';
   selectedStatus = 'all';
   statusFilters = ['all', 'pending', 'confirmed', 'served'];
@@ -133,8 +158,11 @@ export class WaiterComponent implements OnInit {
   lastSeenOrderID: number = Number(localStorage.getItem('lastSeenOrderID') || 0);
   selectedTableNo: number | null = null;
   historyFilter: 'today' | '2days' | 'all' = 'today';
-  allHistoryOrders: Order[] = [];  
-  availableTables: any[] = []; 
+  allHistoryOrders: Order[] = [];
+  availableTables: any[] = [];
+availableOffers: any[] = [];
+selectedOfferId: number | null = null;
+originalOfferId: number | null = null;
 
   selectedOrderForEdit: any = null;
   showEditOrderModal = false;
@@ -147,8 +175,13 @@ export class WaiterComponent implements OnInit {
   pendingChanges: {
     quantityUpdates: Map<number, number>,
     itemsToRemove: number[],
-    itemsToAdd: any[]
+    itemsToAdd: {
+      productID: number;
+      quantity: number;
+      customizationOptionIds: number[];
+    }[]
   } = {
+
       quantityUpdates: new Map<number, number>(),
       itemsToRemove: [],
       itemsToAdd: []
@@ -156,14 +189,33 @@ export class WaiterComponent implements OnInit {
   markAsPaidModal = {
     open: false,
     orderId: 0,
+    orderNumber: 0,
     tableNo: 0,
-    amount: 0,
+    amount: 0,            // total order amount
     selectedMethod: 'Cash' as 'Cash' | 'UPI',
     busy: false,
     paymentId: 0,
-    orderNumber: 0
 
+    // 🔽 ADD THESE
+    paymentType: 'FULL' as 'FULL' | 'PARTIAL',
+    paidSoFar: 0,
+    upiAmount: 0,
+    cashAmount: 0
   };
+showInlineOfferModal = false;
+
+inlineOffer: any = {
+  name: '',
+  description: '',
+  scope: 'GLOBAL',
+  discountType: 'PERCENT',
+  discountPercent: null,
+  discountAmount: null,
+  minBillAmount: 0,
+  validFrom: '',
+  validTo: ''
+};
+
 
   selectedPayTab: 'verify' | 'collect' = 'verify';
 
@@ -177,7 +229,7 @@ export class WaiterComponent implements OnInit {
     amount: 0,
     upiUri: '',
     tab: 'UPI' as 'UPI' | 'CASH',
-    orderNumber: 0 
+    orderNumber: 0
 
   };
 
@@ -195,19 +247,19 @@ export class WaiterComponent implements OnInit {
 
   private httpOptions: { headers: HttpHeaders } = { headers: new HttpHeaders() };
 
-  constructor(private http: HttpClient, private router: Router, private route: ActivatedRoute, private auth: AuthService) {
-    this.setupRouterEvents(); 
+  constructor(private http: HttpClient, private router: Router, private route: ActivatedRoute, private auth: AuthService, private dialog: MatDialog) {
+    this.setupRouterEvents();
 
   }
 
   ngOnInit(): void {
- 
+
     this.route.params.subscribe(params => {
       const routeRestaurantId = params['restaurantId'];
 
       if (routeRestaurantId) {
         this.restaurantId = +routeRestaurantId;
-        this.initializeDashboard(); 
+        this.initializeDashboard();
       } else {
 
         this.showRestaurantError();
@@ -221,7 +273,7 @@ export class WaiterComponent implements OnInit {
 
   getShareableUrl(): string {
     const baseUrl = window.location.origin + window.location.pathname;
-    return baseUrl; 
+    return baseUrl;
   }
 
   refreshUrl(): void {
@@ -234,8 +286,8 @@ export class WaiterComponent implements OnInit {
       this.router.navigate([], {
         relativeTo: this.route,
         queryParams: { restaurantId: this.restaurantId },
-        queryParamsHandling: 'merge', 
-        replaceUrl: true 
+        queryParamsHandling: 'merge',
+        replaceUrl: true
       });
     }
   }
@@ -257,7 +309,7 @@ export class WaiterComponent implements OnInit {
     if (persistedRestaurantId) {
       this.restaurantId = +persistedRestaurantId;
       this.initializeDashboard();
-      this.updateUrlWithRestaurantId(); 
+      this.updateUrlWithRestaurantId();
       return;
     }
 
@@ -270,7 +322,7 @@ export class WaiterComponent implements OnInit {
     if (this.restaurantId) {
       localStorage.setItem('waiter_restaurantId', this.restaurantId.toString());
       this.initializeDashboard();
-      this.updateUrlWithRestaurantId(); 
+      this.updateUrlWithRestaurantId();
     } else {
       this.showRestaurantError();
     }
@@ -319,7 +371,11 @@ export class WaiterComponent implements OnInit {
       }
     }, 15000);
 
-    setInterval(() => this.getOrders(), 10000);
+setInterval(() => {
+  if (!this.showEditOrderModal && !this.markAsPaidModal.open && !this.collectModal.open) {
+    this.getOrders();
+  }
+}, 10000);
     setInterval(() => this.persistUIState(), 30000);
   }
   private showRestaurantError(): void {
@@ -341,6 +397,71 @@ export class WaiterComponent implements OnInit {
       this.updateUrlWithRestaurantId();
     }
   }
+  openInlineOfferModal() {
+  this.resetInlineOffer();
+  this.showInlineOfferModal = true;
+}
+
+closeInlineOfferModal() {
+  this.showInlineOfferModal = false;
+}
+async createInlineOffer(): Promise<void> {
+  try {
+
+    const payload: any = {
+      name: this.inlineOffer.name,
+      description: this.inlineOffer.description,
+      scope: this.inlineOffer.scope,
+      discountType: this.inlineOffer.discountType,
+      minBillAmount: this.inlineOffer.minBillAmount,
+      validFrom: new Date(this.inlineOffer.validFrom).toISOString(),
+      validTo: new Date(this.inlineOffer.validTo).toISOString()
+    };
+
+    if (this.inlineOffer.discountType === 'PERCENT') {
+      payload.discountPercent = this.inlineOffer.discountPercent;
+    }
+
+    if (this.inlineOffer.discountType === 'AMOUNT') {
+      payload.discountAmount = this.inlineOffer.discountAmount;
+    }
+
+    const newOffer: any = await firstValueFrom(
+      this.http.post(
+        `${this.API_BASE}/offer?restaurantId=${this.restaurantId}`,
+        payload,
+        this.httpOptions
+      )
+    );
+
+    // 🔥 Refresh offers list
+    this.loadAvailableOffers();
+
+    // 🔥 Auto select new offer
+    setTimeout(() => {
+      this.selectedOfferId = newOffer.offerID;
+    }, 300);
+
+    this.closeInlineOfferModal();
+
+  } catch (err) {
+    console.error('Failed to create offer', err);
+  }
+}
+resetInlineOffer() {
+  this.inlineOffer = {
+    name: '',
+    description: '',
+    scope: 'GLOBAL',
+    discountType: 'PERCENT',
+    discountPercent: null,
+    discountAmount: null,
+    minBillAmount: 0,
+    validFrom: '',
+    validTo: ''
+  };
+}
+
   copyShareableUrl(): void {
     navigator.clipboard.writeText(this.getShareableUrl()).then(() => {
     });
@@ -411,7 +532,7 @@ export class WaiterComponent implements OnInit {
   switchPayTab(tab: 'verify' | 'collect') {
     if (this.selectedPayTab === tab) return;
     this.selectedPayTab = tab;
-    this.persistUIState(); 
+    this.persistUIState();
 
     this.loadPendingByTab();
   }
@@ -419,7 +540,7 @@ export class WaiterComponent implements OnInit {
   async placeWaiterOrder(paymentPreference: 'PayNow' | 'PayLater' = 'PayLater'): Promise<void> {
     try {
       const orderPayload = {
-        
+
       };
 
       const response: any = await firstValueFrom(
@@ -431,12 +552,12 @@ export class WaiterComponent implements OnInit {
       );
 
       if (paymentPreference === 'PayNow') {
-    
+
       } else {
-   
+
       }
 
-      this.getOrders(); 
+      this.getOrders();
     } catch (error) {
       console.error('Error placing waiter order:', error);
     }
@@ -449,13 +570,13 @@ export class WaiterComponent implements OnInit {
       if (this.selectedSection === 'pendingPayments') {
         this.fetchPendingPayments();
       }
-    }, 10000); 
+    }, 10000);
 
     setInterval(() => {
       if (this.selectedSection === 'pendingPayments') {
         this.checkForNewPendingPayments();
       }
-    }, 5000); 
+    }, 5000);
   }
   private loadPendingByTab(): void {
 
@@ -469,7 +590,7 @@ export class WaiterComponent implements OnInit {
       (p.paymentChannel === undefined && p.source?.toLowerCase() !== 'waiter')
     ).map(p => ({
       ...p,
-      orderNumber: p.orderNumber || p.orderID 
+      orderNumber: p.orderNumber || p.orderID
     }));
 
     this.collectPayments = payments.filter(p =>
@@ -478,7 +599,7 @@ export class WaiterComponent implements OnInit {
       (p.paymentChannel === undefined && p.source?.toLowerCase() === 'waiter')
     ).map(p => ({
       ...p,
-      orderNumber: p.orderNumber || p.orderID 
+      orderNumber: p.orderNumber || p.orderID
     }));
 
     console.log('Verify Payments:', this.verifyPayments);
@@ -486,41 +607,46 @@ export class WaiterComponent implements OnInit {
   }
   selectTableForOrders(tableNo: number): void {
     this.selectedTableNo = tableNo;
-    this.persistUIState(); 
+    this.persistUIState();
 
   }
 
   private setupPendingPaymentPolling(): void {
-    this.fetchPendingPayments(); 
+    this.fetchPendingPayments();
     setInterval(() => this.fetchPendingPayments(), 10000);
   }
 
   navigateToNewOrder(): void {
-    this.selectedSection = 'newOrder'; 
+    this.selectedSection = 'newOrder';
   }
 
-  onNewOrderPlaced(e: {
-    orderID: number;
-    orderNumber?: number; 
+onNewOrderPlaced(e: {
+  orderID: number;
+  paymentStatus?: string;
+  paymentMethod?: string;
+  paymentPreference?: string
+}) {
+  console.log('New Order placed via Waiter flow:', e);
 
-    paymentStatus?: string;
-    paymentMethod?: string;
-    paymentPreference?: string
-  }) {
-    if (e.paymentPreference === 'PayNow') {
-      if (e.paymentStatus === 'created') {
-      } else if (e.paymentStatus === 'paid') {
-      }
-    } else {
-     
-    }
-    this.getOrders();
-  }
+  // 1. Refresh orders immediately to get the new order from backend
+  this.getOrders();
 
-  onNewOrderClosed() {
+  // 2. If it was a 'PayNow' (Paid) order, it might already be marked 'Completed' 
+  // depending on your backend. We switch to the 'orders' section to view it.
+  if (e.paymentPreference === 'PayNow' && e.paymentStatus === 'paid') {
     this.selectedSection = 'orders';
-    this.getOrders(); 
+    this.pushAlert('order', `Order #${e.orderID} paid and confirmed!`);
+  } else {
+    this.selectedSection = 'orders';
+    this.pushAlert('order', `Order #${e.orderID} placed (Pay Later).`);
   }
+}
+onNewOrderClosed() {
+  this.selectedSection = 'orders';
+  // Force a data sync whenever the 'New Order' screen is closed
+  this.getOrders();
+  this.fetchPendingPayments();
+}
 
   private refreshHistoryOnly(): void {
     if (!this.restaurantId) return;
@@ -530,7 +656,7 @@ export class WaiterComponent implements OnInit {
         next: res => {
           const all = this.unwrapArray<any>(res.orders).map(o => ({
             orderID: o.orderID,
-            orderNumber: o.orderNumber || o.orderID, 
+            orderNumber: o.orderNumber || o.orderID,
             tableNo: o.tableNo,
             totalAmount: o.totalAmount,
             orderStatus: this.mapOrderStatus(o.orderStatus),
@@ -539,7 +665,7 @@ export class WaiterComponent implements OnInit {
               productID: i.productID,
               productName: i.productName,
               quantity: i.quantity,
-              unitPrice: i.unitPrice ?? 0 
+              unitPrice: i.unitPrice ?? 0
             })),
             createdAt: o.createdAt ? new Date(o.createdAt) : undefined,
             closedAt: o.closedAt ? new Date(o.closedAt) : undefined,
@@ -548,7 +674,7 @@ export class WaiterComponent implements OnInit {
               status: o.latestPayment.status,
               amount: o.latestPayment.amount,
               paidAt: o.latestPayment.paidAt ? new Date(o.latestPayment.paidAt) : null
-            } : undefined 
+            } : undefined
           }));
 
           this.allHistoryOrders = all.filter(o =>
@@ -563,25 +689,19 @@ export class WaiterComponent implements OnInit {
   }
 
 
-  applyHistoryFilter(): void {
-    const now = new Date();
+ applyHistoryFilter(): void {
+  const now = new Date();
+  const today = now.toDateString();
 
-    if (this.historyFilter === 'all') {
-      this.historyOrders = this.allHistoryOrders;
-    } else if (this.historyFilter === '2days') {
-      const cutoff = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000);
-      this.historyOrders = this.allHistoryOrders.filter(o =>
-        o.closedAt && new Date(o.closedAt) >= cutoff
-      );
-    } else if (this.historyFilter === 'today') {
-      const today = now.toDateString();
-      this.historyOrders = this.allHistoryOrders.filter(o =>
-        o.closedAt && new Date(o.closedAt).toDateString() === today
-      );
-    }
-
-    this.persistUIState(); 
+  if (this.historyFilter === 'all') {
+    this.historyOrders = this.allHistoryOrders;
+  } else {
+    this.historyOrders = this.allHistoryOrders.filter(o => {
+      const orderDate = o.closedAt ? new Date(o.closedAt).toDateString() : new Date(o.createdAt!).toDateString();
+      return orderDate === today;
+    });
   }
+}
   updateReadyTables(): void {
     this.readyTables = this.groupByTable(this.readyToServeOrders);
   }
@@ -650,7 +770,7 @@ export class WaiterComponent implements OnInit {
     });
   }
 
-  markPaymentPaid(payment: any): void { 
+  markPaymentPaid(payment: any): void {
 
 
     const paymentID = payment.paymentID || payment.paymentId || payment.id || payment.PaymentID;
@@ -685,7 +805,7 @@ export class WaiterComponent implements OnInit {
   }
   logout(): void {
     if (confirm('Are you sure you want to log out?')) {
-      this.auth.logout(); 
+      this.auth.logout();
     }
   }
 
@@ -720,7 +840,7 @@ export class WaiterComponent implements OnInit {
                   notificationId: n.notificationId,
                   message: msg,
                   orderId: n.orderId,
-                  orderNumber: orderNumber, 
+                  orderNumber: orderNumber,
                   tableNo: n.tableNo,
                   timestamp: Date.now()
                 });
@@ -748,14 +868,14 @@ export class WaiterComponent implements OnInit {
     notifications.forEach(n => {
       const exists = this.readyOrderMessages.some(m => m.orderId === n.orderId);
       if (!exists) {
-        const orderNumber = n.orderNumber || n.orderId; 
+        const orderNumber = n.orderNumber || n.orderId;
         const message = `Table ${n.tableNo} → Order #${orderNumber} is ready to serve!`;
 
         this.readyOrderMessages.push({
           notificationId: n.notificationId,
           message: message,
           orderId: n.orderId,
-          orderNumber: orderNumber, 
+          orderNumber: orderNumber,
           tableNo: n.tableNo,
           timestamp: Date.now()
         });
@@ -839,38 +959,47 @@ export class WaiterComponent implements OnInit {
     this.collectModal.tab = 'UPI';
     this.busyCollect = false;
   }
-  async initiateUpi() {
-    if (!this.restaurantId) return;
+async initiateUpi(): Promise<void> {
+  if (!this.restaurantId) return;
 
-    this.busyCollect = true;
-    try {
-      if (!this.restaurantDetails.upiId) {
-        await this.loadRestaurantDetails();
-      }
+  this.busyCollect = true;
+  try {
+    const summary = await this.getPaymentSummary(this.collectModal.orderId);
 
-      const resp: any = await firstValueFrom(
-        this.http.post(
-          `${this.API_BASE}/order/payments/initiate?orderId=${this.collectModal.orderId}&restaurantId=${this.restaurantId}&channel=Waiter&method=UPI`,
-          {},
-          this.httpOptions
-        )
-      );
-
-      console.log('UPI Init Response:', resp);
-
-      if (resp && resp.upiUri) {
-        this.collectModal.paymentId = resp.paymentId || this.collectModal.paymentId;
-        this.collectModal.amount = resp.amount || this.collectModal.amount;
-        this.collectModal.upiUri = resp.upiUri;
-      } else {
-        console.error('No UPI URI in response');
-      }
-    } catch (error: any) {
-      console.error('Error initiating UPI:', error);
-    } finally {
-      this.busyCollect = false;
+    if (summary.remainingAmount <= 0) {
+      alert('Order already fully paid');
+      return;
     }
+
+    const amount = Math.min(this.collectModal.amount, summary.remainingAmount);
+
+    const resp: any = await firstValueFrom(
+      this.http.post(
+        `${this.API_BASE}/order/${this.collectModal.orderId}/initiate-payment`,
+        { amount },
+        {
+          headers: this.httpOptions.headers,
+          params: new HttpParams()
+            .set('restaurantId', String(this.restaurantId))
+            .set('method', 'UPI')
+            .set('channel', 'Waiter')
+        }
+      )
+    );
+
+    this.collectModal.paymentId = resp.paymentId;
+    this.collectModal.amount = resp.amount;
+
+  } catch (e: any) {
+    if (e?.error?.message !== 'Order already fully paid.') {
+      console.error('UPI initiation failed', e);
+    }
+  } finally {
+    this.busyCollect = false;
   }
+}
+
+
 
 
   fetchPendingPayments(): void {
@@ -887,7 +1016,7 @@ export class WaiterComponent implements OnInit {
           this.pendingPayments = (payments || []).map(p => ({
             ...p,
             paymentId: p.paymentID || p.paymentId || p.id,
-            orderNumber: p.orderNumber || p.orderID 
+            orderNumber: p.orderNumber || p.orderID
           }));
 
           this.splitPending(this.pendingPayments);
@@ -1016,7 +1145,7 @@ export class WaiterComponent implements OnInit {
 
   toggleSidebar(): void {
     this.isSidebarOpen = !this.isSidebarOpen;
-    this.persistUIState(); 
+    this.persistUIState();
 
   }
 
@@ -1042,7 +1171,7 @@ export class WaiterComponent implements OnInit {
 
     setTimeout(() => {
       this.activeAlerts = this.activeAlerts.filter(a => a.timestamp !== now);
-    }, 2000); 
+    }, 2000);
   }
 
   async markUpiAsPaid(): Promise<void> {
@@ -1084,54 +1213,59 @@ export class WaiterComponent implements OnInit {
     }
   }
 
-  async markCashReceived() {
+async markCashReceived(): Promise<void> {
+  if (this.busyCollect) return;
   this.busyCollect = true;
-  try {
-    const orderId = this.collectModal.orderId;
-    
-    // 1. Re-initiate or ensure the payment record is set to CASH
-    // This overrides the payment method in the DB before we mark it complete
-    const started: any = await firstValueFrom(
-      this.http.post(
-        `${this.API_BASE}/order/payments/initiate?orderId=${orderId}&restaurantId=${this.restaurantId}&channel=Waiter&method=CASH`, 
-        {},
-        this.httpOptions
-      )
-    );
 
-    if (started?.paymentId) {
-      this.collectModal.paymentId = started.paymentId;
-    } else {
-      throw new Error('Failed to create/update cash payment record');
+  try {
+    const summary = await this.getPaymentSummary(this.collectModal.orderId);
+
+    if (summary.remainingAmount <= 0) {
+      alert('Order already fully paid');
+      this.closeCollectModal();
+      this.getOrders(); // Refresh the dashboard
+      return;
     }
 
-    // 2. Mark the specific payment ID as completed
-    await firstValueFrom(
-      this.http.put(
-        `${this.API_BASE}/order/payments/${this.collectModal.paymentId}/complete?restaurantId=${this.restaurantId}`,
-        {},
-        this.httpOptions
+    const amount = Math.min(this.collectModal.amount, summary.remainingAmount);
+
+    // 1. Initiate
+    const started: any = await firstValueFrom(
+      this.http.post(`${this.API_BASE}/order/${this.collectModal.orderId}/initiate-payment`, 
+        { amount }, 
+        { params: new HttpParams()
+            .set('restaurantId', String(this.restaurantId))
+            .set('method', 'CASH')
+            .set('channel', 'Waiter') 
+        }
       )
     );
 
-    // 3. Print bill and refresh UI
-    await this.printOrderBill(orderId);
-    
-    this.closeCollectModal();
-    
-    // Refresh data to reflect "Cash" in history immediately
-    setTimeout(() => {
-      this.fetchPendingPayments();
-      this.getOrders();
-    }, 500);
+    // Handle the "Already Paid" flag from backend
+    if (started.isFullyPaid) {
+      alert('This order was completed by another station.');
+    } else {
+      // 2. Complete
+      await firstValueFrom(
+        this.http.put(`${this.API_BASE}/order/payments/${started.paymentId}/complete`, {}, 
+          { params: new HttpParams().set('restaurantId', String(this.restaurantId)) }
+        )
+      );
+      await this.printOrderBill(this.collectModal.orderId);
+    }
 
-  } catch (error: any) {
-    console.error('Error marking cash received:', error);
-    alert("Failed to save Cash payment. Please try again.");
+    this.closeCollectModal();
+    this.getOrders();
+    this.fetchPendingPayments();
+
+  } catch (e: any) {
+    console.error('Cash payment failed', e);
+    alert(e.error?.message || 'Payment failed');
   } finally {
     this.busyCollect = false;
   }
 }
+
 
   debugPaymentData(): void {
     console.log('=== PAYMENT DATA DEBUG ===');
@@ -1158,7 +1292,7 @@ export class WaiterComponent implements OnInit {
 
     this.collectModal.open = true;
     this.collectModal.orderId = p.orderID;
-    this.collectModal.orderNumber = p.orderNumber || p.orderID; 
+    this.collectModal.orderNumber = p.orderNumber || p.orderID;
     this.collectModal.amount = p.amount;
     this.collectModal.paymentId = p.paymentID || p.paymentId || 0;
     this.collectModal.upiUri = '';
@@ -1169,22 +1303,68 @@ export class WaiterComponent implements OnInit {
 
 
 
-  async printOrderBill(orderId: number): Promise<void> {
-    if (!this.restaurantId) return;
+  // async printOrderBill(orderId: number): Promise<void> {
+  //   if (!this.restaurantId) return;
 
-    try {
-      await firstValueFrom(
-        this.http.post(
-          `${this.API_BASE}/order/${orderId}/print-bill?restaurantId=${this.restaurantId}`,
-          {},
-          this.httpOptions
-        )
-      );
+  //   try {
+  //     await firstValueFrom(
+  //       this.http.post(
+  //         `${this.API_BASE}/order/${orderId}/print-bill?restaurantId=${this.restaurantId}`,
+  //         {},
+  //         this.httpOptions
+  //       )
+  //     );
 
-    } catch (error) {
-      console.error('Print failed:', error);
+  //   } catch (error) {
+  //     console.error('Print failed:', error);
+  //   }
+  // }
+ async printOrderBill(orderId: number): Promise<void> {
+  if (!this.restaurantId) return;
+
+  try {
+    // fetch the latest order snapshot from backend
+    const order = await this.fetchOrderById(orderId);
+
+    if (!order) {
+      console.warn('Order not found for printing:', orderId);
+      return;
+    }
+
+    const total = order.totalAmount ?? 0;
+    const latestPaymentAmount = order.latestPayment?.amount ?? 0;
+    const latestPaymentStatus = order.latestPayment?.status ?? '';
+
+    const paidStatuses = ['Paid', 'Completed', 'Success'];
+
+    // allow print if latest payment status is a paid status OR paid amount >= total
+    if (!(paidStatuses.includes(latestPaymentStatus) || latestPaymentAmount >= total)) {
+      // show clear message to user rather than blindly calling print endpoint
+      alert(`Cannot print bill: payment incomplete. total=${total}, paid=${latestPaymentAmount}`);
+      return;
+    }
+
+    // call print endpoint
+    await firstValueFrom(
+      this.http.post(
+        `${this.API_BASE}/order/${orderId}/print-bill`,
+        {},
+        {
+          headers: this.httpOptions.headers,
+          params: new HttpParams().set('restaurantId', String(this.restaurantId))
+        }
+      )
+    );
+
+  } catch (error: any) {
+    // keep the existing error logging but present payload to dev
+    console.error('Print failed:', error);
+    // if backend returned friendly message, show it
+    if (error?.error?.message) {
+      alert(error.error.message);
     }
   }
+}
 
 
   private async loadRestaurantDetails(): Promise<void> {
@@ -1217,7 +1397,7 @@ export class WaiterComponent implements OnInit {
       };
     }
   }
-  
+
   private truncateText(text: string, maxLength: number): string {
     if (!text) return '';
     return text.length <= maxLength ? text : text.substring(0, maxLength - 3) + '...';
@@ -1232,8 +1412,9 @@ export class WaiterComponent implements OnInit {
   setCollectModalTab(tab: 'UPI' | 'CASH'): void {
     this.collectModal.tab = tab;
   }
+// Inside waiter.component.ts -> getOrders()
 
-private async getOrders(): Promise<void> {
+async getOrders(): Promise<void> {
   if (!this.restaurantId) return;
 
   try {
@@ -1243,19 +1424,20 @@ private async getOrders(): Promise<void> {
 
     const all = this.unwrapArray<any>(res.orders).map(o => this.mapOrderFromApi(o));
 
-  
-this.orders = all.filter(o =>
-  o.orderStatus === OrderStatus.Pending ||
-  o.orderStatus === OrderStatus.Confirmed ||
-  o.orderStatus === OrderStatus.Served
-);
+    // ✅ MODIFIED FILTER: 
+    // Remove OrderStatus.Served from this list so it disappears from the dashboard
+    this.orders = all.filter(o =>
+      o.orderStatus === OrderStatus.Pending ||
+      o.orderStatus === OrderStatus.Confirmed
+    );
 
-
-this.allHistoryOrders = all.filter(o =>
-  o.orderStatus === OrderStatus.Completed ||
-  o.orderStatus === OrderStatus.Cancelled
-);
-
+    // ✅ UPDATE HISTORY FILTER:
+    // Add OrderStatus.Served here so it shows up in the History tab
+    this.allHistoryOrders = all.filter(o =>
+      o.orderStatus === OrderStatus.Served ||
+      o.orderStatus === OrderStatus.Completed ||
+      o.orderStatus === OrderStatus.Cancelled
+    );
 
     this.applyHistoryFilter();
     this.groupedUpcomingOrders = this.groupOrdersByTable(this.orders);
@@ -1266,62 +1448,75 @@ this.allHistoryOrders = all.filter(o =>
     console.error('Error fetching orders:', err);
   }
 }
-private mapOrderFromApi(o: any): Order {
-  let latestPayment: PaymentInfo | undefined = undefined;
 
-  if (o.latestPayment) {
-    latestPayment = {
-      method: o.latestPayment.method,
-      status: o.latestPayment.status,
-      amount: o.latestPayment.amount,
-      paidAt: o.latestPayment.paidAt
-        ? new Date(o.latestPayment.paidAt)
-        : null,
-      paymentID: o.latestPayment.paymentID || o.latestPayment.paymentId,
-      paymentId: o.latestPayment.paymentId || o.latestPayment.paymentID
+// Helper to keep recently completed orders on the dashboard for 10 minutes
+private isRecent(createdAt?: Date): boolean {
+  if (!createdAt) return false;
+  const tenMinutesInMs = 10 * 60 * 1000;
+  return (Date.now() - new Date(createdAt).getTime()) < tenMinutesInMs;
+}
+
+  private mapOrderFromApi(o: any): Order {
+    let latestPayment: PaymentInfo | undefined = undefined;
+
+    if (o.latestPayment) {
+      latestPayment = {
+        method: o.latestPayment.method,
+        status: o.latestPayment.status,
+        amount: o.latestPayment.amount,
+        paidAt: o.latestPayment.paidAt
+          ? new Date(o.latestPayment.paidAt)
+          : null,
+        paymentID: o.latestPayment.paymentID || o.latestPayment.paymentId,
+        paymentId: o.latestPayment.paymentId || o.latestPayment.paymentID
+      };
+    }
+
+    if (o.orderNumber) {
+      this.orderNumberMap[o.orderID] = o.orderNumber;
+    }
+
+    return {
+      orderID: o.orderID,
+      orderNumber: o.orderNumber || o.orderID,
+      tableNo: o.tableNo,
+  subtotal: o.subtotal ?? 0,
+  discountAmount: o.discountAmount ?? 0,
+    appliedOfferID: o.appliedOfferID ?? null,   // 🔥 ADD
+
+  appliedOfferName: o.appliedOffer?.offerName || o.appliedOfferName,
+  totalAmount: o.totalAmount,     
+   orderStatus: this.mapOrderStatus(o.orderStatus),
+      kitchenStatus: o.kitchenStatus
+        ? this.mapKitchenStatus(o.kitchenStatus)
+        : KitchenStatus.Pending,
+
+      items: this.unwrapArray<any>(o.items).map((i: any) => {
+        const customizationTotal =
+          (i.customizations || []).reduce(
+            (sum: number, c: any) =>
+              sum + (c.fixedPrice ?? c.price ?? 0),
+            0
+          );
+
+        return {
+          productID: i.productID,
+          productName: i.productName,
+          quantity: i.quantity,
+unitPrice: i.unitPrice ?? 0,
+          orderItemID:
+            i.orderItemID || i.orderItemId || i.id || i.OrderItemID,
+          customizations: i.customizations || []
+        };
+      }),
+
+      createdAt: o.createdAt ? new Date(o.createdAt) : undefined,
+      closedAt: o.closedAt ? new Date(o.closedAt) : undefined,
+      latestPayment: latestPayment
     };
   }
 
-  if (o.orderNumber) {
-    this.orderNumberMap[o.orderID] = o.orderNumber;
-  }
 
-  return {
-    orderID: o.orderID,
-    orderNumber: o.orderNumber || o.orderID,
-    tableNo: o.tableNo,
-    totalAmount: o.totalAmount,
-    orderStatus: this.mapOrderStatus(o.orderStatus),
-    kitchenStatus: o.kitchenStatus
-      ? this.mapKitchenStatus(o.kitchenStatus)
-      : KitchenStatus.Pending,
-
-    items: this.unwrapArray<any>(o.items).map((i: any) => {
-      const customizationTotal =
-        (i.customizations || []).reduce(
-          (sum: number, c: any) =>
-            sum + (c.fixedPrice ?? c.price ?? 0),
-          0
-        );
-
-      return {
-        productID: i.productID,
-        productName: i.productName,
-        quantity: i.quantity,
-        unitPrice: (i.unitPrice ?? 0) + customizationTotal,
-        orderItemID:
-          i.orderItemID || i.orderItemId || i.id || i.OrderItemID,
-        customizations: i.customizations || []
-      };
-    }),
-
-    createdAt: o.createdAt ? new Date(o.createdAt) : undefined,
-    closedAt: o.closedAt ? new Date(o.closedAt) : undefined,
-    latestPayment: latestPayment
-  };
-}
-
- 
 
   isOrderPaid(order: Order): boolean {
     return order.latestPayment?.status === 'Success' ||
@@ -1345,7 +1540,7 @@ private mapOrderFromApi(o: any): Order {
       );
     }
 
-    this.persistUIState(); 
+    this.persistUIState();
   }
 
   toggleTableGroup(tableGroup: any): void {
@@ -1416,28 +1611,28 @@ private mapOrderFromApi(o: any): Order {
       o.orderStatus === OrderStatus.Confirmed
     );
   }
-  async serveOrder(orderID: number): Promise<void> {
-    if (!this.restaurantId) return;
+async serveOrder(orderID: number): Promise<void> {
+  if (!this.restaurantId) return;
 
-    const order = this.orders.find(o => o.orderID === orderID);
+  try {
+    await firstValueFrom(
+      this.http.put(`${this.API_BASE}/Order/${orderID}/serve?restaurantId=${this.restaurantId}`, null, this.httpOptions)
+    );
 
-    if (!order) return;
+    // ✅ OPTION A: Simply re-fetch everything (Cleanest)
+    await this.getOrders(); 
 
-    try {
-      await firstValueFrom(
-        this.http.put(`${this.API_BASE}/Order/${orderID}/serve?restaurantId=${this.restaurantId}`, null, this.httpOptions)
-      );
+    // ✅ OPTION B: Manual local removal for instant UI response
+    // this.orders = this.orders.filter(o => o.orderID !== orderID);
+    // this.groupedUpcomingOrders = this.groupOrdersByTable(this.orders);
 
-      this.getOrders();
-
-      const orderReference = order.orderNumber ? `Order #${order.orderNumber}` : `Order #${orderID}`;
-
-      this.printOrderBill(orderID);
-    } catch (error: any) {
-      console.error('Error serving order:', error);
-      const orderReference = order.orderNumber ? `Order #${order.orderNumber}` : `Order #${orderID}`;
-    }
+    this.printOrderBill(orderID);
+    this.pushAlert('order', `Order served and moved to history.`);
+    
+  } catch (error: any) {
+    console.error('Error serving order:', error);
   }
+}
 
   alternativeServeOrder(orderID: number): void {
     const payload = {
@@ -1472,7 +1667,7 @@ private mapOrderFromApi(o: any): Order {
     return Object.entries(map).map(([tableNo, orders]) => ({
       tableNo: +tableNo,
       orders,
-      expanded: false  
+      expanded: false
     }));
   }
 
@@ -1546,8 +1741,8 @@ private mapOrderFromApi(o: any): Order {
     if (itemIndex !== -1) {
       this.selectedOrderForEdit.items[itemIndex].quantity = newQuantity;
     }
-this.selectedOrderForEdit.totalAmount =
-  this.recalculateOrderTotal(this.selectedOrderForEdit);
+    this.selectedOrderForEdit.totalAmount =
+      this.recalculateOrderTotal(this.selectedOrderForEdit);
   }
 
 
@@ -1583,7 +1778,7 @@ this.selectedOrderForEdit.totalAmount =
 
     const orderReference = order.orderNumber ? `Order #${order.orderNumber}` : `Order #${order.orderID}`;
     const reason = prompt(`Reason for cancelling ${orderReference}:`);
-    if (reason === null) return; 
+    if (reason === null) return;
 
     const payload = {
       reason: reason || 'No reason provided',
@@ -1635,15 +1830,26 @@ this.selectedOrderForEdit.totalAmount =
     const group = this.groupedUpcomingOrders.find(g => g.tableNo === this.selectedTableNo);
     return group ? group.orders : [];
   }
-  switchSection(section: 'orders' | 'requests' | 'history' | 'pendingPayments' | 'readyOrders' | 'newOrder'): void {
-    this.selectedSection = section;
-    this.isSidebarOpen = false; 
-    this.persistUIState(); 
+switchSection(section: any): void {
+
+  if (this.showEditOrderModal) {
+    const confirmClose = confirm('Close edit modal first?');
+    if (!confirmClose) return;
+    this.closeEditOrderModal();
   }
-  closeEditOrderModal(): void {
-    this.showEditOrderModal = false;
-    this.resetPendingChanges();
-  }
+
+  this.selectedSection = section;
+  this.isSidebarOpen = false;
+  this.persistUIState();
+}
+
+closeEditOrderModal(): void {
+  this.showEditOrderModal = false;
+  this.selectedOrderForEdit = null;
+  this.originalOrderData = null;
+  this.resetPendingChanges();
+}
+
   getCustomizationsText(customizations: any[] | undefined): string {
     if (!customizations || customizations.length === 0) return '';
     return customizations.map(c => c.optionName).join(', ');
@@ -1659,6 +1865,104 @@ this.selectedOrderForEdit.totalAmount =
     }
   }
 
+//   async saveOrderChanges(): Promise<void> {
+//     if (this.isSavingChanges || !this.hasUnsavedChanges()) {
+//       return;
+//     }
+
+//     this.isSavingChanges = true;
+
+//     try {
+//       let successCount = 0;
+
+//       const tableHasChanged = this.selectedOrderForEdit.tableNo !== this.originalOrderData.tableNo;
+
+//       const totalChanges =
+//         this.pendingChanges.quantityUpdates.size +
+//         this.pendingChanges.itemsToRemove.length +
+//         this.pendingChanges.itemsToAdd.length +
+//         (tableHasChanged ? 1 : 0);
+
+//       if (tableHasChanged) {
+//         const payload = {
+//           newTableNo: +this.selectedOrderForEdit.tableNo,
+//           changedByUserId: this.getCurrentUserId()
+//         };
+//         await firstValueFrom(
+//           this.http.put(`${this.API_BASE}/order/${this.selectedOrderForEdit.orderID}/change-table?restaurantId=${this.restaurantId}`, payload, this.httpOptions)
+//         );
+//         successCount++;
+//       }
+
+//       for (const [orderItemID, newQuantity] of this.pendingChanges.quantityUpdates) {
+//         const payload = {
+//           quantity: newQuantity,
+//           changedByUserId: this.getCurrentUserId()
+//         };
+//         await firstValueFrom(
+//           this.http.put(`${this.API_BASE}/order/${this.selectedOrderForEdit.orderID}/update-item/${orderItemID}?restaurantId=${this.restaurantId}`, payload, this.httpOptions)
+//         );
+//         successCount++;
+//       }
+
+//       for (const orderItemID of this.pendingChanges.itemsToRemove) {
+//         const payload = {
+//           quantity: 0,
+//           changedByUserId: this.getCurrentUserId()
+//         };
+//         await firstValueFrom(
+//           this.http.put(`${this.API_BASE}/order/${this.selectedOrderForEdit.orderID}/update-item/${orderItemID}?restaurantId=${this.restaurantId}`, payload, this.httpOptions)
+//         );
+//         successCount++;
+//       }
+
+//       for (const item of this.pendingChanges.itemsToAdd) {
+//         const payload = {
+//           productID: item.productID,
+//           quantity: item.quantity,
+//           customizationOptionIds: item.customizationOptionIds || [],
+//           changedByUserId: this.getCurrentUserId()
+//         };
+
+//         await firstValueFrom(
+//           this.http.post(`${this.API_BASE}/order/${this.selectedOrderForEdit.orderID}/add-item?restaurantId=${this.restaurantId}`, payload, this.httpOptions)
+//         );
+//         successCount++;
+//       }
+
+//       if (successCount === totalChanges) {
+//         // const newTotal = this.recalculateOrderTotal(this.selectedOrderForEdit);
+//         // this.selectedOrderForEdit.totalAmount = newTotal;
+// await this.getOrders();
+
+//         const index = this.orders.findIndex(o => o.orderID === this.selectedOrderForEdit.orderID);
+//         if (index !== -1) {
+//           this.orders[index] = JSON.parse(JSON.stringify(this.selectedOrderForEdit));
+
+//           if (this.orders[index].latestPayment && this.orders[index].latestPayment?.status === 'Pending') {
+//             this.orders[index].latestPayment!.amount = newTotal;
+//           }
+//         }
+
+//         this.groupedUpcomingOrders = this.groupOrdersByTable(this.orders);
+//         this.runTableSelectionLogic();
+
+//         this.resetPendingChanges();
+//         this.showEditOrderModal = false;
+
+//         setTimeout(() => this.getOrders(), 1500);
+
+//       } else {
+//         throw new Error('Some changes could not be saved');
+//       }
+
+//     } catch (error: any) {
+//       console.error(' Error saving order changes:', error);
+//     } finally {
+//       this.isSavingChanges = false;
+//     }
+//   }
+
 async saveOrderChanges(): Promise<void> {
   if (this.isSavingChanges || !this.hasUnsavedChanges()) {
     return;
@@ -1669,7 +1973,8 @@ async saveOrderChanges(): Promise<void> {
   try {
     let successCount = 0;
 
-    const tableHasChanged = this.selectedOrderForEdit.tableNo !== this.originalOrderData.tableNo;
+    const tableHasChanged =
+      this.selectedOrderForEdit.tableNo !== this.originalOrderData.tableNo;
 
     const totalChanges =
       this.pendingChanges.quantityUpdates.size +
@@ -1677,83 +1982,129 @@ async saveOrderChanges(): Promise<void> {
       this.pendingChanges.itemsToAdd.length +
       (tableHasChanged ? 1 : 0);
 
+    // ===============================
+    // 1️⃣ Change Table
+    // ===============================
     if (tableHasChanged) {
       const payload = {
         newTableNo: +this.selectedOrderForEdit.tableNo,
         changedByUserId: this.getCurrentUserId()
       };
+
       await firstValueFrom(
-        this.http.put(`${this.API_BASE}/order/${this.selectedOrderForEdit.orderID}/change-table?restaurantId=${this.restaurantId}`, payload, this.httpOptions)
+        this.http.put(
+          `${this.API_BASE}/order/${this.selectedOrderForEdit.orderID}/change-table`,
+          payload,
+          {
+            headers: this.httpOptions.headers,
+            params: new HttpParams()
+              .set('restaurantId', String(this.restaurantId))
+          }
+        )
       );
+
       successCount++;
     }
 
+    // ===============================
+    // 2️⃣ Update Quantities
+    // ===============================
     for (const [orderItemID, newQuantity] of this.pendingChanges.quantityUpdates) {
       const payload = {
         quantity: newQuantity,
         changedByUserId: this.getCurrentUserId()
       };
+
       await firstValueFrom(
-        this.http.put(`${this.API_BASE}/order/${this.selectedOrderForEdit.orderID}/update-item/${orderItemID}?restaurantId=${this.restaurantId}`, payload, this.httpOptions)
+        this.http.put(
+          `${this.API_BASE}/order/${this.selectedOrderForEdit.orderID}/update-item/${orderItemID}`,
+          payload,
+          {
+            headers: this.httpOptions.headers,
+            params: new HttpParams()
+              .set('restaurantId', String(this.restaurantId))
+          }
+        )
       );
+
       successCount++;
     }
 
+    // ===============================
+    // 3️⃣ Remove Items
+    // ===============================
     for (const orderItemID of this.pendingChanges.itemsToRemove) {
       const payload = {
         quantity: 0,
         changedByUserId: this.getCurrentUserId()
       };
+
       await firstValueFrom(
-        this.http.put(`${this.API_BASE}/order/${this.selectedOrderForEdit.orderID}/update-item/${orderItemID}?restaurantId=${this.restaurantId}`, payload, this.httpOptions)
+        this.http.put(
+          `${this.API_BASE}/order/${this.selectedOrderForEdit.orderID}/update-item/${orderItemID}`,
+          payload,
+          {
+            headers: this.httpOptions.headers,
+            params: new HttpParams()
+              .set('restaurantId', String(this.restaurantId))
+          }
+        )
       );
+
       successCount++;
     }
 
+    // ===============================
+    // 4️⃣ Add New Items
+    // ===============================
     for (const item of this.pendingChanges.itemsToAdd) {
       const payload = {
         productID: item.productID,
         quantity: item.quantity,
+        customizationOptionIds: item.customizationOptionIds || [],
         changedByUserId: this.getCurrentUserId()
       };
+
       await firstValueFrom(
-        this.http.post(`${this.API_BASE}/order/${this.selectedOrderForEdit.orderID}/add-item?restaurantId=${this.restaurantId}`, payload, this.httpOptions)
+        this.http.post(
+          `${this.API_BASE}/order/${this.selectedOrderForEdit.orderID}/add-item`,
+          payload,
+          {
+            headers: this.httpOptions.headers,
+            params: new HttpParams()
+              .set('restaurantId', String(this.restaurantId))
+          }
+        )
       );
+
       successCount++;
     }
 
+    // ===============================
+    // 5️⃣ Final Validation
+    // ===============================
     if (successCount === totalChanges) {
-      const newTotal = this.recalculateOrderTotal(this.selectedOrderForEdit);
-      this.selectedOrderForEdit.totalAmount = newTotal;
 
-      const index = this.orders.findIndex(o => o.orderID === this.selectedOrderForEdit.orderID);
-      if (index !== -1) {
-        this.orders[index] = JSON.parse(JSON.stringify(this.selectedOrderForEdit));
+      // ❗ IMPORTANT:
+      // Do NOT calculate totals in frontend
+      // Backend recalculates offers, tax, totals automatically
 
-        if (this.orders[index].latestPayment && this.orders[index].latestPayment?.status === 'Pending') {
-          this.orders[index].latestPayment!.amount = newTotal;
-        }
-      }
-
-      this.groupedUpcomingOrders = this.groupOrdersByTable(this.orders);
-      this.runTableSelectionLogic();
+      await this.getOrders();  // 🔥 refresh with backend truth
 
       this.resetPendingChanges();
       this.showEditOrderModal = false;
-      
-      setTimeout(() => this.getOrders(), 1500);
 
     } else {
-      throw new Error('Some changes could not be saved');
+      throw new Error('Some changes failed to save.');
     }
 
   } catch (error: any) {
-    console.error(' Error saving order changes:', error);
+    console.error('Error saving order changes:', error);
+    alert(error?.error?.message || 'Failed to save changes.');
   } finally {
     this.isSavingChanges = false;
   }
 }
-  
 
   private async refreshOrdersAfterEdit(): Promise<void> {
     try {
@@ -1774,7 +2125,7 @@ async saveOrderChanges(): Promise<void> {
       }
     }
 
-    this.persistUIState(); 
+    this.persistUIState();
   }
   private async fetchOrderById(orderId: number): Promise<Order | null> {
     try {
@@ -1790,36 +2141,54 @@ async saveOrderChanges(): Promise<void> {
     }
   }
 
-  async collectWaiterPayment(orderId: number, method: 'Cash' | 'UPI'): Promise<void> {
-    try {
-      const response: any = await firstValueFrom(
-        this.http.post(
-          `${this.API_BASE}/order/${orderId}/initiate-payment?restaurantId=${this.restaurantId}&method=${method}&channel=Waiter`,
+
+async collectWaiterPayment(orderId: number, method: 'Cash' | 'UPI'): Promise<void> {
+  try {
+    const summary = await this.getPaymentSummary(orderId);
+
+    if (summary.remainingAmount <= 0) {
+      alert('Order already fully paid');
+      return;
+    }
+
+    const resp: any = await firstValueFrom(
+      this.http.post(
+        `${this.API_BASE}/order/${orderId}/initiate-payment`,
+        { amount: summary.remainingAmount },
+        {
+          headers: this.httpOptions.headers,
+          params: new HttpParams()
+            .set('restaurantId', String(this.restaurantId))
+            .set('method', method.toUpperCase())
+            .set('channel', 'Waiter')
+        }
+      )
+    );
+
+    if (method === 'Cash') {
+      await firstValueFrom(
+        this.http.put(
+          `${this.API_BASE}/order/payments/${resp.paymentId}/complete`,
           {},
-          this.httpOptions
+          { params: new HttpParams().set('restaurantId', String(this.restaurantId)) }
         )
       );
-
-      if (method === 'Cash') {
-        await firstValueFrom(
-          this.http.put(
-            `${this.API_BASE}/order/payments/${response.paymentId}/complete?restaurantId=${this.restaurantId}`,
-            {},
-            this.httpOptions
-          )
-        );
-        this.pushAlert('payment', `Cash payment collected for Order #${orderId}`);
-      } else {
-        this.openCollectModal({
-          orderID: orderId,
-          paymentID: response.paymentId,
-          amount: response.amount
-        });
-      }
-    } catch (error) {
-      console.error('Error collecting payment:', error);
+      await this.printOrderBill(orderId);
+      this.getOrders();
+      this.fetchPendingPayments();
+    } else {
+      this.openCollectModal({
+        orderID: orderId,
+        paymentID: resp.paymentId,
+        amount: resp.amount
+      });
     }
+  } catch (e: any) {
+    console.error('Collect payment failed', e);
   }
+}
+
+
   closeChangeHistoryModal(): void {
     this.showChangeHistoryModal = false;
   }
@@ -1846,7 +2215,7 @@ async saveOrderChanges(): Promise<void> {
     };
     return classes[status] || 'bg-light text-dark';
   }
-  
+
   isOrderLocked(): boolean {
     const lockedStatuses = [OrderStatus.Served, OrderStatus.Completed, OrderStatus.Cancelled];
     return lockedStatuses.includes(this.selectedOrderForEdit?.orderStatus);
@@ -1886,9 +2255,16 @@ async saveOrderChanges(): Promise<void> {
   }
 
   increaseProductQuantity(product: any): void {
-    const current = this.getProductQuantity(product);
-    this.productQuantities.set(product.productID, current + 1);
+    if (this.isOrderLocked()) return;
+
+    if (product.customizationOptions?.length) {
+      this.openCustomizationModal(product, 1);
+      return;
+    }
+
+    this.addProductWithoutCustomization(product, 1);
   }
+
 
   decreaseProductQuantity(product: any): void {
     const current = this.getProductQuantity(product);
@@ -1905,90 +2281,134 @@ async saveOrderChanges(): Promise<void> {
     return count;
   }
 private recalculateOrderTotal(order: any): number {
-  if (!order || !order.items) return 0;
+  if (!order?.items) return 0;
 
-  return order.items.reduce((sum: number, item: any) => {
-    const price = item.unitPrice ?? 0;
-    const qty = item.quantity ?? 0;
-    return sum + (price * qty);
+  const subtotal = order.items.reduce((sum: number, item: any) => {
+    return sum + ((item.unitPrice ?? 0) * (item.quantity ?? 0));
   }, 0);
+
+  order.subtotal = subtotal;
+
+  // ❗ DO NOT apply discount locally
+  // ❗ DO NOT subtract anything
+  // ❗ Backend will recalc correctly on save
+
+  return order.totalAmount ?? subtotal;
 }
 
- 
 
-addSelectedProductsToOrder(): void {
-  if (this.isOrderLocked()) return;
 
-  const productsToAdd: any[] = [];
-  this.productQuantities.forEach((quantity, productId) => {
-    if (quantity > 0) {
+
+  addSelectedProductsToOrder(): void {
+    if (this.isOrderLocked()) return;
+
+    this.productQuantities.forEach((quantity, productId) => {
+      if (quantity <= 0) return;
+
       const product = this.availableProducts.find(p => p.productID === productId);
-      if (product) {
-        productsToAdd.push({
-          productID: productId,
-          quantity: quantity,
-          productName: product.productName,
-          unitPrice: product.price, 
-          customizations: [] 
-        });
-      }
-    }
-  });
+      if (!product) return;
 
-  if (productsToAdd.length > 0) {
-    this.pendingChanges.itemsToAdd.push(...productsToAdd);
-    this.selectedOrderForEdit.items.push(...productsToAdd);
-    
-    this.selectedOrderForEdit.totalAmount = this.recalculateOrderTotal(this.selectedOrderForEdit);
-    
+      if (product.customizationOptions?.length) {
+        this.openCustomizationModal(product, quantity);
+      } else {
+        this.addProductWithoutCustomization(product, quantity);
+      }
+    });
+
     this.productQuantities.clear();
     this.showProductList = false;
   }
-}
-removeOrderItem(item: any): void {
+  openCustomizationModal(product: any, quantity: number): void {
+    const dialogRef = this.dialog.open(CustomizationModalComponent, {
+      width: '400px',
+      panelClass: 'customization-dialog',
+      data: { product }
+    });
 
-  const orderItemID =
-    item.orderItemID || item.orderItemId || item.id || item.OrderItemID || item.itemId;
+    dialogRef.afterClosed().subscribe(result => {
+      if (!result || !result.customizationOptionID) return;
 
-  if (!orderItemID) {
-    console.error(' No valid order item ID found for item:', item);
-    return;
-  }
+      // ✅ 1. SAVE DATA FOR BACKEND
+      this.pendingChanges.itemsToAdd.push({
+        productID: product.productID,
+        quantity,
+        customizationOptionIds: [result.customizationOptionID]
+      });
 
-  if (this.isOrderLocked()) {
-    return;
-  }
-
-  if (
-    confirm(
-      `Remove ${item.productName} from order?\nThis change will be saved when you click "Save Changes".`
-    )
-  ) {
-    this.pendingChanges.itemsToRemove.push(orderItemID);
-
-    this.selectedOrderForEdit.items =
-      this.selectedOrderForEdit.items.filter((i: any) =>
-        (i.orderItemID || i.orderItemId || i.id || i.OrderItemID || i.itemId) !== orderItemID
+      // ✅ 2. UI PREVIEW ONLY
+      const customization = product.customizationOptions?.find(
+        (c: any) => c.customizationOptionID === result.customizationOptionID
       );
+
+      this.selectedOrderForEdit.items.push({
+        productID: product.productID,
+        productName: product.productName,
+        quantity,
+        unitPrice: product.price, // BASE PRICE ONLY
+        customizations: customization ? [{
+          customizationOptionID: customization.customizationOptionID,
+          optionName: customization.name,
+          fixedPrice: customization.fixedPrice
+        }] : []
+      });
+
+      this.selectedOrderForEdit.totalAmount =
+        this.recalculateOrderTotal(this.selectedOrderForEdit);
+    });
+  }
+
+  addProductWithoutCustomization(product: any, quantity: number): void {
+    this.pendingChanges.itemsToAdd.push({
+      productID: product.productID,
+      quantity,
+      customizationOptionIds: []
+    });
+
+    this.selectedOrderForEdit.items.push({
+      productID: product.productID,
+      productName: product.productName,
+      quantity,
+      unitPrice: product.price,
+      customizations: []
+    });
 
     this.selectedOrderForEdit.totalAmount =
       this.recalculateOrderTotal(this.selectedOrderForEdit);
-
   }
-}
-  openEditOrderModal(order: any): void {
-    this.selectedOrderForEdit = JSON.parse(JSON.stringify(order)); 
-    this.originalOrderData = JSON.parse(JSON.stringify(order)); 
-    this.showProductList = false;
-    this.productSearch = '';
-    this.selectedCategory = '';
-    this.productQuantities.clear();
-    this.resetPendingChanges(); 
-    this.loadAvailableProducts();
-    this.loadAvailableTables(); 
 
-    this.showEditOrderModal = true;
+
+  removeOrderItem(item: any): void {
+
+    const orderItemID =
+      item.orderItemID || item.orderItemId || item.id || item.OrderItemID || item.itemId;
+
+    if (!orderItemID) {
+      console.error(' No valid order item ID found for item:', item);
+      return;
+    }
+
+    if (this.isOrderLocked()) {
+      return;
+    }
+
+    if (
+      confirm(
+        `Remove ${item.productName} from order?\nThis change will be saved when you click "Save Changes".`
+      )
+    ) {
+      this.pendingChanges.itemsToRemove.push(orderItemID);
+
+      this.selectedOrderForEdit.items =
+        this.selectedOrderForEdit.items.filter((i: any) =>
+          (i.orderItemID || i.orderItemId || i.id || i.OrderItemID || i.itemId) !== orderItemID
+        );
+
+      this.selectedOrderForEdit.totalAmount =
+        this.recalculateOrderTotal(this.selectedOrderForEdit);
+
+    }
   }
+ 
   resetPendingChanges(): void {
     this.pendingChanges = {
       quantityUpdates: new Map<number, number>(),
@@ -2005,7 +2425,7 @@ removeOrderItem(item: any): void {
         },
         error: (err) => {
           console.error(' Error loading available tables:', err);
-          this.availableTables = []; 
+          this.availableTables = [];
         }
       });
   }
@@ -2015,7 +2435,7 @@ removeOrderItem(item: any): void {
     return this.pendingChanges.quantityUpdates.size > 0 ||
       this.pendingChanges.itemsToRemove.length > 0 ||
       this.pendingChanges.itemsToAdd.length > 0 ||
-      tableChanged; 
+      tableChanged;
   }
 
 
@@ -2024,7 +2444,7 @@ removeOrderItem(item: any): void {
       .subscribe({
         next: (products) => {
           this.availableProducts = products.filter(p => p.isAvailable);
-          this.filterProducts(); 
+          this.filterProducts();
         },
         error: (err) => {
           console.error('Error loading products:', err);
@@ -2038,122 +2458,380 @@ removeOrderItem(item: any): void {
       order.orderStatus !== OrderStatus.Completed &&
       order.orderStatus !== OrderStatus.Cancelled;
   }
+// waiter.component.ts
+async openMarkAsPaidModal(order: Order): Promise<void> {
 
+  // 🔥 CRITICAL FIX
+  this.showEditOrderModal = false;
+  this.selectedOrderForEdit = null;
 
-  openMarkAsPaidModal(order: Order): void {
+  const summary = await this.getPaymentSummary(order.orderID);
 
-    let paymentId = 0;
+  this.markAsPaidModal = {
+    open: true,
+    orderId: order.orderID,
+    orderNumber: order.orderNumber || order.orderID,
+    tableNo: order.tableNo || 0,
+    amount: summary.remainingAmount > 0 
+              ? summary.remainingAmount 
+              : summary.totalAmount,
+    paidSoFar: summary.paidAmount,
+    selectedMethod: 'Cash',
+    busy: false,
+    paymentId: 0,
+    paymentType: summary.remainingAmount > 0 ? 'PARTIAL' : 'FULL',
+    upiAmount: 0,
+    cashAmount: 0
+    
+  };
+}
 
-    if (order.latestPayment) {
-      paymentId = (order.latestPayment as any).paymentID ||
-        (order.latestPayment as any).paymentId || 0;
+async confirmPartialPayment(): Promise<void> {
+  try {
+    this.markAsPaidModal.busy = true;
+
+    // 🔥 FIX 1: Fetch the ACTUAL remaining balance from server (accounts for offers)
+    const summary = await this.getPaymentSummary(this.markAsPaidModal.orderId);
+
+    if (summary.remainingAmount <= 0) {
+      alert('This order has already been fully paid or discounted to zero.');
+      this.closeMarkAsPaidModal();
+      return;
     }
 
-    if (!paymentId) {
-      const collectPayment = this.collectPayments.find(p => p.orderID === order.orderID);
-      if (collectPayment) {
-        paymentId = collectPayment.paymentID || collectPayment.paymentId;
+    const upi = Number(this.markAsPaidModal.upiAmount || 0);
+    const cash = Number(this.markAsPaidModal.cashAmount || 0);
+    const totalToPay = upi + cash;
+
+    if (totalToPay <= 0) {
+      alert('Please enter a valid amount.');
+      return;
+    }
+
+    // 🔥 FIX 2: Validate against discounted total
+    // We use a small tolerance (0.01) for decimal precision
+    if (totalToPay > summary.remainingAmount + 0.01) {
+      alert(`The split amounts (₹${totalToPay}) exceed the actual remaining balance (₹${summary.remainingAmount.toFixed(2)}).`);
+      return;
+    }
+
+    // 🔹 Pay UPI First
+    if (upi > 0) {
+      await this.safePartialPay('UPI', upi);
+    }
+
+    // 🔹 Pay Cash Second (fetch summary again if needed, or use safePartialPay logic)
+    if (cash > 0) {
+      // Re-fetch to see what's left after UPI
+      const secondSummary = await this.getPaymentSummary(this.markAsPaidModal.orderId);
+      if (secondSummary.remainingAmount > 0) {
+         const remainingAfterUpi = Math.min(cash, secondSummary.remainingAmount);
+         await this.safePartialPay('CASH', remainingAfterUpi);
       }
     }
 
-    this.markAsPaidModal = {
-      open: true,
-      orderId: order.orderID,
-      orderNumber: order.orderNumber || order.orderID, 
-      tableNo: order.tableNo || 0,
-      amount: order.totalAmount || 0,
-      selectedMethod: order.latestPayment?.method === 'UPI' ? 'UPI' : 'Cash',
-      busy: false,
-      paymentId: paymentId
-    };
+    this.closeMarkAsPaidModal();
+    await this.getOrders(); // Refresh UI list
+    this.fetchPendingPayments();
+
+  } catch (err: any) {
+    console.error('Partial payment workflow failed', err);
+    alert(err?.error?.message || 'Failed to process partial payment.');
+  } finally {
+    this.markAsPaidModal.busy = false;
+  }
+}
+
+
+private async safePartialPay(method: 'UPI' | 'CASH', amount: number): Promise<void> {
+  if (amount <= 0) return;
+
+  const summary = await this.getPaymentSummary(this.markAsPaidModal.orderId);
+
+  if (summary.remainingAmount <= 0) {
+    throw new Error('ORDER_ALREADY_PAID');
   }
 
-  async confirmMarkAsPaid(): Promise<void> {
-    if (!this.restaurantId) return;
+  // 1. Initiate Payment
+  const resp: any = await firstValueFrom(
+    this.http.post(`${this.API_BASE}/order/${this.markAsPaidModal.orderId}/initiate-payment`, 
+      { amount }, 
+      {
+        headers: this.httpOptions.headers,
+        params: new HttpParams()
+          .set('restaurantId', String(this.restaurantId))
+          .set('method', method)
+          .set('channel', 'Waiter')
+      }
+    )
+  );
+
+  // 2. Critical Check: Only proceed to complete if we have a valid ID > 0
+  if (resp && resp.paymentId > 0) {
+    await firstValueFrom(
+      this.http.put(`${this.API_BASE}/order/payments/${resp.paymentId}/complete`, {}, 
+        {
+          headers: this.httpOptions.headers,
+          params: new HttpParams().set('restaurantId', String(this.restaurantId))
+        }
+      )
+    );
+  } else if (resp && resp.isFullyPaid) {
+    console.warn("Order was already paid, skipping completion step.");
+    // Optional: this.getOrders();
+  } else {
+    throw new Error('Failed to initiate a valid payment record.');
+  }
+}
+
+private async getPaymentSummary(orderId: number): Promise<{
+  totalAmount: number;
+  paidAmount: number;
+  remainingAmount: number;
+}> {
+  const summary: any = await firstValueFrom(
+    this.http.get(
+      `${this.API_BASE}/order/${orderId}/payment-summary`,
+      {
+        headers: this.httpOptions.headers,
+        params: new HttpParams().set('restaurantId', String(this.restaurantId))
+      }
+    )
+  );
+
+  return {
+    totalAmount: summary.totalAmount ?? 0,
+    paidAmount: summary.paidAmount ?? 0,
+    remainingAmount: summary.remainingAmount ?? 0
+  };
+}
+loadAvailableOffers() {
+  this.http.get<any[]>(
+    `${this.API_BASE}/offer/restaurant/${this.restaurantId}`
+  ).subscribe({
+    next: (data) => {
+      this.availableOffers = data;
+      console.log('Offers loaded:', data);
+    },
+    error: (err) => {
+      console.error('Failed to load offers', err);
+    }
+  });
+}
+
+async applyOfferToOrder(): Promise<void> {
+  if (!this.selectedOrderForEdit) return;
+
+  try {
+    if (!this.selectedOfferId) {
+      await this.removeOfferFromOrder();
+      return;
+    }
+
+    await firstValueFrom(
+      this.http.put(
+        `${this.API_BASE}/order/${this.selectedOrderForEdit.orderID}/apply-offer`,
+        { offerId: this.selectedOfferId },
+        {
+          headers: this.httpOptions.headers,
+          params: new HttpParams()
+            .set('restaurantId', String(this.restaurantId))
+        }
+      )
+    );
+
+    await this.getOrders();
+
+    const updated = this.orders.find(
+      o => o.orderID === this.selectedOrderForEdit.orderID
+    );
+
+    if (updated) {
+      this.selectedOrderForEdit = JSON.parse(JSON.stringify(updated));
+      this.originalOfferId = updated.appliedOfferID || null;
+    }
+
+  } catch (err: any) {
+    console.error('Apply offer failed', err);
+    alert(err?.error?.message || 'Failed to apply offer');
+  }
+}
+
+openEditOrderModal(order: Order): void {
+  console.log('--- Edit Modal Debug Start ---');
+  console.log('1. Target Order ID:', order?.orderID);
+  console.log('2. Current Order Status:', order?.orderStatus);
+
+  // Validation: Check if the order object is even valid
+  if (!order) {
+    console.error('ERROR: Order object is undefined or null.');
+    return;
+  }
+
+  // 1. Close ALL overlays first to prevent UI deadlocks
+  this.markAsPaidModal.open = false;
+  this.collectModal.open = false;
+  this.showInlineOfferModal = false;
+  this.showEditOrderModal = false;
+  this.selectedOrderForEdit = null;
+  console.log('3. All previous overlays cleared.');
+
+  // 2. Wait for Angular to process the state reset
+  setTimeout(() => {
+    try {
+      console.log('4. Entering setTimeout block...');
+      
+      // 3. Clone data
+      this.selectedOrderForEdit = JSON.parse(JSON.stringify(order));
+      this.originalOrderData = JSON.parse(JSON.stringify(order));
+      console.log('5. Data cloned successfully:', this.selectedOrderForEdit);
+      
+      // 4. Set offer state
+      this.selectedOfferId = order.appliedOfferID || null;
+      this.originalOfferId = order.appliedOfferID || null;
+      
+      // 5. Reset changes tracker
+      this.resetPendingChanges();
+      
+      // 6. Load products if needed
+      if (this.availableProducts.length === 0) {
+        console.log('6a. Loading products...');
+        this.loadAvailableProducts();
+      }
+  
+      // 7. Load offers
+      if (this.availableOffers.length === 0) {
+        console.log('6b. Loading offers...');
+        this.loadAvailableOffers();
+      }
+      
+      // 8. The Critical Flip
+      this.showEditOrderModal = true;
+      console.log('7. Final State: showEditOrderModal =', this.showEditOrderModal);
+      console.log('--- Edit Modal Debug Success ---');
+
+    } catch (err) {
+      console.error('CRITICAL ERROR inside openEditOrderModal:', err);
+    }
+  }, 100); 
+}
+async removeOfferFromOrder(): Promise<void> {
+  try {
+    await firstValueFrom(
+      this.http.put(
+        `${this.API_BASE}/order/${this.selectedOrderForEdit.orderID}/remove-offer`,
+        {},
+        {
+          headers: this.httpOptions.headers,
+          params: new HttpParams()
+            .set('restaurantId', String(this.restaurantId))
+        }
+      )
+    );
+
+    await this.getOrders();
+
+  } catch (err: any) {
+    console.error('Remove offer failed', err);
+    alert(err?.error?.message || 'Failed to remove offer');
+  }
+}
+
+async confirmMarkAsPaid(): Promise<void> {
+  try {
+    const summary = await this.getPaymentSummary(this.markAsPaidModal.orderId);
+
+    if (summary.remainingAmount <= 0) {
+      alert('Order already fully paid');
+      return;
+    }
 
     this.markAsPaidModal.busy = true;
 
-    try {
-      let paymentId = this.markAsPaidModal.paymentId;
-
-      if (!paymentId) {
-
-        const response: any = await firstValueFrom(
-          this.http.post(
-            `${this.API_BASE}/order/payments/initiate?orderId=${this.markAsPaidModal.orderId}&restaurantId=${this.restaurantId}&method=${this.markAsPaidModal.selectedMethod}&channel=Waiter`,
-            {},
-            this.httpOptions
-          )
-        );
-
-        if (response && response.paymentId) {
-          paymentId = response.paymentId;
-          console.log(' Created payment with ID:', paymentId);
-        } else {
-          throw new Error('Failed to create payment record');
+    const resp: any = await firstValueFrom(
+      this.http.post(
+        `${this.API_BASE}/order/${this.markAsPaidModal.orderId}/initiate-payment`,
+        { amount: summary.remainingAmount },
+        {
+          headers: this.httpOptions.headers,
+          params: new HttpParams()
+            .set('restaurantId', String(this.restaurantId))
+            .set('method', this.markAsPaidModal.selectedMethod)
+            .set('channel', 'Waiter')
         }
-      }
+      )
+    );
 
-      await firstValueFrom(
-        this.http.put(
-          `${this.API_BASE}/order/payments/${paymentId}/complete?restaurantId=${this.restaurantId}`,
-          {},
-          this.httpOptions
-        )
-      );
+    await firstValueFrom(
+      this.http.put(
+        `${this.API_BASE}/order/payments/${resp.paymentId}/complete`,
+        {},
+        { params: new HttpParams().set('restaurantId', String(this.restaurantId)) }
+      )
+    );
 
-      await this.printOrderBill(this.markAsPaidModal.orderId);
+    await this.printOrderBill(this.markAsPaidModal.orderId);
 
-      const orderReference = this.markAsPaidModal.orderNumber ?
-        `Order #${this.markAsPaidModal.orderNumber}` :
-        `Order #${this.markAsPaidModal.orderId}`;
+    this.closeMarkAsPaidModal();
+    await this.getOrders();
+    this.fetchPendingPayments();
 
-      this.closeMarkAsPaidModal();
-      this.getOrders();
-      this.fetchPendingPayments();
-
-    } catch (error: any) {
-      console.error('Error marking order as paid:', error);
-      const orderReference = this.markAsPaidModal.orderNumber ?
-        `Order #${this.markAsPaidModal.orderNumber}` :
-        `Order #${this.markAsPaidModal.orderId}`;
-    } finally {
-      this.markAsPaidModal.busy = false;
-    }
+  } catch (err: any) {
+    console.error('Mark paid failed', err);
+    alert(err?.error?.message || 'Payment failed');
+  } finally {
+    this.markAsPaidModal.busy = false;
   }
+}
 
-  private async createPaymentForOrder(order: Order): Promise<void> {
-    try {
 
-      const response: any = await firstValueFrom(
-        this.http.post(
-          `${this.API_BASE}/order/payments/initiate?orderId=${order.orderID}&restaurantId=${this.restaurantId}&method=Cash&channel=Waiter`,
-          {},
-          this.httpOptions
-        )
-      );
+// private async createPaymentForOrder(order: Order) {
+//   try {
+//     const summary = await this.getPaymentSummary(order.orderID);
 
-      if (response && response.paymentId) {
-        console.log('Created payment with ID:', response.paymentId);
+//     if (summary.remainingAmount <= 0) {
+//       console.warn('Order already fully paid');
+//       return;
+//     }
 
-        await firstValueFrom(
-          this.http.put(
-            `${this.API_BASE}/order/payments/${response.paymentId}/complete?restaurantId=${this.restaurantId}`,
-            {},
-            this.httpOptions
-          )
-        );
+//     const body = { amount: summary.remainingAmount };
 
-        this.getOrders();
-        this.printOrderBill(order.orderID);
-      } else {
-        throw new Error('No payment ID in response');
-      }
-    } catch (error: any) {
-      console.error('Error creating payment:', error);
-      this.pushAlert('payment', `Failed to create payment: ${error.error?.message || error.message}`);
-    }
-  }
+//     const resp: any = await firstValueFrom(
+//       this.http.post(
+//         `${this.API_BASE}/order/${order.orderID}/initiate-payment`,
+//         body,
+//         {
+//           headers: this.httpOptions.headers,
+//           params: new HttpParams()
+//             .set('restaurantId', String(this.restaurantId))
+//             .set('method', 'CASH')
+//             .set('channel', 'Waiter')
+//         }
+//       )
+//     );
+
+//     await firstValueFrom(
+//       this.http.put(
+//         `${this.API_BASE}/order/payments/${resp.paymentId}/complete`,
+//         {},
+//         { params: new HttpParams().set('restaurantId', String(this.restaurantId)) }
+//       )
+//     );
+
+//     await this.printOrderBill(order.orderID);
+//     this.getOrders();
+//   } catch (e) {
+//     console.error('Create payment failed', e);
+//   }
+// }
+
+
+
+
+ 
+
+
+ 
   private async markOrderAsPaidDirect(orderId: number, paymentId: number): Promise<void> {
     try {
       await firstValueFrom(

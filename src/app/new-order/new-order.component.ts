@@ -38,8 +38,6 @@ export interface CartItem {
   customizationOptionIds: number[];
   customisations: string[];
 
-  // 🔒 DISPLAY ONLY – set AFTER backend response
-  unitPrice?: number;
 }
 
 
@@ -75,6 +73,12 @@ export class NewOrderComponent implements OnInit, OnDestroy {
     paymentMethod?: string;
     paymentPreference?: string
   }>();
+// 🔽 ADD THESE
+paymentMode: 'FULL' | 'PARTIAL' = 'FULL';
+
+partialUpiAmount = 0;
+partialCashAmount = 0;
+paidSoFar = 0; // future-proof, keep 0 for now
 
   tables: any[] = [];
   products: Product[] = [];
@@ -99,7 +103,7 @@ export class NewOrderComponent implements OnInit, OnDestroy {
   modalOptions: CustomisationOption[] = [];
   modalQty = 1;
 
-  paymentStage: 0 | 1 | 2 | 3 = 0;
+paymentStage: 0 | 1 | 2 | 3 | 4 = 0;
   orderID = 0;
   orderTotal = 0;
   method: '' | 'Cash' | 'UPI' = '';
@@ -152,68 +156,119 @@ export class NewOrderComponent implements OnInit, OnDestroy {
       this.submit();
     }
   }
+startPartialPayment() {
+  this.paymentMode = 'PARTIAL';
+  this.partialUpiAmount = 0;
+  this.partialCashAmount = 0;
+  this.paymentStage = 4;
+}
+async confirmPartialPayment() {
+  const upi = this.partialUpiAmount || 0;
+  const cash = this.partialCashAmount || 0;
+  const total = upi + cash;
 
-  async submitWithPreference() {
-    if (!this.selectedTable || !this.cart.length) return;
-    this.busy = true;
+  if (total <= 0 || total > this.orderTotal) {
+    alert('Invalid payment amount');
+    return;
+  }
 
-    try {
-      const orderPayload = {
-        OrderItems: this.cart.map(c => ({
-          productID: c.productID,
-          quantity: c.quantity,
-          customizationOptionIds: c.customizationOptionIds || []
-        }))
-      };
+  this.busyPay = true;
 
-      console.log(' Submitting waiter order with payment preference:', this.paymentPreference);
-
-      const gen: any = await this.http.post(
-        `${this.API}/order/generate?tableNo=${this.selectedTable}&restaurantId=${this.restaurantId}&source=waiter&paymentPreference=${this.paymentPreference}`,
-        orderPayload
-      ).toPromise();
-this.orderTotal = gen.totalAmount ?? 0;
-
-      this.orderID = gen.orderID;
-      await this.http.post(
-        `${this.API}/order/${this.orderID}/confirm?restaurantId=${this.restaurantId}`,
+  try {
+    // 🔹 UPI PART
+    if (upi > 0) {
+      const u: any = await this.http.post(
+        `${this.API}/order/${this.orderID}/initiate-payment?method=UPI&amount=${upi}&restaurantId=${this.restaurantId}&channel=Waiter`,
         {}
       ).toPromise();
 
-      console.log(' Order confirmed → KOT should print now');
-
-      console.log(' Order created with details:', {
-        orderID: this.orderID,
-        paymentPreference: this.paymentPreference,
-        orderStatus: gen.orderStatus,
-        paymentStatus: gen.paymentStatus
-      });
-
-      if (this.paymentPreference === 'PayNow') {
-        this.paymentStage = 1;
-        this.busy = false;
-
-        this.orderPlaced.emit({
-          orderID: this.orderID,
-          paymentStatus: 'created',
-          paymentPreference: 'PayNow'
-        });
-
-      } else {
-        this.orderPlaced.emit({
-          orderID: this.orderID,
-          paymentStatus: 'pending',
-          paymentPreference: 'PayLater'
-        });
-
-        this.resetAndClose();
+      if (u?.paymentId) {
+        await this.http.put(
+          `${this.API}/order/pending-payments/${u.paymentId}/clear?restaurantId=${this.restaurantId}`,
+          {}
+        ).toPromise();
       }
-
-    } catch (e: any) {
-      console.error(' Error placing waiter order:', e);
-      this.busy = false;
     }
+
+    // 🔹 CASH PART
+    if (cash > 0) {
+      const c: any = await this.http.post(
+        `${this.API}/order/${this.orderID}/initiate-payment?method=Cash&amount=${cash}&restaurantId=${this.restaurantId}&channel=Waiter`,
+        {}
+      ).toPromise();
+
+      if (c?.paymentId) {
+        await this.http.put(
+          `${this.API}/order/pending-payments/${c.paymentId}/clear?restaurantId=${this.restaurantId}`,
+          {}
+        ).toPromise();
+      }
+    }
+
+    await this.printOrderBill(this.orderID);
+
+    this.orderPlaced.emit({
+      orderID: this.orderID,
+      paymentStatus: 'paid',
+      paymentMethod: 'Partial',
+      paymentPreference: 'PayNow'
+    });
+
+    alert(`Order #${this.orderID} paid partially (UPI + Cash)`);
+
+    this.resetAndClose();
+
+  } catch (e) {
+    console.error('Partial payment failed', e);
+    alert('Partial payment failed');
+  } finally {
+    this.busyPay = false;
   }
+}
+
+async submitWithPreference() {
+  if (!this.selectedTable || !this.cart.length) return;
+  this.busy = true;
+
+  try {
+    const orderPayload = {
+      OrderItems: this.cart.map(c => ({
+        productID: c.productID,
+        quantity: c.quantity,
+        customizationOptionIds: c.customizationOptionIds || []
+      }))
+    };
+
+    // 1. Generate the order
+    const gen: any = await this.http.post(
+      `${this.API}/order/generate?tableNo=${this.selectedTable}&restaurantId=${this.restaurantId}&source=waiter&paymentPreference=${this.paymentPreference}`,
+      orderPayload
+    ).toPromise();
+
+    this.orderID = gen.orderID;
+    
+    // 🔥 FIX: Use the discounted total returned by the server, NOT the preview total
+    this.orderTotal = gen.totalAmount; 
+
+    // 2. Confirm for KOT
+    await this.http.post(
+      `${this.API}/order/${this.orderID}/confirm?restaurantId=${this.restaurantId}`,
+      {}
+    ).toPromise();
+
+    if (this.paymentPreference === 'PayNow') {
+      this.paymentStage = 1; // Open select payment method screen
+      this.busy = false;
+    } else {
+      this.resetAndClose();
+    }
+
+  } catch (e: any) {
+    console.error('Error placing waiter order:', e);
+    this.busy = false;
+  }
+}
+  
 
   private buildUpiUri(pa: string, pn: string, am: number, tr: string, tn: string = 'ScanUI Order'): string {
     const enc = encodeURIComponent;
@@ -257,7 +312,6 @@ const existing = this.cart.find(ci =>
         quantity: item.quantity,
         customizationOptionIds: [],
         customisations: [],
-              unitPrice: item.price   
 
       });
     }
@@ -469,7 +523,6 @@ const existing = this.cart.find(ci =>
         quantity: 1,
         customizationOptionIds: chosen ? [chosen.customizationOptionID] : [],
         customisations: chosen ? [chosen.name] : [],
-unitPrice: p.price + customizationPrice
 
       };
 
@@ -491,13 +544,13 @@ unitPrice: p.price + customizationPrice
     }
   }
 
- get cartPreviewTotal(): number {
-  if (!this.cart || this.cart.length === 0) return 0;
-
+get cartPreviewTotal(): number {
   return this.cart.reduce((sum, c) => {
-    return sum + ((c.unitPrice ?? 0) * (c.quantity ?? 0));
+    const product = this.products.find(p => p.productID === c.productID);
+    return sum + ((product?.price ?? 0) * c.quantity);
   }, 0);
 }
+
 
 
   private async fetchCustomizationFromServer(p: Product): Promise<CustomisationOption[]> {
@@ -564,7 +617,6 @@ unitPrice: p.price + customizationPrice
     quantity: this.modalQty,
     customizationOptionIds: selected.map(o => o.customizationOptionID),
     customisations: selected.map(o => o.name),
-    unitPrice: this.modalProduct.basePrice + optionPrice   
   };
 
   const key = JSON.stringify([item.productID, item.customizationOptionIds.slice().sort()]);
@@ -582,34 +634,40 @@ unitPrice: p.price + customizationPrice
   remove(i: number) { this.cart.splice(i, 1); }
   clearCart() { this.cart = []; }
 
-  async submit() {
-    if (!this.selectedTable || !this.cart.length) return;
-    this.busy = true;
-    try {
-      const gen: any = await this.http.post(
-        `${this.API}/order/generate?tableNo=${this.selectedTable}&restaurantId=${this.restaurantId}&source=Customer`,
-        {}
-      ).toPromise();
-      this.orderID = gen.orderID;
-      this.orderPlaced.emit({ orderID: this.orderID });
+async submit() {
+  if (!this.selectedTable || !this.cart.length) return;
+  this.busy = true;
 
-      await this.http.post(
-        `${this.API}/order/${this.orderID}/addItem?restaurantId=${this.restaurantId}`,
-        this.cart.map(c => ({
-          productID: c.productID,
-          quantity: c.quantity,
-          customizationOptionIds: c.customizationOptionIds
-        }))
-      ).toPromise();
+  try {
+    const orderPayload = {
+      OrderItems: this.cart.map(c => ({
+        productID: c.productID,
+        quantity: c.quantity,
+        customizationOptionIds: c.customizationOptionIds || []
+      }))
+    };
 
-      this.paymentStage = 1;
+    const gen: any = await this.http.post(
+      `${this.API}/order/generate?tableNo=${this.selectedTable}&restaurantId=${this.restaurantId}&source=Customer`,
+      orderPayload
+    ).toPromise();
 
-    } catch (e) {
-      console.error(e);
-    } finally {
-      this.busy = false;
-    }
+    this.orderID = gen.orderID;
+    this.orderTotal = gen.totalAmount ?? 0;
+
+    await this.http.post(
+      `${this.API}/order/${this.orderID}/confirm?restaurantId=${this.restaurantId}`,
+      {}
+    ).toPromise();
+
+    this.paymentStage = 1;
+
+  } catch (e) {
+    console.error(e);
+  } finally {
+    this.busy = false;
   }
+}
 
   payLater() {
     this.http.post(
@@ -639,30 +697,48 @@ unitPrice: p.price + customizationPrice
       this.busyPay = false;
     }
   }
+getItemApproxTotal(c: CartItem): number {
+  const product = this.products.find(p => p.productID === c.productID);
+  return (product?.price ?? 0) * (c.quantity ?? 0);
+}
 
-  async initiateUPIPayment() {
-    this.busyPay = true;
-    try {
-      const resp: any = await this.http.post(
-        `${this.API}/order/${this.orderID}/initiate-payment?method=UPI&restaurantId=${this.restaurantId}&channel=Waiter`,
-        {}
-      ).toPromise();
+async initiateUPIPayment() {
+  this.busyPay = true;
 
-      this.upiId = resp?.upiId || '';
-      this.upiName = resp?.upiName || '';
-      this.upiAmount = +resp?.amount || this.orderTotal || 0;
-      this.upiTxnId = resp?.transactionId || '';
-      this.paymentId = resp?.paymentId ?? null;
+  try {
+    const details: any = await this.http.get(
+      `${this.API}/order/${this.restaurantId}/payment-details`
+    ).toPromise();
 
-      this.upiUri = this.buildUpiUri(this.upiId, this.upiName, this.upiAmount, this.upiTxnId, `Order #${this.orderID}`);
+    const resp: any = await this.http.post(
+      `${this.API}/order/${this.orderID}/initiate-payment?method=UPI&restaurantId=${this.restaurantId}&channel=Waiter`,
+      {}
+    ).toPromise();
 
-      this.paymentStage = 2;
-    } catch (e) {
-      console.error('UPI initiation failed:', e);
-    } finally {
-      this.busyPay = false;
-    }
+    this.paymentId = resp?.paymentId ?? null;
+    this.upiAmount = +resp?.amount || this.orderTotal || 0;
+
+    this.upiId = details?.upiID || '';
+    this.upiName = details?.upiName || '';
+
+    this.upiTxnId = `ORDER-${this.orderID}`;
+
+    this.upiUri = this.buildUpiUri(
+      this.upiId,
+      this.upiName,
+      this.upiAmount,
+      this.upiTxnId,
+      `Order #${this.orderID}`
+    );
+
+    this.paymentStage = 2;
+
+  } catch (e) {
+    console.error('UPI initiation failed:', e);
+  } finally {
+    this.busyPay = false;
   }
+}
 
   async initiateCashPayment() {
     this.paymentStage = 3;

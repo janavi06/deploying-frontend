@@ -50,20 +50,18 @@
 
 
 <!-- OFFERS & DISCOUNTS SECTION -->
-<section *ngIf="selectedSection === 'offers'" class="offers-section">
+<!-- <section *ngIf="selectedSection === 'offers'" class="offers-section">
   <div class="row mb-4">
     <div class="col">
       <h2>Offers & Discounts</h2>
     </div>
     <div class="col-auto">
-      <!-- Remove data-bs attributes and use Angular click binding -->
       <button class="btn btn-primary" (click)="openOfferModal()">
         <i class="bi bi-plus-circle"></i> Create Offer
       </button>
     </div>
   </div>
 
-  <!-- Active Offers -->
   <div class="row">
     <div class="col-12">
       <div class="card">
@@ -130,7 +128,6 @@
     </div>
   </div>
 
-  <!-- Offer Performance -->
   <div class="row mt-4">
     <div class="col-md-6">
       <div class="card">
@@ -171,7 +168,7 @@
       </div>
     </div>
   </div>
-</section>
+</section> -->
 
 
 <!-- EXPENSE TRACKING SECTION -->
@@ -892,8 +889,7 @@
 </div>
 
 
-
-<!-- Angular-Controlled Offer Modal -->
+<!-- 
 <div class="modal-backdrop fade show" *ngIf="showOfferModal" (click)="closeOfferModal()"></div>
 <div class="modal fade" [class.show]="showOfferModal" [style.display]="showOfferModal ? 'block' : 'none'">
   <div class="modal-dialog">
@@ -904,7 +900,6 @@
       </div>
       <div class="modal-body">
         <form #offerForm="ngForm">
-          <!-- Offer Type -->
           <div class="mb-3">
             <label class="form-label">Offer Type *</label>
             <div class="btn-group w-100" role="group">
@@ -918,7 +913,6 @@
             </div>
           </div>
 
-          <!-- Discount Value -->
           <div class="mb-3" *ngIf="newOffer.offerType === 'percent'">
             <label class="form-label">Discount Percentage *</label>
             <div class="input-group">
@@ -937,7 +931,6 @@
             </div>
           </div>
 
-          <!-- Offer Code (Optional) -->
           <div class="mb-3">
             <label class="form-label">Offer Code</label>
             <input type="text" class="form-control" [(ngModel)]="newOffer.code" name="code"
@@ -946,14 +939,12 @@
             <small class="text-muted">If no code is provided, offer will be auto-applied to eligible bills</small>
           </div>
 
-          <!-- Description -->
           <div class="mb-3">
             <label class="form-label">Description *</label>
             <textarea class="form-control" [(ngModel)]="newOffer.description" name="description" 
                       rows="2" required placeholder="E.g., Weekend Special, Festival Offer..."></textarea>
           </div>
 
-          <!-- Minimum Bill Amount -->
           <div class="mb-3">
             <label class="form-label">Minimum Bill Amount</label>
             <div class="input-group">
@@ -963,7 +954,6 @@
             </div>
           </div>
 
-          <!-- Validity Period -->
           <div class="row">
             <div class="col-md-6">
               <div class="mb-3">
@@ -981,7 +971,6 @@
             </div>
           </div>
 
-          <!-- Auto Apply -->
           <div class="mb-3 form-check form-switch">
             <input type="checkbox" class="form-check-input" [(ngModel)]="newOffer.autoApply" 
                    name="autoApply" id="autoApply">
@@ -996,4 +985,4 @@
       </div>
     </div>
   </div>
-</div>
+</div> -->

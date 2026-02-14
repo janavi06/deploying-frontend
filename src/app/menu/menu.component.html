@@ -302,12 +302,22 @@
             <td colspan="2">Subtotal</td>
             <td class="text-end">₹{{ orderSummaryDetails?.subtotal | number:'1.2-2' }}</td>
           </tr>
-          <tr *ngIf="appliedOffer" class="text-success">
-            <td colspan="2">
-              Discount ({{ appliedOffer.description }})
-            </td>
-            <td class="text-end">− ₹{{ discountAmount | number:'1.2-2' }}</td>
-          </tr>
+<ng-container *ngIf="orderSummaryDetails as summary">
+  <tr *ngIf="summary.discountAmount > 0" class="text-success">
+
+    <td colspan="2">
+      Discount ({{ summary.appliedOfferName ?? 'Offer' }})
+    </td>
+
+    <td class="text-end">
+      − ₹{{ summary.discountAmount | number:'1.2-2' }}
+    </td>
+
+  </tr>
+</ng-container>
+
+
+
           <tr class="text-primary fw-bold fs-5">
             <td colspan="2">Total</td>
 <td class="text-end">

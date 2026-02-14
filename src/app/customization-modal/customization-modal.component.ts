@@ -43,12 +43,12 @@ export class CustomizationModalComponent {
     this.dialogRef.close(null);
   }
 
-  confirm(): void {
-    this.dialogRef.close({
-      customizationOptionID: this.selectedOption,
-      price: this.getAddonPrice() 
-    });
-  }
+confirm(): void {
+  this.dialogRef.close({
+    customizationOptionID: this.selectedOption
+  });
+}
+
 
   getAddonPrice(): number {
     if (this.selectedOption === null || !this.product.customizationOptions) {

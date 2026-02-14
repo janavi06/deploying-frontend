@@ -94,6 +94,10 @@ interface OrderSummary {
   serviceCharge: number;
   totalAmount: number;
   orderStatus: string; 
+    discountAmount: number;
+  appliedOfferName?: string;
+  appliedOfferDescription?: string;
+
 }
 
 interface PaymentVerificationResponse {
@@ -343,9 +347,7 @@ async ngOnInit(): Promise<void> {
       await this.getOrderSummary();
     }
 
-    if (!this.appliedOffer && this.orderSummaryDetails) {
-      this.evaluateOffers();
-    }
+
 
   } catch (err) {
     console.error('Error loading initial data:', err);
@@ -406,59 +408,8 @@ removeFromCart(productID: number): void {
   }
   this.newCart = this.newCart.filter(i => i.productID !== productID);
 }
-fetchOffers(): void {
-  if (!this.restaurantID) {
-    console.warn("No restaurantID found for fetching offers");
-    return;
-  }
-
-  this.http.get<Offer[]>(`${this.API_BASE}/offer/restaurant/${this.restaurantID}`).subscribe({
-    next: (data) => {
-      this.offers = data;
-      this.evaluateOffers();
-    },
-    error: (err) => {
-      console.error("Failed to fetch offers:", err);
-    }
-  });
-}
-
-evaluateOffers(): void {
-  const subtotal = this.orderSummaryDetails?.subtotal ?? 0;
-
-  const now = new Date();
-
-  const validOffers = this.offers.filter(o =>
-    o.isActive &&
-    o.autoApply &&
-    subtotal >= o.minBillAmount &&
-    new Date(o.validFrom) <= now &&
-    new Date(o.validTo) >= now
-  );
-  let bestOffer: Offer | null = null;
-  let maxDiscount = 0;
-
-  for (const offer of validOffers) {
-    let discount = 0;
-
-    if (offer.discountAmount) {
-      discount = offer.discountAmount;
-    } else if (offer.discountPercent) {
-      discount = (subtotal * offer.discountPercent) / 100;
-    }
-
-    if (discount > maxDiscount) {
-      maxDiscount = discount;
-      bestOffer = offer;
-    }
-  }
-  this.appliedOffer = bestOffer;
-  this.discountAmount = maxDiscount;
 
 
-
-
-}
 getFormattedDate(date: Date | string | null): string {
   if (!date) return 'N/A';
   
@@ -960,7 +911,6 @@ private fetchRestaurantInfo(): void {
       }
 
 
-      this.fetchOffers();
     },
     error: err => {
       console.error('Could not load restaurant info', err);
@@ -993,7 +943,6 @@ private fallbackFetchRestaurantInfo(): void {
         const updatedURL = `${window.location.pathname}?tableNo=${this.restaurantTableID}&restaurantId=${this.restaurantID}`;
         window.history.replaceState({}, '', updatedURL);
 
-        this.fetchOffers();
       },
       error: err => {
         console.error('Fallback also failed to load restaurant info', err);
@@ -1677,7 +1626,21 @@ private async postCartItems(): Promise<void> {
         summary.orderStatus = this.mapStatus(summary.orderStatus);
 
         this.orderSummaryDetails = summary;
-        
+        this.discountAmount = summary.discountAmount || 0;
+
+this.appliedOffer = summary.appliedOfferName
+  ? {
+      offerID: 0,
+      restaurantID: this.restaurantID,
+      description: summary.appliedOfferDescription || summary.appliedOfferName,
+      minBillAmount: 0,
+      validFrom: '',
+      validTo: '',
+      isActive: true,
+      autoApply: true
+    }
+  : null;
+
         this.orderNumber = summary.orderNumber || this.orderID;
 
         this.confirmedCart = [];
@@ -1691,7 +1654,6 @@ private async postCartItems(): Promise<void> {
         });
 
 
-        this.evaluateOffers();
 
         resolve();
 

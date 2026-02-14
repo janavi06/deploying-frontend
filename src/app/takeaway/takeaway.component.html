@@ -1,0 +1,108 @@
+<div class="takeaway-container">
+
+  <!-- ================= LIST MODE ================= -->
+  <ng-container *ngIf="mode === 'list'">
+
+    <div class="header d-flex justify-content-between align-items-center mb-3">
+      <h4 class="mb-0">Takeaway Orders</h4>
+      <button class="btn btn-primary btn-sm"
+              (click)="startNewOrder()">
+        + New Parcel Order
+      </button>
+    </div>
+
+    <div *ngIf="orders.length === 0"
+         class="alert alert-light text-center">
+      No takeaway orders.
+    </div>
+
+    <div *ngFor="let order of orders"
+         class="card shadow-sm p-3 mb-3">
+
+      <div class="d-flex justify-content-between">
+        <div>
+          <strong>Order #{{ order.orderNumber }}</strong>
+          <div class="small text-muted">
+            {{ order.createdAt | date:'shortTime' }}
+          </div>
+        </div>
+
+        <div class="fw-bold text-primary">
+          ₹{{ order.total | number:'1.2-2' }}
+        </div>
+      </div>
+
+      <div class="mt-2">
+        <span class="badge"
+              [ngClass]="getStatusBadge(order.status)">
+          {{ order.status }}
+        </span>
+      </div>
+
+    </div>
+
+  </ng-container>
+
+
+
+  <!-- ================= CREATE MODE ================= -->
+  <!-- ================= CREATE MODE ================= -->
+<ng-container *ngIf="mode === 'create'">
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">Select Products</h4>
+    <button class="btn btn-outline-secondary btn-sm"
+            (click)="cancelCreate()">
+      Back
+    </button>
+  </div>
+
+  <!-- PRODUCT GRID -->
+  <div class="product-grid pb-5">
+
+    <div *ngFor="let product of products"
+         class="product-card"
+         (click)="addToCart(product)">
+
+      <div class="product-name">
+        {{ product.productName }}
+      </div>
+
+      <div class="product-price">
+        ₹{{ product.price | number:'1.0-0' }}
+      </div>
+
+      <div *ngIf="getItemQuantity(product.productID) > 0"
+           class="qty-badge">
+        {{ getItemQuantity(product.productID) }}
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- FIXED CART BAR -->
+  <div class="fixed-cart"
+       *ngIf="cart.length > 0">
+
+    <div class="cart-summary">
+      <div>
+        <strong>{{ cart.length }} Items</strong>
+      </div>
+
+      <div class="cart-total">
+        ₹{{ getCartTotal() | number:'1.2-2' }}
+      </div>
+
+      <button class="btn btn-light btn-sm"
+              (click)="placeOrder()">
+        Place Order
+      </button>
+    </div>
+
+  </div>
+
+</ng-container>
+
+
+</div>
