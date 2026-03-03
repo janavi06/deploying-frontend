@@ -33,7 +33,7 @@ selectedOrder: any = null;
 
   startDate!: string;
   endDate!: string;
-
+orderTypeFilter: string = '';
   loading = false;
   error: string | null = null;
 
@@ -48,7 +48,15 @@ selectedOrder: any = null;
     }
     this.loadOverview();
   }
-
+reloadActiveSection() {
+  if (this.activeSection === 'overview') this.loadOverview();
+  if (this.activeSection === 'live') this.loadLiveOrders();
+  if (this.activeSection === 'sales') this.loadSales();
+  if (this.activeSection === 'orders') this.loadOrders();
+  if (this.activeSection === 'past') this.loadPastOrders();
+  if (this.activeSection === 'items') this.loadItems();
+  if (this.activeSection === 'categories') this.loadCategories();
+}
   setSection(section: any) {
     this.activeSection = section;
     this.error = null;
@@ -135,8 +143,9 @@ closeOrderModal() {
   /* ========== Overview ========== */
   loadOverview() {
     this.loading = true;
-    this.http.get<any>(`${this.api}/order/manager/reports/dashboard-stats?restaurantId=${this.restaurantId}`)
-      .subscribe({
+this.http.get<any>(
+  `${this.api}/order/manager/reports/dashboard-stats?restaurantId=${this.restaurantId}&orderType=${this.orderTypeFilter}`
+)      .subscribe({
         next: res => {
           this.overview = res ?? {};
           this.calculateExtraMetrics();
@@ -158,8 +167,9 @@ closeOrderModal() {
   /* ========== Live Orders ========== */
   loadLiveOrders() {
     this.loading = true;
-    this.http.get<any[]>(`${this.api}/order/manager/reports/live-orders?restaurantId=${this.restaurantId}`)
-      .subscribe({
+this.http.get<any[]>(
+  `${this.api}/order/manager/reports/live-orders?restaurantId=${this.restaurantId}&orderType=${this.orderTypeFilter}`
+)      .subscribe({
         next: res => this.liveOrders = res ?? [],
         error: err => this.handleError(err),
         complete: () => this.loading = false
@@ -173,8 +183,9 @@ closeOrderModal() {
       return;
     }
     this.loading = true;
-    this.http.get<any>(`${this.api}/order/manager/reports/sales?restaurantId=${this.restaurantId}&startDate=${this.startDate}&endDate=${this.endDate}`)
-      .subscribe({
+this.http.get<any>(
+  `${this.api}/order/manager/reports/sales?restaurantId=${this.restaurantId}&startDate=${this.startDate}&endDate=${this.endDate}&orderType=${this.orderTypeFilter}`
+)      .subscribe({
         next: res => this.sales = res,
         error: err => this.handleError(err),
         complete: () => this.loading = false
@@ -184,18 +195,26 @@ closeOrderModal() {
   /* ========== Orders ========== */
   loadOrders() {
     this.loading = true;
-    this.http.get<any>(`${this.api}/order/manager/reports/orders?restaurantId=${this.restaurantId}`)
-      .subscribe({
+this.http.get<any>(
+  `${this.api}/order/manager/reports/orders?restaurantId=${this.restaurantId}&orderType=${this.orderTypeFilter}`
+)      .subscribe({
         next: res => this.orders = res,
         error: err => this.handleError(err),
         complete: () => this.loading = false
       });
   }
+
 loadPastOrders() {
   this.loading = true;
 
   let url = `${this.api}/order/manager/reports/past-orders?restaurantId=${this.restaurantId}`;
 
+  // 🔥 Add Order Type Filter
+  if (this.orderTypeFilter) {
+    url += `&orderType=${encodeURIComponent(this.orderTypeFilter)}`;
+  }
+
+  // 🔥 Add Date Filter
   if (this.dateFilterMode !== 'all' && this.startDate && this.endDate) {
     url += `&startDate=${encodeURIComponent(this.startDate)}&endDate=${encodeURIComponent(this.endDate)}`;
   }
@@ -204,8 +223,6 @@ loadPastOrders() {
     next: res => {
 
       this.pastOrders = (res ?? []).map(o => {
-
-        // ----- STRICT BACKEND ALIGNMENT -----
 
         const cashPaid = Number(o.cashPaid ?? 0);
         const upiPaid = Number(o.upiPaid ?? 0);
@@ -219,15 +236,16 @@ loadPastOrders() {
         return {
           ...o,
 
+          // 🔥 Ensure Order Type Exists
+          orderType: o.orderType ?? 'Unknown',
+
           total,
           cashPaid,
           upiPaid,
           paid: totalPaid,
           remaining,
 
-          paymentType: o.paymentType ?? 'Pending',
-
-          // Keep raw payments array
+paymentMethod: o.paymentMethod ?? 'Pending',
           payments: (o.payments ?? []).map((p: any) => ({
             paymentMethod: p.paymentMethod,
             amount: Number(p.amount ?? 0),
@@ -242,7 +260,6 @@ loadPastOrders() {
             originalPrice: Number(i.originalPrice ?? 0),
             discountAmount: Number(i.discountAmount ?? 0),
             finalPrice: Number(i.finalPrice ?? 0),
-            offerName: i.offerName ?? null
           }))
         };
       });
@@ -252,7 +269,6 @@ loadPastOrders() {
     complete: () => this.loading = false
   });
 }
-
   /* ========== Items ========== */
   loadItems() {
     if (!this.startDate || !this.endDate) {
@@ -290,7 +306,7 @@ loadPastOrders() {
       table: o.table,
       status: o.status,
       total: o.total,
-      paymentType: o.paymentType,
+paymentMethod: o.paymentMethod,
       items: o.items?.map((i: any) =>
         `${i.itemName} x${i.quantity} | Gross:${(i.originalPrice || 0).toFixed(2)} | Discount:${(i.discountAmount || 0).toFixed(2)} | Net:${(i.finalPrice || 0).toFixed(2)} | Offer:${i.offerName || ''}`
       ).join(' || ')

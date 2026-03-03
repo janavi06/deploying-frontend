@@ -1,19 +1,21 @@
 import { Component, Input, OnInit } from '@angular/core';
-import { HttpClient, HttpClientModule } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 import { CommonModule } from '@angular/common';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { FormsModule } from '@angular/forms';
+import { CustomizationModalComponent } from '../customization-modal/customization-modal.component';
 
 @Component({
   selector: 'app-takeaway',
   standalone: true,
-  imports: [CommonModule, HttpClientModule],
+  imports: [CommonModule, MatDialogModule, FormsModule],
   templateUrl: './takeaway.component.html',
   styleUrls: ['./takeaway.component.css']
 })
 export class TakeawayComponent implements OnInit {
 
   @Input() restaurantId!: number;
-
   private API = environment.apiUrl;
 
   mode: 'list' | 'create' = 'list';
@@ -22,7 +24,19 @@ export class TakeawayComponent implements OnInit {
   products: any[] = [];
   cart: any[] = [];
 
-  constructor(private http: HttpClient) {}
+  /* ================= PAYMENT STATE ================= */
+
+  showPaymentModal = false;
+  selectedOrder: any = null;
+
+  paymentMode: 'Cash' | 'UPI' | 'Partial' = 'Cash';
+
+  partialCashAmount: number = 0;
+
+  constructor(
+    private http: HttpClient,
+    private dialog: MatDialog
+  ) {}
 
   ngOnInit(): void {
     this.loadTakeawayOrders();
@@ -38,6 +52,84 @@ export class TakeawayComponent implements OnInit {
     });
   }
 
+  /* ================= PAYMENT FLOW ================= */
+
+  openTakeawayPayment(order: any) {
+    this.selectedOrder = order;
+    this.paymentMode = 'Cash';
+    this.partialCashAmount = 0;
+    this.showPaymentModal = true;
+  }
+
+  closePaymentModal() {
+    this.showPaymentModal = false;
+    this.selectedOrder = null;
+  }
+
+  confirmTakeawayPayment() {
+
+    if (!this.selectedOrder) return;
+
+    const remaining = this.selectedOrder.remainingAmount;
+
+    /* ================= FULL CASH ================= */
+    if (this.paymentMode === 'Cash') {
+      this.processPayment('Cash', remaining);
+      return;
+    }
+
+    /* ================= FULL UPI ================= */
+    if (this.paymentMode === 'UPI') {
+      this.processPayment('UPI', remaining);
+      return;
+    }
+
+    /* ================= PARTIAL ================= */
+    if (this.paymentMode === 'Partial') {
+
+      if (this.partialCashAmount <= 0 || this.partialCashAmount >= remaining) {
+        return;
+      }
+
+      const upiAmount = remaining - this.partialCashAmount;
+
+      // 1️⃣ Cash Payment
+      this.http.put(
+        `${this.API}/order/${this.selectedOrder.orderID}/takeaway/pay-and-serve?restaurantId=${this.restaurantId}`,
+        { method: 'Cash', amount: this.partialCashAmount }
+      ).subscribe({
+        next: () => {
+
+          // 2️⃣ UPI Payment
+          this.http.put(
+            `${this.API}/order/${this.selectedOrder.orderID}/takeaway/pay-and-serve?restaurantId=${this.restaurantId}`,
+            { method: 'UPI', amount: upiAmount }
+          ).subscribe({
+            next: () => {
+              this.closePaymentModal();
+              this.loadTakeawayOrders();
+            }
+          });
+
+        }
+      });
+    }
+  }
+
+  processPayment(method: string, amount: number) {
+    this.http.put(
+      `${this.API}/order/${this.selectedOrder.orderID}/takeaway/pay-and-serve?restaurantId=${this.restaurantId}`,
+      { method, amount }
+    ).subscribe({
+      next: () => {
+        this.closePaymentModal();
+        this.loadTakeawayOrders();
+      }
+    });
+  }
+
+  /* ================= CREATE ================= */
+
   startNewOrder(): void {
     this.mode = 'create';
     this.cart = [];
@@ -48,8 +140,6 @@ export class TakeawayComponent implements OnInit {
     this.mode = 'list';
   }
 
-  /* ================= PRODUCTS ================= */
-
   loadProducts(): void {
     this.http.get<any[]>(
       `${this.API}/product?restaurantId=${this.restaurantId}`
@@ -57,40 +147,69 @@ export class TakeawayComponent implements OnInit {
       this.products = res || [];
     });
   }
-markDone(orderId: number): void {
 
-  this.http.put(
-    `${this.API}/order/${orderId}/complete?restaurantId=${this.restaurantId}`,
-    {}
-  ).subscribe({
-    next: () => {
-      this.loadTakeawayOrders(); // refresh list
-    },
-    error: (err) => console.error('Complete failed', err)
-  });
+  /* ================= CUSTOMIZATION ================= */
 
-}
+  openProductCustomization(product: any): void {
 
-  addToCart(product: any): void {
-    const existing = this.cart.find(x => x.productID === product.productID);
+    if (!product.customizationOptions || product.customizationOptions.length === 0) {
+      this.addToCart(product, []);
+      return;
+    }
+
+    const dialogRef = this.dialog.open(CustomizationModalComponent, {
+      width: '420px',
+      data: { product }
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (!result) return;
+
+      const selectedId = result.customizationOptionID;
+      const customizationIds = selectedId ? [selectedId] : [];
+
+      this.addToCart(product, customizationIds);
+    });
+  }
+
+  /* ================= CART ================= */
+
+  addToCart(product: any, customizationIds: number[]): void {
+
+    const customizationPrice = product.customizationOptions
+      ? product.customizationOptions
+          .filter((c: any) =>
+            customizationIds.includes(c.customizationOptionID))
+          .reduce((sum: number, c: any) => sum + c.fixedPrice, 0)
+      : 0;
+
+    const unitPrice = product.price + customizationPrice;
+
+    const existing = this.cart.find(x =>
+      x.productID === product.productID &&
+      JSON.stringify(x.customizationOptionIds) === JSON.stringify(customizationIds)
+    );
 
     if (existing) {
       existing.quantity++;
-      existing.total = existing.quantity * existing.price;
+      existing.total = existing.quantity * existing.unitPrice;
     } else {
       this.cart.push({
         productID: product.productID,
         productName: product.productName,
-        price: product.price,
+        unitPrice: unitPrice,
         quantity: 1,
-        total: product.price
+        total: unitPrice,
+        customizationOptionIds: customizationIds
       });
     }
   }
-getItemQuantity(productId: number): number {
-  const item = this.cart.find(x => x.productID === productId);
-  return item ? item.quantity : 0;
-}
+
+  getItemQuantity(productId: number): number {
+    return this.cart
+      .filter(x => x.productID === productId)
+      .reduce((sum, x) => sum + x.quantity, 0);
+  }
 
   getCartTotal(): number {
     return this.cart.reduce((sum, item) => sum + item.total, 0);
@@ -103,7 +222,8 @@ getItemQuantity(productId: number): number {
     const payload = {
       orderItems: this.cart.map(item => ({
         productID: item.productID,
-        quantity: item.quantity
+        quantity: item.quantity,
+        customizationOptionIds: item.customizationOptionIds
       }))
     };
 
@@ -114,12 +234,11 @@ getItemQuantity(productId: number): number {
       next: () => {
         this.mode = 'list';
         this.loadTakeawayOrders();
-      },
-      error: (err) => console.error('Order creation failed', err)
+      }
     });
   }
 
-  /* ================= UI HELPERS ================= */
+  /* ================= UI ================= */
 
   getStatusBadge(status: string): string {
     const map: any = {

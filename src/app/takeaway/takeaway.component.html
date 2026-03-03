@@ -1,52 +1,80 @@
 <div class="takeaway-container">
 
-  <!-- ================= LIST MODE ================= -->
-  <ng-container *ngIf="mode === 'list'">
+<!-- ================= TAKEAWAY LIST MODE ================= -->
+<div *ngIf="mode === 'list'">
 
-    <div class="header d-flex justify-content-between align-items-center mb-3">
-      <h4 class="mb-0">Takeaway Orders</h4>
-      <button class="btn btn-primary btn-sm"
-              (click)="startNewOrder()">
-        + New Parcel Order
-      </button>
-    </div>
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="mb-0">Takeaway Orders</h5>
+    <button class="btn btn-primary btn-sm" (click)="startNewOrder()">
+      + New Order
+    </button>
+  </div>
 
-    <div *ngIf="orders.length === 0"
-         class="alert alert-light text-center">
-      No takeaway orders.
-    </div>
+  <div *ngIf="orders.length === 0" class="text-muted text-center py-4">
+    No takeaway orders available.
+  </div>
 
-    <div *ngFor="let order of orders"
-         class="card shadow-sm p-3 mb-3">
+  <div *ngFor="let order of orders" class="card mb-3 shadow-sm">
 
-      <div class="d-flex justify-content-between">
+    <div class="card-body">
+
+      <!-- HEADER -->
+      <div class="d-flex justify-content-between align-items-center mb-2">
         <div>
-          <strong>Order #{{ order.orderNumber }}</strong>
-          <div class="small text-muted">
-            {{ order.createdAt | date:'shortTime' }}
-          </div>
+          <strong>Order #{{ order.orderNumber || order.orderID }}</strong>
+          <span class="badge ms-2" [ngClass]="getStatusBadge(order.orderStatus)">
+            {{ order.orderStatus }}
+          </span>
         </div>
 
         <div class="fw-bold text-primary">
-          ₹{{ order.total | number:'1.2-2' }}
+          ₹{{ order.totalAmount | number:'1.2-2' }}
         </div>
       </div>
 
-      <div class="mt-2">
-        <span class="badge"
-              [ngClass]="getStatusBadge(order.status)">
-          {{ order.status }}
-        </span>
+      <!-- ITEMS -->
+      <ul class="list-unstyled mb-2">
+        <li *ngFor="let item of order.items" class="mb-2">
+
+          <div class="d-flex justify-content-between">
+            <span>
+              {{ item.productName }} × {{ item.quantity }}
+            </span>
+            <span>
+              ₹{{ item.lineTotal | number:'1.2-2' }}
+            </span>
+          </div>
+
+          <!-- CUSTOMIZATIONS -->
+          <div *ngIf="item.customizations?.length > 0"
+               class="text-muted small ms-3">
+
+            <div *ngFor="let c of item.customizations">
+              + {{ c.optionName }}
+              <span *ngIf="c.price > 0">
+                (₹{{ c.price | number:'1.2-2' }})
+              </span>
+            </div>
+
+          </div>
+
+        </li>
+      </ul>
+
+      <div class="d-flex justify-content-end">
+       <button class="btn btn-primary btn-sm"
+        (click)="openTakeawayPayment(order)">
+  Pay & Serve
+</button>
       </div>
 
     </div>
+  </div>
+</div>
 
-  </ng-container>
 
 
-
-  <!-- ================= CREATE MODE ================= -->
-  <!-- ================= CREATE MODE ================= -->
+<!-- ================= CREATE MODE ================= -->
 <ng-container *ngIf="mode === 'create'">
 
   <div class="d-flex justify-content-between align-items-center mb-3">
@@ -57,12 +85,11 @@
     </button>
   </div>
 
-  <!-- PRODUCT GRID -->
   <div class="product-grid pb-5">
 
     <div *ngFor="let product of products"
          class="product-card"
-         (click)="addToCart(product)">
+         (click)="openProductCustomization(product)">
 
       <div class="product-name">
         {{ product.productName }}
@@ -103,6 +130,57 @@
   </div>
 
 </ng-container>
+<!-- ================= PAYMENT MODAL ================= -->
+<div class="modal-backdrop" *ngIf="showPaymentModal">
+  <div class="payment-modal">
 
+    <h5 class="mb-3">Takeaway Payment</h5>
 
+    <div class="mb-3">
+      <strong>Total Remaining:</strong>
+      ₹{{ selectedOrder?.remainingAmount | number:'1.2-2' }}
+    </div>
+
+    <!-- PAYMENT MODE -->
+    <div class="mb-3">
+      <label class="form-label">Payment Type</label>
+      <select class="form-select" [(ngModel)]="paymentMode">
+        <option value="Cash">Cash (Full)</option>
+        <option value="UPI">UPI (Full)</option>
+        <option value="Partial">Partial (Cash + UPI)</option>
+      </select>
+    </div>
+
+    <!-- PARTIAL INPUT -->
+    <div *ngIf="paymentMode === 'Partial'" class="mb-3">
+
+      <label class="form-label">Cash Amount</label>
+      <input type="number"
+             class="form-control"
+             [(ngModel)]="partialCashAmount"
+             [max]="selectedOrder?.remainingAmount"
+             min="1">
+
+      <div class="mt-2 text-muted small">
+        Remaining will be paid via UPI:
+        ₹{{ (selectedOrder?.remainingAmount - partialCashAmount) | number:'1.2-2' }}
+      </div>
+
+    </div>
+
+    <!-- BUTTONS -->
+    <div class="d-flex justify-content-end gap-2">
+      <button class="btn btn-secondary btn-sm"
+              (click)="closePaymentModal()">
+        Cancel
+      </button>
+
+      <button class="btn btn-success btn-sm"
+              (click)="confirmTakeawayPayment()">
+        Confirm Payment
+      </button>
+    </div>
+
+  </div>
+</div>
 </div>

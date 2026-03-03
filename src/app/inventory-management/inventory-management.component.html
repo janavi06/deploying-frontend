@@ -1,10 +1,17 @@
+<!-- inventory-management.component.html -->
 <div class="inventory-container">
   <div class="header">
     <h2>Inventory Management</h2>
+
     <div class="header-actions">
+      <span class="low-stock-badge" *ngIf="getLowStockItems().length > 0">
+        ⚠ {{ getLowStockItems().length }} low stock
+      </span>
+
       <button class="btn btn-primary" (click)="openItemModal()">
         <i class="fas fa-plus"></i> Add Item
       </button>
+
       <button class="btn btn-secondary" (click)="openTransactionModal()">
         <i class="fas fa-exchange-alt"></i> Add Transaction
       </button>
@@ -22,237 +29,306 @@
     <button class="tab" [class.active]="activeTab === 'recipes'" (click)="setActiveTab('recipes')">
       Recipes
     </button>
+    <button class="tab" [class.active]="activeTab === 'conversions'" (click)="setActiveTab('conversions')">
+  Conversions
+</button>
+
+<button class="tab" [class.active]="activeTab === 'audit'" (click)="setActiveTab('audit')">
+  Audit
+</button>
+
+<button class="tab" [class.active]="activeTab === 'analytics'" (click)="setActiveTab('analytics')">
+  Analytics
+</button>
   </div>
 
-  <!-- Inventory Items Tab -->
-  @if (activeTab === 'items') {
-  <div class="tab-content">
+  <!-- ITEMS TAB -->
+  <div *ngIf="activeTab === 'items'">
     <div class="filters">
-      <input type="text" [(ngModel)]="searchTerm" placeholder="Search items..." (input)="searchItems()"
-        class="search-input">
-      <button class="btn btn-outline" (click)="loadItems()">
-        <i class="fas fa-refresh"></i> Refresh
-      </button>
+      <input type="text"
+             [(ngModel)]="searchTerm"
+             placeholder="Search items..."
+             (input)="searchItems()"
+             class="search-input" />
+      <button class="btn btn-outline" (click)="loadItems()">Refresh</button>
     </div>
 
-    <div class="table-container">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Item Name</th>
-            <th>SKU</th>
-            <th>Current Quantity</th>
-            <th>Unit</th>
-            <th>Reorder Level</th>
-            <th>Avg. Cost</th>
-            <th>Status</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (item of items; track item.inventoryItemID) {
-          <tr>
-            <td>{{ item.itemName }}</td>
-            <td>{{ item.sku || '-' }}</td>
-            <td [class.low-stock]="item.currentQuantity <= item.reorderLevel">
-              {{ item.currentQuantity }}
-            </td>
-            <td>{{ item.unitOfMeasure }}</td>
-            <td>{{ item.reorderLevel }}</td>
-            <td>${{ formatNumber(item.averageUnitCost) }}</td>
-            <td>
-              <span [class]="item.isActive ? 'status-active' : 'status-inactive'">
-                {{ item.isActive ? 'Active' : 'Inactive' }}
-              </span>
-            </td>
-            <td class="actions">
-              <button class="btn-icon" (click)="editItem(item)" title="Edit">
-                <i class="fas fa-edit"></i>
-              </button>
-              <button class="btn-icon btn-danger" (click)="deleteItem(item.inventoryItemID)" title="Delete">
-                <i class="fas fa-trash"></i>
-              </button>
-            </td>
-          </tr>
-          }
-          @if (items.length === 0) {
-          <tr>
-            <td colspan="8" class="no-data">No inventory items found</td>
-          </tr>
-          }
-        </tbody>
-      </table>
-    </div>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>SKU</th>
+          <th>Qty</th>
+          <th>Unit</th>
+          <th>Reorder</th>
+          <th>Avg Cost</th>
+          <th>Stock Value</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let item of items">
+          <td>{{ item.itemName }}</td>
+          <td>{{ item.sku || '-' }}</td>
+          <td
+            [class.low-stock]="item.currentQuantity <= item.reorderLevel"
+            [class.normal-stock]="item.currentQuantity > item.reorderLevel"
+          >
+            {{ formatNumber(item.currentQuantity) }}
+          </td>
+          <td>{{ item.unitOfMeasure }}</td>
+          <td>{{ formatNumber(item.reorderLevel) }}</td>
+          <td>{{ formatNumber(item.averageUnitCost) }}</td>
+          <td>{{ formatNumber(getStockValue(item)) }}</td>
+          <td>
+            <span [class]="item.isActive ? 'status-active' : 'status-inactive'">
+              {{ item.isActive ? 'Active' : 'Inactive' }}
+            </span>
+          </td>
+          <td>
+            <button (click)="editItem(item)">Edit</button>
+            <button (click)="deleteItem(item.inventoryItemID)">Delete</button>
+          </td>
+        </tr>
+        <tr *ngIf="items.length === 0">
+          <td colspan="9" style="text-align:center; color:#666;">No inventory items.</td>
+        </tr>
+      </tbody>
+    </table>
   </div>
-  }
+<div *ngIf="activeTab === 'conversions'">
 
-  <!-- Transactions Tab -->
-  @if (activeTab === 'transactions') {
-  <div class="tab-content">
-    <div class="filters">
-      <select [(ngModel)]="selectedItemId" (change)="loadTransactions()" class="filter-select">
-        <option value="">All Items</option>
-        @for (item of items; track item.inventoryItemID) {
-        <option [value]="item.inventoryItemID">{{ item.itemName }}</option>
-        }
-      </select>
-      <input type="date" [(ngModel)]="dateFrom" (change)="loadTransactions()" class="filter-input">
-      <input type="date" [(ngModel)]="dateTo" (change)="loadTransactions()" class="filter-input">
-      <button class="btn btn-outline" (click)="loadTransactions()">
-        <i class="fas fa-refresh"></i> Refresh
-      </button>
-    </div>
+  <select [(ngModel)]="selectedConversionItemId" (change)="loadConversions()">
+    <option value="">Select Item</option>
+    <option *ngFor="let item of items" [value]="item.inventoryItemID">
+      {{ item.itemName }}
+    </option>
+  </select>
 
-    <div class="table-container">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Item</th>
-            <th>Type</th>
-            <th>Quantity Change</th>
-            <th>Unit Cost</th>
-            <th>Reference</th>
-            <th>Notes</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (tx of transactions; track tx.stockTransactionID) {
-          <tr>
-            <td>{{ formatDate(tx.transactionTime) }}</td>
-            <td>{{ getItemName(tx.inventoryItemID) }}</td>
-            <td>
-              <span [class]="getTransactionTypeClass(tx.transactionType)">
-                {{ getTransactionTypeLabel(tx.transactionType) }}
-              </span>
-            </td>
-            <td [class]="tx.quantityChange > 0 ? 'text-success' : 'text-danger'">
-              {{ tx.quantityChange > 0 ? '+' : '' }}{{ tx.quantityChange }}
-            </td>
-            <td>${{ formatNumber(tx.unitCost) }}</td>
-            <td>{{ tx.reference || '-' }}</td>
-            <td>{{ tx.notes || '-' }}</td>
-          </tr>
-          }
-          @if (transactions.length === 0) {
-          <tr>
-            <td colspan="7" class="no-data">No transactions found</td>
-          </tr>
-          }
-        </tbody>
-      </table>
-    </div>
+  <table class="data-table" *ngIf="selectedConversionItemId">
+    <thead>
+      <tr>
+        <th>From Unit</th>
+        <th>To Unit</th>
+        <th>Factor</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let c of conversions">
+        <td>{{ c.fromUnit }}</td>
+        <td>{{ c.toUnit }}</td>
+        <td>{{ c.conversionFactor }}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div *ngIf="selectedConversionItemId">
+    <input [(ngModel)]="newConversion.fromUnit" placeholder="From Unit" />
+    <input [(ngModel)]="newConversion.toUnit" placeholder="To Unit" />
+    <input type="number" step="0.000001" [(ngModel)]="newConversion.conversionFactor" placeholder="Factor" />
+    <button (click)="saveConversion()">Add / Update</button>
   </div>
-  }
 
-  <!-- Recipes Tab -->
-  @if (activeTab === 'recipes') {
-  <div class="tab-content">
-    <div class="filters">
-      <select [(ngModel)]="selectedProductId" (change)="loadRecipes()" class="filter-select">
-        <option value="">Select Product</option>
-        <!-- Add your products here -->
-      </select>
-      <button class="btn btn-primary" (click)="openRecipeModal()">
-        <i class="fas fa-plus"></i> Add Recipe
-      </button>
-    </div>
-
-    <div class="table-container">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Product</th>
-            <th>Inventory Item</th>
-            <th>Quantity Per Unit</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (recipe of recipes; track recipe.productRecipeID) {
-          <tr>
-            <td>{{ getProductName(recipe.productID) }}</td>
-            <td>{{ getItemName(recipe.inventoryItemID) }}</td>
-            <td>{{ recipe.quantityPerUnit }}</td>
-            <td class="actions">
-              <button class="btn-icon btn-danger" (click)="deleteRecipe(recipe.productRecipeID)" title="Delete">
-                <i class="fas fa-trash"></i>
-              </button>
-            </td>
-          </tr>
-          }
-          @if (recipes.length === 0) {
-          <tr>
-            <td colspan="4" class="no-data">No recipes found</td>
-          </tr>
-          }
-        </tbody>
-      </table>
-    </div>
-  </div>
-  }
 </div>
+<div *ngIf="activeTab === 'audit'">
 
-<!-- ITEM MODAL -->
-<div class="modal-backdrop" *ngIf="showItemModal">
-  <div class="modal-box">
-    <div class="modal-header">
-      <h3>Add Inventory Item</h3>
-      <button class="close-btn" (click)="closeItemModal()">&times;</button>
-    </div>
-    <div class="modal-body">
-      <label>Item Name:</label>
-      <input type="text" [(ngModel)]="currentItem.itemName" class="form-control">
+  <select [(ngModel)]="auditItemId">
+    <option value="">Select Item</option>
+    <option *ngFor="let item of items" [value]="item.inventoryItemID">
+      {{ item.itemName }}
+    </option>
+  </select>
 
-      <label>Unit:</label>
-      <input type="text" [(ngModel)]="currentItem.unitOfMeasure" class="form-control">
+  <input type="number" step="0.0001" [(ngModel)]="physicalQuantity" placeholder="Physical Quantity" />
 
-      <label>Reorder Level:</label>
-      <input type="number" [(ngModel)]="currentItem.reorderLevel" class="form-control">
+  <button (click)="performAudit()">Submit Audit</button>
 
-      <div class="actions">
-        <button class="btn btn-outline" (click)="closeItemModal()">Cancel</button>
-        <button class="btn btn-primary" (click)="saveItem()">Save</button>
-      </div>
-    </div>
-  </div>
+  <h3>Variance Report</h3>
+
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Item</th>
+        <th>System Qty</th>
+        <th>Physical Qty</th>
+        <th>Variance</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let v of varianceReport">
+        <td>{{ getInventoryItemName(v.inventoryItemID) }}</td>
+        <td>{{ v.systemQuantity }}</td>
+        <td>{{ v.physicalQuantity }}</td>
+        <td>{{ v.variance }}</td>
+      </tr>
+    </tbody>
+  </table>
+
 </div>
+<div *ngIf="activeTab === 'analytics'">
 
-<!-- TRANSACTION MODAL -->
-<div class="modal-backdrop" *ngIf="showTransactionModal">
-  <div class="modal-box">
-    <div class="modal-header">
-      <h3>Add Transaction</h3>
-      <button class="close-btn" (click)="closeTransactionModal()">&times;</button>
-    </div>
-    <div class="modal-body">
-      <label>Select Item:</label>
-      <select [(ngModel)]="currentTransaction.inventoryItemID" class="form-control">
-        <option value="">Select Item</option>
+  <h3>Inventory Turnover</h3>
+  <div *ngIf="turnover">
+    <p>COGS: {{ turnover.totalCOGS }}</p>
+    <p>Average Inventory: {{ turnover.averageInventoryValue }}</p>
+    <p>Turnover Ratio: {{ turnover.turnoverRatio }}</p>
+  </div>
+
+  <h3>Waste Analytics</h3>
+  <div *ngIf="wasteAnalytics">
+    <p>Waste Value: {{ wasteAnalytics.wasteValue }}</p>
+    <p>Waste %: {{ wasteAnalytics.wastePercentage | number:'1.2-2' }}%</p>
+  </div>
+
+  <h3>Dead Stock</h3>
+  <table class="data-table">
+    <tr *ngFor="let d of deadStock">
+      <td>{{ d.itemName }}</td>
+      <td>{{ d.currentQuantity }}</td>
+      <td>{{ d.stockValue }}</td>
+    </tr>
+  </table>
+
+</div>
+  <!-- TRANSACTIONS TAB -->
+  <div *ngIf="activeTab === 'transactions'">
+    <div class="filters">
+      <select [(ngModel)]="selectedItemId" (change)="loadTransactions()">
+        <option value="">All</option>
         <option *ngFor="let item of items" [value]="item.inventoryItemID">
           {{ item.itemName }}
         </option>
       </select>
+      <button (click)="loadTransactions()">Refresh</button>
+    </div>
 
-      <label>Transaction Type:</label>
-      <select [(ngModel)]="currentTransaction.transactionType" class="form-control">
-        <option value="0">Purchase</option>
-        <option value="1">Adjustment</option>
-        <option value="2">Waste</option>
-        <option value="3">Sale</option>
-        <option value="4">Return</option>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Item</th>
+          <th>Type</th>
+          <th>Qty</th>
+          <th>Cost</th>
+          <th>Reference</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let tx of transactions">
+          <td>{{ formatDate(tx.transactionTime) }}</td>
+          <td>{{ getInventoryItemName(tx.inventoryItemID) }}</td>
+          <td>{{ getTransactionTypeLabel(tx.transactionType) }}</td>
+          <td [class.text-success]="tx.quantityChange > 0" [class.text-danger]="tx.quantityChange < 0">
+            {{ formatNumber(tx.quantityChange) }}
+          </td>
+          <td>{{ formatNumber(tx.unitCost) }}</td>
+          <td>{{ tx.reference || '-' }}</td>
+        </tr>
+        <tr *ngIf="transactions.length === 0">
+          <td colspan="6" style="text-align:center; color:#666;">No transactions.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- RECIPES TAB -->
+  <div *ngIf="activeTab === 'recipes'">
+    <div class="filters" style="display:flex; gap:8px; align-items:center;">
+      <label style="white-space:nowrap;">Product</label>
+      <select [(ngModel)]="selectedProductId" (change)="onProductChange()">
+        <option value="">Select Product</option>
+        <option *ngFor="let p of products" [value]="p.productID">{{ p.productName }}</option>
       </select>
 
-      <label>Quantity:</label>
-      <input type="number" [(ngModel)]="currentTransaction.quantityChange" class="form-control">
+      <button class="btn" (click)="addRecipeItem()" [disabled]="!selectedProductId">+ Add Ingredient</button>
+      <button class="btn" (click)="saveAllRecipeItems()" [disabled]="!selectedProductId || isSavingRecipe">Save All</button>
+      <button class="btn btn-outline" (click)="loadRecipe()" [disabled]="!selectedProductId">Refresh</button>
+    </div>
 
-      <label>Unit Cost:</label>
-      <input type="number" [(ngModel)]="currentTransaction.unitCost" class="form-control">
+    <div *ngIf="!selectedProductId" style="margin-top:12px; color:#666;">Select a product to configure recipe ingredients.</div>
+
+    <table *ngIf="selectedProductId" class="data-table" style="margin-top:12px;">
+      <thead>
+        <tr>
+          <th style="width: 55%;">Ingredient (Inventory Item)</th>
+          <th style="width: 25%;">Qty Per Unit</th>
+          <th style="width: 20%;"></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let r of recipeItems; let i = index">
+          <td>
+            <select [(ngModel)]="r.inventoryItemID">
+              <option [ngValue]="null">Select ingredient</option>
+              <option *ngFor="let item of items" [ngValue]="item.inventoryItemID">{{ item.itemName }}</option>
+            </select>
+          </td>
+
+          <td>
+            <input type="number" step="0.0001" [(ngModel)]="r.quantityPerUnit" />
+          </td>
+
+          <td>
+            <button (click)="saveRecipeItem(r)" [disabled]="isSavingRecipe">Save</button>
+            <button (click)="deleteRecipeItem(r.productRecipeID)" [disabled]="isSavingRecipe">Delete</button>
+          </td>
+        </tr>
+
+        <tr *ngIf="recipeItems.length === 0">
+          <td colspan="3" style="text-align:center; color:#666;">No recipe configured for this product.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ITEM MODAL -->
+  <div class="modal-backdrop" *ngIf="showItemModal">
+    <div class="modal-box">
+      <h3>{{ editingItem ? 'Edit Item' : 'Add Item' }}</h3>
+
+      <input [(ngModel)]="currentItem.itemName" placeholder="Item Name" />
+      <input [(ngModel)]="currentItem.unitOfMeasure" placeholder="Unit" />
+      <input type="number" step="0.0001" [(ngModel)]="currentItem.reorderLevel" placeholder="Reorder Level" />
 
       <div class="actions">
-        <button class="btn btn-outline" (click)="closeTransactionModal()">Cancel</button>
-        <button class="btn btn-primary" (click)="saveTransaction()">Save</button>
+        <button (click)="closeItemModal()">Cancel</button>
+        <button (click)="saveItem()" [disabled]="isSavingItem">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TRANSACTION MODAL -->
+  <div class="modal-backdrop" *ngIf="showTransactionModal">
+    <div class="modal-box">
+      <h3>Add Transaction</h3>
+
+      <select [(ngModel)]="currentTransaction.inventoryItemID">
+        <option value="">Select Item</option>
+        <option *ngFor="let item of items" [value]="item.inventoryItemID">{{ item.itemName }}</option>
+      </select>
+
+      <select [(ngModel)]="currentTransaction.transactionType">
+        <option [value]="0">Purchase (+)</option>
+        <option [value]="1">Adjustment (+/-)</option>
+        <option [value]="2">Waste (−)</option>
+        <option [value]="3">Sale (−)</option>
+        <option [value]="4">Return (+)</option>
+      </select>
+
+      <input type="number" step="0.0001" [(ngModel)]="currentTransaction.quantityChange" placeholder="Quantity (enter positive value)" />
+
+      <input type="number" step="0.0001" [(ngModel)]="currentTransaction.unitCost" placeholder="Unit Cost" />
+
+      <!-- Adjustment Reason -->
+      <input *ngIf="currentTransaction.transactionType == 1" [(ngModel)]="currentTransaction.adjustmentReason" placeholder="Adjustment Reason" />
+
+      <div class="actions">
+        <button (click)="closeTransactionModal()">Cancel</button>
+        <button (click)="saveTransaction()" [disabled]="isSavingTransaction">Save</button>
       </div>
     </div>
   </div>
 </div>
+
+<!-- minimal embedded styles to make the view usable if external CSS is missing -->

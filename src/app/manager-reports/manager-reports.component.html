@@ -10,7 +10,16 @@
 
   <!-- OVERVIEW -->
   <section *ngIf="activeSection === 'overview'" class="dashboard-grid">
+<div class="filter-bar mb-3">
+  <label>Order Type:</label>
 
+  <select [(ngModel)]="orderTypeFilter" (change)="reloadActiveSection()">
+    <option value="">All</option>
+    <!-- <option value="QR">QR (Dine-In)</option> -->
+    <option value="Waiter">Dine-In</option>
+    <option value="Takeaway">Takeaway</option>
+  </select>
+</div>
     <div class="stats-row">
       <div class="stat-card">
         <span class="label">Total Revenue (Net)</span>
@@ -73,12 +82,23 @@
       ⬇ Export CSV
     </button>
   </div>
+<div class="filter-bar mb-3">
+  <label>Order Type:</label>
 
+  <select [(ngModel)]="orderTypeFilter" (change)="reloadActiveSection()">
+    <option value="">All</option>
+    <option value="QR">QR (Dine-In)</option>
+    <option value="Waiter">Waiter</option>
+    <option value="Takeaway">Takeaway</option>
+  </select>
+</div>
   <table>
     <thead>
       <tr>
         <th>Order #</th>
         <th>Date</th>
+            <th>Type</th> <!-- 🔥 NEW -->
+
         <th>Table</th>
         <th>Status</th>
         <th>Total (Net)</th>
@@ -87,25 +107,38 @@
     </thead>
 
     <tbody>
+
       <tr *ngFor="let o of pastOrders"
           (click)="openOrderModal(o)"
           style="cursor:pointer">
 
         <td>#{{ o.orderNumber }}</td>
         <td>{{ o.date | date:'short' }}</td>
+
+         <td>
+    <span class="badge"
+      [ngClass]="{
+        'takeaway-badge': o.orderType === 'Takeaway',
+        'qr-badge': o.orderType === 'QR',
+        'waiter-badge': o.orderType === 'Waiter'
+      }">
+      {{ o.orderType }}
+    </span>
+  </td>
         <td>{{ o.table }}</td>
         <td>{{ o.status }}</td>
         <td><strong>₹{{ o.total }}</strong></td>
 
         <td>
-          <span class="badge"
-            [ngClass]="{
-              'full': o.paymentType === 'Full',
-              'partial': o.paymentType === 'Partial',
-              'pending': o.paymentType === 'Pending'
-            }">
-            {{ o.paymentType }}
-          </span>
+       <span class="badge"
+  [ngClass]="{
+    'cash-badge': o.paymentMethod === 'Cash',
+    'upi-badge': o.paymentMethod === 'UPI',
+    'mixed-badge': o.paymentMethod?.includes('+'),
+    'pending': o.paymentMethod === 'Pending'
+  }">
+  {{ o.paymentMethod }}
+</span>
         </td>
       </tr>
 
@@ -129,11 +162,13 @@
     </div>
 
     <!-- BASIC INFO -->
-    <div class="mb-3">
-      <strong>Date:</strong> {{ selectedOrder.date | date:'short' }} <br>
-      <strong>Table:</strong> {{ selectedOrder.table }} <br>
-      <strong>Status:</strong> {{ selectedOrder.status }}
-    </div>
+<!-- BASIC INFO -->
+<div class="mb-3">
+  <strong>Date:</strong> {{ selectedOrder.date | date:'short' }} <br>
+  <strong>Order Type:</strong> {{ selectedOrder.orderType }} <br>
+  <strong>Table:</strong> {{ selectedOrder.table }} <br>
+  <strong>Status:</strong> {{ selectedOrder.status }}
+</div>
 
     <!-- ITEMS -->
     <h5>Items</h5>
@@ -211,7 +246,7 @@
 
 <div class="summary-line">
   <span>Status</span>
-  <span>{{ selectedOrder.paymentType }}</span>
+<span>{{ selectedOrder.paymentMethod }}</span>
 </div>
 
 <hr>
