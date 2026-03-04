@@ -1319,32 +1319,66 @@ async markCashReceived(): Promise<void> {
   //     console.error('Print failed:', error);
   //   }
   // }
- async printOrderBill(orderId: number): Promise<void> {
+//  async printOrderBill(orderId: number): Promise<void> {
+//   if (!this.restaurantId) return;
+
+//   try {
+//     // fetch the latest order snapshot from backend
+//     const order = await this.fetchOrderById(orderId);
+
+//     if (!order) {
+//       console.warn('Order not found for printing:', orderId);
+//       return;
+//     }
+
+//     const total = order.totalAmount ?? 0;
+//     const latestPaymentAmount = order.latestPayment?.amount ?? 0;
+//     const latestPaymentStatus = order.latestPayment?.status ?? '';
+
+//     const paidStatuses = ['Paid', 'Completed', 'Success'];
+
+//     // allow print if latest payment status is a paid status OR paid amount >= total
+//     if (!(paidStatuses.includes(latestPaymentStatus) || latestPaymentAmount >= total)) {
+//       // show clear message to user rather than blindly calling print endpoint
+//       alert(`Cannot print bill: payment incomplete. total=${total}, paid=${latestPaymentAmount}`);
+//       return;
+//     }
+
+//     // call print endpoint
+//     await firstValueFrom(
+//       this.http.post(
+//         `${this.API_BASE}/order/${orderId}/print-bill`,
+//         {},
+//         {
+//           headers: this.httpOptions.headers,
+//           params: new HttpParams().set('restaurantId', String(this.restaurantId))
+//         }
+//       )
+//     );
+
+//   } catch (error: any) {
+//     // keep the existing error logging but present payload to dev
+//     console.error('Print failed:', error);
+//     // if backend returned friendly message, show it
+//     if (error?.error?.message) {
+//       alert(error.error.message);
+//     }
+//   }
+// }
+
+async printOrderBill(orderId: number): Promise<void> {
   if (!this.restaurantId) return;
 
   try {
-    // fetch the latest order snapshot from backend
-    const order = await this.fetchOrderById(orderId);
+    // Use server-side payment summary for accurate paid vs total check
+    const summary = await this.getPaymentSummary(orderId);
 
-    if (!order) {
-      console.warn('Order not found for printing:', orderId);
+    // Allow ₹1 tolerance for decimal rounding
+    if (summary.totalAmount > 0 && summary.paidAmount < (summary.totalAmount - 1)) {
+      alert(`Cannot print bill: payment incomplete.\nTotal: ₹${summary.totalAmount.toFixed(2)}\nPaid: ₹${summary.paidAmount.toFixed(2)}\nRemaining: ₹${summary.remainingAmount.toFixed(2)}`);
       return;
     }
 
-    const total = order.totalAmount ?? 0;
-    const latestPaymentAmount = order.latestPayment?.amount ?? 0;
-    const latestPaymentStatus = order.latestPayment?.status ?? '';
-
-    const paidStatuses = ['Paid', 'Completed', 'Success'];
-
-    // allow print if latest payment status is a paid status OR paid amount >= total
-    if (!(paidStatuses.includes(latestPaymentStatus) || latestPaymentAmount >= total)) {
-      // show clear message to user rather than blindly calling print endpoint
-      alert(`Cannot print bill: payment incomplete. total=${total}, paid=${latestPaymentAmount}`);
-      return;
-    }
-
-    // call print endpoint
     await firstValueFrom(
       this.http.post(
         `${this.API_BASE}/order/${orderId}/print-bill`,
@@ -1357,16 +1391,12 @@ async markCashReceived(): Promise<void> {
     );
 
   } catch (error: any) {
-    // keep the existing error logging but present payload to dev
     console.error('Print failed:', error);
-    // if backend returned friendly message, show it
     if (error?.error?.message) {
       alert(error.error.message);
     }
   }
 }
-
-
   private async loadRestaurantDetails(): Promise<void> {
     try {
       if (!this.restaurantId) {
