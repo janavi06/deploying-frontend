@@ -2254,16 +2254,30 @@ async collectWaiterPayment(orderId: number, method: 'Cash' | 'UPI'): Promise<voi
     return this.productQuantities.get(product.productID) || 0;
   }
 
-  increaseProductQuantity(product: any): void {
-    if (this.isOrderLocked()) return;
+increaseProductQuantity(product: any): void {
 
-    if (product.customizationOptions?.length) {
-      this.openCustomizationModal(product, 1);
-      return;
-    }
+  console.log("========== INCREASE PRODUCT QUANTITY ==========");
+  console.log("Product:", product.productName);
+  console.log("Customization options:", product.customizationOptions);
 
-    this.addProductWithoutCustomization(product, 1);
+  if (this.isOrderLocked()) {
+    console.warn("Order is locked → cannot add item");
+    return;
   }
+
+  // If product has customization options
+  if (product.customizationOptions && product.customizationOptions.length > 0) {
+
+    console.log("Product has customization → opening modal");
+
+    this.openCustomizationModal(product, 1);
+    return;
+  }
+
+  console.log("Product has NO customization → adding directly");
+
+  this.addProductWithoutCustomization(product, 1);
+}
 
 
   decreaseProductQuantity(product: any): void {
@@ -2318,64 +2332,125 @@ private recalculateOrderTotal(order: any): number {
     this.productQuantities.clear();
     this.showProductList = false;
   }
-  openCustomizationModal(product: any, quantity: number): void {
-    const dialogRef = this.dialog.open(CustomizationModalComponent, {
-      width: '400px',
-      panelClass: 'customization-dialog',
-      data: { product }
-    });
+openCustomizationModal(product: any, quantity: number): void {
 
-    dialogRef.afterClosed().subscribe(result => {
-      if (!result || !result.customizationOptionID) return;
+  console.log("========== OPEN CUSTOMIZATION MODAL ==========");
+  console.log("Product:", product);
+  console.log("Quantity:", quantity);
 
-      // ✅ 1. SAVE DATA FOR BACKEND
-      this.pendingChanges.itemsToAdd.push({
+  const dialogRef = this.dialog.open(CustomizationModalComponent, {
+    width: '400px',
+    panelClass: 'customization-dialog',
+    data: { product }
+  });
+
+  dialogRef.afterClosed().subscribe(result => {
+
+    console.log("Customization modal result:", result);
+
+    // 🔥 CASE 1: USER CLOSED MODAL / NO CUSTOMIZATION SELECTED
+    if (!result || !result.customizationOptionID) {
+
+      console.log("No customization selected → adding base product");
+
+      const item = {
         productID: product.productID,
-        quantity,
-        customizationOptionIds: [result.customizationOptionID]
-      });
+        quantity: quantity,
+        customizationOptionIds: []
+      };
 
-      // ✅ 2. UI PREVIEW ONLY
-      const customization = product.customizationOptions?.find(
-        (c: any) => c.customizationOptionID === result.customizationOptionID
-      );
+      console.log("Item being pushed to pendingChanges:", item);
 
+      this.pendingChanges.itemsToAdd.push(item);
+
+      console.log("pendingChanges.itemsToAdd:", this.pendingChanges.itemsToAdd);
+
+      // UI preview
       this.selectedOrderForEdit.items.push({
         productID: product.productID,
         productName: product.productName,
-        quantity,
-        unitPrice: product.price, // BASE PRICE ONLY
-        customizations: customization ? [{
-          customizationOptionID: customization.customizationOptionID,
-          optionName: customization.name,
-          fixedPrice: customization.fixedPrice
-        }] : []
+        quantity: quantity,
+        unitPrice: product.price,
+        customizations: []
       });
 
       this.selectedOrderForEdit.totalAmount =
         this.recalculateOrderTotal(this.selectedOrderForEdit);
-    });
-  }
 
-  addProductWithoutCustomization(product: any, quantity: number): void {
-    this.pendingChanges.itemsToAdd.push({
+      console.log("Order items after add:", this.selectedOrderForEdit.items);
+
+      return;
+    }
+
+    // 🔥 CASE 2: CUSTOMIZATION SELECTED
+
+    const item = {
       productID: product.productID,
-      quantity,
-      customizationOptionIds: []
-    });
+      quantity: quantity,
+      customizationOptionIds: [result.customizationOptionID]
+    };
+
+    console.log("Adding item WITH customization:", item);
+
+    this.pendingChanges.itemsToAdd.push(item);
+
+    console.log("pendingChanges.itemsToAdd:", this.pendingChanges.itemsToAdd);
+
+    const customization = product.customizationOptions?.find(
+      (c: any) => c.customizationOptionID === result.customizationOptionID
+    );
 
     this.selectedOrderForEdit.items.push({
       productID: product.productID,
       productName: product.productName,
-      quantity,
+      quantity: quantity,
       unitPrice: product.price,
-      customizations: []
+      customizations: customization ? [{
+        customizationOptionID: customization.customizationOptionID,
+        optionName: customization.name,
+        fixedPrice: customization.fixedPrice
+      }] : []
     });
 
     this.selectedOrderForEdit.totalAmount =
       this.recalculateOrderTotal(this.selectedOrderForEdit);
-  }
 
+    console.log("Order items after customization:", this.selectedOrderForEdit.items);
+  });
+}
+
+addProductWithoutCustomization(product: any, quantity: number): void {
+
+  console.log("========== ADD PRODUCT WITHOUT CUSTOMIZATION ==========");
+  console.log("Product:", product);
+  console.log("Quantity:", quantity);
+
+  const item = {
+    productID: product.productID,
+    quantity: quantity,
+    customizationOptionIds: []
+  };
+
+  console.log("Item pushed to pendingChanges:", item);
+
+  this.pendingChanges.itemsToAdd.push(item);
+
+  console.log("pendingChanges.itemsToAdd:", this.pendingChanges.itemsToAdd);
+
+  // UI preview
+  this.selectedOrderForEdit.items.push({
+    productID: product.productID,
+    productName: product.productName,
+    quantity: quantity,
+    unitPrice: product.price,
+    customizations: []
+  });
+
+  this.selectedOrderForEdit.totalAmount =
+    this.recalculateOrderTotal(this.selectedOrderForEdit);
+
+  console.log("Order items after add:", this.selectedOrderForEdit.items);
+}
 
   removeOrderItem(item: any): void {
 
