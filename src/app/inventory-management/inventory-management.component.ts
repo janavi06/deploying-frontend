@@ -96,7 +96,8 @@ newConversion: Partial<UnitConversion> = {
 
   showItemModal = false;
   showTransactionModal = false;
-
+lowStockItems: InventoryItem[] = [];
+lastLowStockCount = 0;
   isSavingTransaction = false;
   isSavingItem = false;
   isSavingRecipe = false;
@@ -197,6 +198,26 @@ saveConversion() {
       }
     });
 }
+updateLowStockState() {
+
+  this.lowStockItems = this.items.filter(
+    i => i.currentQuantity <= (i.reorderLevel ?? 0)
+  );
+
+  // trigger alert when new low stock appears
+  if (this.lowStockItems.length > this.lastLowStockCount) {
+
+    const names = this.lowStockItems
+      .map(i => i.itemName)
+      .join(', ');
+
+    console.warn('Low stock items:', names);
+
+    alert(`Low stock detected for: ${names}`);
+  }
+
+  this.lastLowStockCount = this.lowStockItems.length;
+}
   setActiveTab(tab: any) {
     this.activeTab = tab;
     // always refresh items when switching (keeps UI in sync)
@@ -223,29 +244,58 @@ loadAnalytics() {
   /******************************
    * Items
    ******************************/
-  loadItems() {
-    let url = `${environment.apiUrl}/inventory/items?restaurantId=${this.restaurantId}`;
-    if (this.searchTerm) url += `&search=${encodeURIComponent(this.searchTerm)}`;
-    const sub = this.http.get<any[]>(url).subscribe({
-      next: res => {
-        this.items = (res || []).map(i => ({
-          inventoryItemID: i.inventoryItemID ?? i.inventoryItemID ?? i.InventoryItemID ?? 0,
-          itemName: i.itemName ?? i.itemName ?? i.ItemName ?? '',
-          sku: i.sku ?? i.sku ?? i.SKU ?? null,
-          unitOfMeasure: i.unitOfMeasure ?? i.unitOfMeasure ?? i.UnitOfMeasure ?? 'unit',
-          currentQuantity: Number(i.currentQuantity ?? i.CurrentQuantity ?? 0),
-          reorderLevel: Number(i.reorderLevel ?? i.ReorderLevel ?? 0),
-          averageUnitCost: Number(i.averageUnitCost ?? i.AverageUnitCost ?? 0),
-          isActive: i.isActive ?? i.IsActive ?? true,
-          restaurantID: i.restaurantID ?? i.RestaurantID ?? this.restaurantId
-        }));
-      },
-      error: () => {
-        this.items = [];
+loadItems() {
+
+  let url = `${environment.apiUrl}/inventory/items?restaurantId=${this.restaurantId}`;
+
+  if (this.searchTerm)
+    url += `&search=${encodeURIComponent(this.searchTerm)}`;
+
+  const sub = this.http.get<any[]>(url).subscribe({
+
+    next: res => {
+
+      this.items = (res || []).map(i => ({
+        inventoryItemID: i.inventoryItemID ?? i.InventoryItemID ?? 0,
+        itemName: i.itemName ?? i.ItemName ?? '',
+        sku: i.sku ?? i.SKU ?? null,
+        unitOfMeasure: i.unitOfMeasure ?? i.UnitOfMeasure ?? 'unit',
+        currentQuantity: Number(i.currentQuantity ?? i.CurrentQuantity ?? 0),
+        reorderLevel: Number(i.reorderLevel ?? i.ReorderLevel ?? 0),
+        averageUnitCost: Number(i.averageUnitCost ?? i.AverageUnitCost ?? 0),
+        isActive: i.isActive ?? i.IsActive ?? true,
+        restaurantID: i.restaurantID ?? i.RestaurantID ?? this.restaurantId
+      }));
+
+      // 🔔 Update low stock cache
+      this.lowStockItems = this.items.filter(
+        i => i.currentQuantity <= (i.reorderLevel ?? 0)
+      );
+
+      // 🔔 Notify only if new low stock detected
+      if (this.lowStockItems.length > this.lastLowStockCount) {
+
+        const names = this.lowStockItems
+          .map(i => i.itemName)
+          .join(', ');
+
+        console.warn('Low stock detected:', names);
+
+        alert(`Low stock items: ${names}`);
       }
-    });
-    this.subs.push(sub);
-  }
+
+      this.lastLowStockCount = this.lowStockItems.length;
+    },
+
+    error: () => {
+      this.items = [];
+      this.lowStockItems = [];
+    }
+
+  });
+
+  this.subs.push(sub);
+}
 
   searchItems() {
     clearTimeout((this as any)._searchTimer);
@@ -462,10 +512,13 @@ loadAnalytics() {
     }
   }
 
-  getLowStockItems() {
-    return this.items.filter(i => i.currentQuantity <= (i.reorderLevel ?? 0));
-  }
+  // getLowStockItems() {
+  //   return this.items.filter(i => i.currentQuantity <= (i.reorderLevel ?? 0));
+  // }
 
+getLowStockItems() {
+  return this.lowStockItems;
+}
   getStockValue(item: InventoryItem) {
     return (item.currentQuantity ?? 0) * (item.averageUnitCost ?? 0);
   }

@@ -728,3 +728,46 @@ input:focus, select:focus {
   }
 
 }
+.low-stock-badge{
+  background:#fff3cd;
+  color:#856404;
+  padding:6px 10px;
+  border-radius:6px;
+  font-weight:600;
+}
+
+.low-stock{
+  color:#ff9800;
+  font-weight:600;
+}
+
+.critical-stock{
+  color:#e53935;
+  font-weight:700;
+}
+
+.out-stock{
+  color:#b71c1c;
+  font-weight:800;
+}
+
+.low-stock-alert{
+  background:#fff8e1;
+  border:1px solid #ffd54f;
+  padding:12px;
+  margin-bottom:12px;
+  border-radius:8px;
+}
+
+.alert-items{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.alert-item{
+  background:#fff;
+  border:1px solid #ffc107;
+  padding:6px 10px;
+  border-radius:6px;
+}

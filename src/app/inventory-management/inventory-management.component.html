@@ -4,9 +4,9 @@
     <h2>Inventory Management</h2>
 
     <div class="header-actions">
-      <span class="low-stock-badge" *ngIf="getLowStockItems().length > 0">
-        ⚠ {{ getLowStockItems().length }} low stock
-      </span>
+<span class="low-stock-badge" *ngIf="lowStockItems.length > 0">
+  ⚠ {{ lowStockItems.length }} low stock
+</span>
 
       <button class="btn btn-primary" (click)="openItemModal()">
         <i class="fas fa-plus"></i> Add Item
@@ -17,7 +17,25 @@
       </button>
     </div>
   </div>
+<div class="low-stock-alert" *ngIf="lowStockItems.length > 0">
 
+  <div class="alert-title">
+    ⚠ Low Stock Items
+  </div>
+
+  <div class="alert-items">
+
+    <div class="alert-item" *ngFor="let item of lowStockItems">
+      <strong>{{ item.itemName }}</strong>
+      <span>
+        {{ formatNumber(item.currentQuantity) }} {{ item.unitOfMeasure }}
+        remaining
+      </span>
+    </div>
+
+  </div>
+
+</div>
   <!-- Tabs -->
   <div class="tabs">
     <button class="tab" [class.active]="activeTab === 'items'" (click)="setActiveTab('items')">
@@ -72,9 +90,10 @@
           <td>{{ item.itemName }}</td>
           <td>{{ item.sku || '-' }}</td>
           <td
-            [class.low-stock]="item.currentQuantity <= item.reorderLevel"
-            [class.normal-stock]="item.currentQuantity > item.reorderLevel"
-          >
+  [class.out-stock]="item.currentQuantity <= 0"
+  [class.critical-stock]="item.currentQuantity > 0 && item.currentQuantity <= item.reorderLevel * 0.5"
+  [class.low-stock]="item.currentQuantity <= item.reorderLevel && item.currentQuantity > item.reorderLevel * 0.5"
+>
             {{ formatNumber(item.currentQuantity) }}
           </td>
           <td>{{ item.unitOfMeasure }}</td>

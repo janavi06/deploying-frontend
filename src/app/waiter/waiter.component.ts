@@ -2418,7 +2418,31 @@ openCustomizationModal(product: any, quantity: number): void {
     console.log("Order items after customization:", this.selectedOrderForEdit.items);
   });
 }
+async printOrderBillAnytime(orderId: number): Promise<void> {
+  if (!this.restaurantId) return;
 
+  try {
+
+    await firstValueFrom(
+      this.http.post(
+        `${this.API_BASE}/order/${orderId}/print-preview`,
+        {},
+        {
+          headers: this.httpOptions.headers,
+          params: new HttpParams()
+            .set('restaurantId', String(this.restaurantId))
+        }
+      )
+    );
+
+  } catch (error: any) {
+    console.error('Print failed:', error);
+
+    if (error?.error?.message) {
+      alert(error.error.message);
+    }
+  }
+}
 addProductWithoutCustomization(product: any, quantity: number): void {
 
   console.log("========== ADD PRODUCT WITHOUT CUSTOMIZATION ==========");
