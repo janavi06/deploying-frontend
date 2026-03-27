@@ -186,22 +186,24 @@ originalOfferId: number | null = null;
       itemsToRemove: [],
       itemsToAdd: []
     };
-  markAsPaidModal = {
-    open: false,
-    orderId: 0,
-    orderNumber: 0,
-    tableNo: 0,
-    amount: 0,            // total order amount
-    selectedMethod: 'Cash' as 'Cash' | 'UPI',
-    busy: false,
-    paymentId: 0,
+markAsPaidModal = {
+  open: false,
+  orderId: 0,
+  orderNumber: 0,
+  tableNo: 0,
 
-    // 🔽 ADD THESE
-    paymentType: 'FULL' as 'FULL' | 'PARTIAL',
-    paidSoFar: 0,
-    upiAmount: 0,
-    cashAmount: 0
-  };
+  totalAmount: 0,     // full order
+  paidSoFar: 0,       // already paid
+  remaining: 0,       // 🔥 USE THIS
+
+  selectedMethod: 'Cash' as 'Cash' | 'UPI',
+  busy: false,
+  paymentId: 0,
+
+  paymentType: 'FULL' as 'FULL' | 'PARTIAL',
+  upiAmount: 0,
+  cashAmount: 0
+};
 showInlineOfferModal = false;
 
 inlineOffer: any = {
@@ -435,8 +437,7 @@ async createInlineOffer(): Promise<void> {
     );
 
     // 🔥 Refresh offers list
-    this.loadAvailableOffers();
-
+this.loadAvailableOffersForOrder(this.selectedOrderForEdit.orderID);
     // 🔥 Auto select new offer
     setTimeout(() => {
       this.selectedOfferId = newOffer.offerID;
@@ -1078,7 +1079,7 @@ async initiateUpi(): Promise<void> {
 
       const complete: any = await firstValueFrom(
         this.http.put(
-          `${this.API_BASE}/order/payments/${this.collectModal.paymentId}/complete?restaurantId=${this.restaurantId}`,
+          `${this.API_BASE}/order/payments/${this.collectModal.paymentId}/clear?restaurantId=${this.restaurantId}`,
           {},
           this.httpOptions
         )
@@ -1191,14 +1192,15 @@ async initiateUpi(): Promise<void> {
         throw new Error('Payment data not found');
       }
 
-      await firstValueFrom(
-        this.http.put(
-          `${this.API_BASE}/order/payments/${this.collectModal.paymentId}/complete?restaurantId=${this.restaurantId}`,
-          {},
-          this.httpOptions
-        )
-      );
-
+await firstValueFrom(
+  this.http.put(
+    `${this.API_BASE}/order/pending-payments/${this.collectModal.paymentId}/clear`,
+    {},
+    {
+      params: new HttpParams().set('restaurantId', String(this.restaurantId))
+    }
+  )
+);
       await this.printOrderBill(this.collectModal.orderId);
 
       this.onPaymentCleared(this.collectModal.paymentId);
@@ -1246,11 +1248,15 @@ async markCashReceived(): Promise<void> {
       alert('This order was completed by another station.');
     } else {
       // 2. Complete
-      await firstValueFrom(
-        this.http.put(`${this.API_BASE}/order/payments/${started.paymentId}/complete`, {}, 
-          { params: new HttpParams().set('restaurantId', String(this.restaurantId)) }
-        )
-      );
+await firstValueFrom(
+  this.http.put(
+    `${this.API_BASE}/order/pending-payments/${started.paymentId}/clear`,
+    {},
+    {
+      params: new HttpParams().set('restaurantId', String(this.restaurantId))
+    }
+  )
+);
       await this.printOrderBill(this.collectModal.orderId);
     }
 
@@ -2166,13 +2172,15 @@ async collectWaiterPayment(orderId: number, method: 'Cash' | 'UPI'): Promise<voi
     );
 
     if (method === 'Cash') {
-      await firstValueFrom(
-        this.http.put(
-          `${this.API_BASE}/order/payments/${resp.paymentId}/complete`,
-          {},
-          { params: new HttpParams().set('restaurantId', String(this.restaurantId)) }
-        )
-      );
+await firstValueFrom(
+  this.http.put(
+    `${this.API_BASE}/order/pending-payments/${resp.paymentId}/clear`,
+    {},
+    {
+      params: new HttpParams().set('restaurantId', String(this.restaurantId))
+    }
+  )
+);
       await this.printOrderBill(orderId);
       this.getOrders();
       this.fetchPendingPayments();
@@ -2558,88 +2566,36 @@ addProductWithoutCustomization(product: any, quantity: number): void {
       order.orderStatus !== OrderStatus.Cancelled;
   }
 // waiter.component.ts
-async openMarkAsPaidModal(order: Order): Promise<void> {
+openMarkAsPaidModal(order: Order) {
+  const total = Number(order.totalAmount || 0);
+  const paid = Number(order.latestPayment?.amount || 0);
+  const remaining = Math.max(total - paid, 0);
 
-  // 🔥 CRITICAL FIX
-  this.showEditOrderModal = false;
-  this.selectedOrderForEdit = null;
-
-  const summary = await this.getPaymentSummary(order.orderID);
+  if (remaining <= 0) {
+    alert('Order already fully paid');
+    return;
+  }
 
   this.markAsPaidModal = {
     open: true,
     orderId: order.orderID,
-    orderNumber: order.orderNumber || order.orderID,
+    orderNumber: order.orderNumber,
     tableNo: order.tableNo || 0,
-    amount: summary.remainingAmount > 0 
-              ? summary.remainingAmount 
-              : summary.totalAmount,
-    paidSoFar: summary.paidAmount,
+
+    totalAmount: total,
+    paidSoFar: paid,
+    remaining: remaining,
+
     selectedMethod: 'Cash',
     busy: false,
     paymentId: 0,
-    paymentType: summary.remainingAmount > 0 ? 'PARTIAL' : 'FULL',
+
+    paymentType: 'FULL',
     upiAmount: 0,
-    cashAmount: 0
-    
+    cashAmount: remaining // auto-fill
   };
 }
 
-async confirmPartialPayment(): Promise<void> {
-  try {
-    this.markAsPaidModal.busy = true;
-
-    // 🔥 FIX 1: Fetch the ACTUAL remaining balance from server (accounts for offers)
-    const summary = await this.getPaymentSummary(this.markAsPaidModal.orderId);
-
-    if (summary.remainingAmount <= 0) {
-      alert('This order has already been fully paid or discounted to zero.');
-      this.closeMarkAsPaidModal();
-      return;
-    }
-
-    const upi = Number(this.markAsPaidModal.upiAmount || 0);
-    const cash = Number(this.markAsPaidModal.cashAmount || 0);
-    const totalToPay = upi + cash;
-
-    if (totalToPay <= 0) {
-      alert('Please enter a valid amount.');
-      return;
-    }
-
-    // 🔥 FIX 2: Validate against discounted total
-    // We use a small tolerance (0.01) for decimal precision
-    if (totalToPay > summary.remainingAmount + 0.01) {
-      alert(`The split amounts (₹${totalToPay}) exceed the actual remaining balance (₹${summary.remainingAmount.toFixed(2)}).`);
-      return;
-    }
-
-    // 🔹 Pay UPI First
-    if (upi > 0) {
-      await this.safePartialPay('UPI', upi);
-    }
-
-    // 🔹 Pay Cash Second (fetch summary again if needed, or use safePartialPay logic)
-    if (cash > 0) {
-      // Re-fetch to see what's left after UPI
-      const secondSummary = await this.getPaymentSummary(this.markAsPaidModal.orderId);
-      if (secondSummary.remainingAmount > 0) {
-         const remainingAfterUpi = Math.min(cash, secondSummary.remainingAmount);
-         await this.safePartialPay('CASH', remainingAfterUpi);
-      }
-    }
-
-    this.closeMarkAsPaidModal();
-    await this.getOrders(); // Refresh UI list
-    this.fetchPendingPayments();
-
-  } catch (err: any) {
-    console.error('Partial payment workflow failed', err);
-    alert(err?.error?.message || 'Failed to process partial payment.');
-  } finally {
-    this.markAsPaidModal.busy = false;
-  }
-}
 
 
 private async safePartialPay(method: 'UPI' | 'CASH', amount: number): Promise<void> {
@@ -2704,18 +2660,31 @@ private async getPaymentSummary(orderId: number): Promise<{
     remainingAmount: summary.remainingAmount ?? 0
   };
 }
-loadAvailableOffers() {
-  this.http.get<any[]>(
-    `${this.API_BASE}/offer/restaurant/${this.restaurantId}`
-  ).subscribe({
-    next: (data) => {
-      this.availableOffers = data;
-      console.log('Offers loaded:', data);
-    },
-    error: (err) => {
-      console.error('Failed to load offers', err);
-    }
-  });
+// loadAvailableOffers() {
+//   this.http.get<any[]>(
+//     `${this.API_BASE}/offer/restaurant/${this.restaurantId}`
+//   ).subscribe({
+//     next: (data) => {
+//       this.availableOffers = data;
+//       console.log('Offers loaded:', data);
+//     },
+//     error: (err) => {
+//       console.error('Failed to load offers', err);
+//     }
+//   });
+// }
+async loadAvailableOffers(orderId: number) {
+  try {
+    const res: any = await firstValueFrom(
+      this.http.get(
+        `${this.API_BASE}/offer/applicable?restaurantId=${this.restaurantId}&orderId=${orderId}`
+      )
+    );
+
+    this.availableOffers = res;
+  } catch (err) {
+    console.error('Failed to load offers', err);
+  }
 }
 
 async applyOfferToOrder(): Promise<void> {
@@ -2756,63 +2725,285 @@ async applyOfferToOrder(): Promise<void> {
   }
 }
 
+// openEditOrderModal(order: Order): void {
+//   console.log('--- Edit Modal Debug Start ---');
+//   console.log('1. Target Order ID:', order?.orderID);
+//   console.log('2. Current Order Status:', order?.orderStatus);
+
+//   // Validation: Check if the order object is even valid
+//   if (!order) {
+//     console.error('ERROR: Order object is undefined or null.');
+//     return;
+//   }
+
+//   // 1. Close ALL overlays first to prevent UI deadlocks
+//   this.markAsPaidModal.open = false;
+//   this.collectModal.open = false;
+//   this.showInlineOfferModal = false;
+//   this.showEditOrderModal = false;
+//   this.selectedOrderForEdit = null;
+//   console.log('3. All previous overlays cleared.');
+
+//   // 2. Wait for Angular to process the state reset
+//   setTimeout(() => {
+//     try {
+//       console.log('4. Entering setTimeout block...');
+      
+//       // 3. Clone data
+//       this.selectedOrderForEdit = JSON.parse(JSON.stringify(order));
+//       this.originalOrderData = JSON.parse(JSON.stringify(order));
+//       console.log('5. Data cloned successfully:', this.selectedOrderForEdit);
+      
+//       // 4. Set offer state
+//       this.selectedOfferId = order.appliedOfferID || null;
+//       this.originalOfferId = order.appliedOfferID || null;
+      
+//       // 5. Reset changes tracker
+//       this.resetPendingChanges();
+      
+//       // 6. Load products if needed
+//       if (this.availableProducts.length === 0) {
+//         console.log('6a. Loading products...');
+//         this.loadAvailableProducts();
+//       }
+  
+//       // 7. Load offers
+//       if (this.availableOffers.length === 0) {
+//         console.log('6b. Loading offers...');
+//         this.loadAvailableOffers();
+//       }
+      
+//       // 8. The Critical Flip
+//       this.showEditOrderModal = true;
+//       console.log('7. Final State: showEditOrderModal =', this.showEditOrderModal);
+//       console.log('--- Edit Modal Debug Success ---');
+
+//     } catch (err) {
+//       console.error('CRITICAL ERROR inside openEditOrderModal:', err);
+//     }
+//   }, 100); 
+// }
+
+async loadAvailableOffersForOrder(orderId: number) {
+  try {
+    const res: any = await firstValueFrom(
+      this.http.get(
+        `${this.API_BASE}/offer/applicable?restaurantId=${this.restaurantId}&orderId=${orderId}`
+      )
+    );
+
+    this.availableOffers = res || [];
+
+    console.log('Applicable offers:', this.availableOffers);
+
+  } catch (err) {
+    console.error('Offer load failed', err);
+    this.availableOffers = [];
+  }
+}
+
 openEditOrderModal(order: Order): void {
   console.log('--- Edit Modal Debug Start ---');
   console.log('1. Target Order ID:', order?.orderID);
   console.log('2. Current Order Status:', order?.orderStatus);
 
-  // Validation: Check if the order object is even valid
   if (!order) {
     console.error('ERROR: Order object is undefined or null.');
     return;
   }
 
-  // 1. Close ALL overlays first to prevent UI deadlocks
+  // 🔴 1. HARD RESET (important)
   this.markAsPaidModal.open = false;
   this.collectModal.open = false;
   this.showInlineOfferModal = false;
   this.showEditOrderModal = false;
-  this.selectedOrderForEdit = null;
-  console.log('3. All previous overlays cleared.');
 
-  // 2. Wait for Angular to process the state reset
-  setTimeout(() => {
+  this.selectedOrderForEdit = null;
+  this.availableOffers = [];   // 🔥 reset offers (avoid stale)
+  this.selectedOfferId = null;
+  this.originalOfferId = null;
+
+  console.log('3. All previous overlays & states cleared.');
+
+  // 🔴 2. WAIT FOR UI FLUSH
+  setTimeout(async () => {
     try {
       console.log('4. Entering setTimeout block...');
-      
-      // 3. Clone data
+
+      // 🔴 3. CLONE ORDER (safe deep copy)
       this.selectedOrderForEdit = JSON.parse(JSON.stringify(order));
       this.originalOrderData = JSON.parse(JSON.stringify(order));
-      console.log('5. Data cloned successfully:', this.selectedOrderForEdit);
-      
-      // 4. Set offer state
+
+      console.log('5. Data cloned:', this.selectedOrderForEdit);
+
+      // 🔴 4. OFFER STATE SYNC
       this.selectedOfferId = order.appliedOfferID || null;
       this.originalOfferId = order.appliedOfferID || null;
-      
-      // 5. Reset changes tracker
+
+      console.log('6. Offer state set:', {
+        selected: this.selectedOfferId,
+        original: this.originalOfferId
+      });
+
+      // 🔴 5. RESET CHANGE TRACKER
       this.resetPendingChanges();
-      
-      // 6. Load products if needed
-      if (this.availableProducts.length === 0) {
-        console.log('6a. Loading products...');
-        this.loadAvailableProducts();
+
+      // 🔴 6. LOAD PRODUCTS (if not loaded)
+      if (!this.availableProducts.length) {
+        console.log('7a. Loading products...');
+        await this.loadAvailableProducts();
       }
-  
-      // 7. Load offers
-      if (this.availableOffers.length === 0) {
-        console.log('6b. Loading offers...');
-        this.loadAvailableOffers();
-      }
-      
-      // 8. The Critical Flip
+
+      // 🔥 7. LOAD APPLICABLE OFFERS (CRITICAL CHANGE)
+      console.log('7b. Loading applicable offers...');
+      await this.loadAvailableOffersForOrder(order.orderID);
+
+      // 🔴 8. OPEN MODAL
       this.showEditOrderModal = true;
-      console.log('7. Final State: showEditOrderModal =', this.showEditOrderModal);
+
+      console.log('8. Modal opened successfully');
       console.log('--- Edit Modal Debug Success ---');
 
     } catch (err) {
       console.error('CRITICAL ERROR inside openEditOrderModal:', err);
     }
-  }, 100); 
+  }, 100);
+}
+onSplitChange() {
+  const remaining = this.markAsPaidModal.remaining;
+
+  let upi = Number(this.markAsPaidModal.upiAmount || 0);
+  let cash = Number(this.markAsPaidModal.cashAmount || 0);
+
+  if (upi > remaining) upi = remaining;
+  if (cash > remaining) cash = remaining;
+
+  if (upi + cash > remaining) {
+    cash = remaining - upi;
+  }
+
+  this.markAsPaidModal.upiAmount = upi;
+  this.markAsPaidModal.cashAmount = cash;
+}
+async confirmPartialPayment() {
+  const upi = Number(this.markAsPaidModal.upiAmount || 0);
+  const cash = Number(this.markAsPaidModal.cashAmount || 0);
+  const remaining = this.markAsPaidModal.remaining;
+
+  if (upi + cash !== remaining) {
+    alert(`Split must equal ₹${remaining}`);
+    return;
+  }
+
+  this.markAsPaidModal.busy = true;
+
+  try {
+
+    // 🔥 UPI PAYMENT
+    if (upi > 0) {
+      const upiRes: any = await firstValueFrom(
+        this.http.post(
+          `${this.API_BASE}/order/${this.markAsPaidModal.orderId}/initiate-payment`,
+          { amount: upi },
+          {
+            params: new HttpParams()
+              .set('restaurantId', String(this.restaurantId))
+              .set('method', 'UPI')
+              .set('channel', 'Waiter')
+          }
+        )
+      );
+
+      // ✅ COMPLETE UPI ALSO (YOU MISSED THIS)
+      await firstValueFrom(
+        this.http.put(
+          `${this.API_BASE}/order/payments/${upiRes.paymentId}/complete`,
+          {},
+          {
+            params: new HttpParams().set('restaurantId', String(this.restaurantId))
+          }
+        )
+      );
+    }
+
+    // 🔥 CASH PAYMENT
+    if (cash > 0) {
+      const cashRes: any = await firstValueFrom(
+        this.http.post(
+          `${this.API_BASE}/order/${this.markAsPaidModal.orderId}/initiate-payment`,
+          { amount: cash },
+          {
+            params: new HttpParams()
+              .set('restaurantId', String(this.restaurantId))
+              .set('method', 'CASH')
+              .set('channel', 'Waiter')
+          }
+        )
+      );
+
+      await firstValueFrom(
+        this.http.put(
+          `${this.API_BASE}/order/payments/${cashRes.paymentId}/complete`,
+          {},
+          {
+            params: new HttpParams().set('restaurantId', String(this.restaurantId))
+          }
+        )
+      );
+    }
+
+    this.closeMarkAsPaidModal();
+    this.getOrders();
+
+  } catch (e: any) {
+    console.error(e);
+    alert(e.error?.message || 'Payment failed');
+  } finally {
+    this.markAsPaidModal.busy = false;
+  }
+}
+
+async applySelectedOffer() {
+  if (!this.selectedOfferId || !this.selectedOrderForEdit) return;
+
+  try {
+    const res: any = await firstValueFrom(
+      this.http.put(
+        `${this.API_BASE}/order/${this.selectedOrderForEdit.orderID}/apply-offer?restaurantId=${this.restaurantId}`,
+        { offerId: this.selectedOfferId }
+      )
+    );
+
+    // 🔥 Update UI instantly
+    this.selectedOrderForEdit.discountAmount = res.discount;
+    this.selectedOrderForEdit.totalAmount = res.total;
+
+    const selectedOffer = this.availableOffers.find(
+      o => o.offerID === this.selectedOfferId
+    );
+
+    this.selectedOrderForEdit.appliedOfferName = selectedOffer?.name;
+
+  } catch (err) {
+    console.error('Offer apply failed', err);
+    alert('Offer not valid');
+  }
+}
+async removeOffer() {
+  try {
+    await firstValueFrom(
+      this.http.delete(
+        `${this.API_BASE}/order/${this.selectedOrderForEdit.orderID}/remove-offer?restaurantId=${this.restaurantId}`
+      )
+    );
+
+    this.selectedOfferId = null;
+    this.selectedOrderForEdit.discountAmount = 0;
+    this.selectedOrderForEdit.appliedOfferName = null;
+
+  } catch (err) {
+    console.error('Remove failed', err);
+  }
 }
 async removeOfferFromOrder(): Promise<void> {
   try {
@@ -2836,48 +3027,41 @@ async removeOfferFromOrder(): Promise<void> {
   }
 }
 
-async confirmMarkAsPaid(): Promise<void> {
+async confirmMarkAsPaid() {
+  const amount = this.markAsPaidModal.remaining;
+
+  this.markAsPaidModal.busy = true;
+
   try {
-    const summary = await this.getPaymentSummary(this.markAsPaidModal.orderId);
-
-    if (summary.remainingAmount <= 0) {
-      alert('Order already fully paid');
-      return;
-    }
-
-    this.markAsPaidModal.busy = true;
-
-    const resp: any = await firstValueFrom(
+    const res: any = await firstValueFrom(
       this.http.post(
         `${this.API_BASE}/order/${this.markAsPaidModal.orderId}/initiate-payment`,
-        { amount: summary.remainingAmount },
+        { amount },
         {
-          headers: this.httpOptions.headers,
           params: new HttpParams()
             .set('restaurantId', String(this.restaurantId))
-            .set('method', this.markAsPaidModal.selectedMethod)
+            .set('method', this.markAsPaidModal.selectedMethod.toUpperCase())
             .set('channel', 'Waiter')
         }
       )
     );
 
+    // 🔥 ALWAYS COMPLETE
     await firstValueFrom(
       this.http.put(
-        `${this.API_BASE}/order/payments/${resp.paymentId}/complete`,
+        `${this.API_BASE}/order/payments/${res.paymentId}/complete`,
         {},
-        { params: new HttpParams().set('restaurantId', String(this.restaurantId)) }
+        {
+          params: new HttpParams().set('restaurantId', String(this.restaurantId))
+        }
       )
     );
 
-    await this.printOrderBill(this.markAsPaidModal.orderId);
-
     this.closeMarkAsPaidModal();
-    await this.getOrders();
-    this.fetchPendingPayments();
+    this.getOrders();
 
-  } catch (err: any) {
-    console.error('Mark paid failed', err);
-    alert(err?.error?.message || 'Payment failed');
+  } catch (e) {
+    console.error(e);
   } finally {
     this.markAsPaidModal.busy = false;
   }
@@ -2935,7 +3119,7 @@ async confirmMarkAsPaid(): Promise<void> {
     try {
       await firstValueFrom(
         this.http.put(
-          `${this.API_BASE}/order/payments/${paymentId}/complete?restaurantId=${this.restaurantId}`,
+          `${this.API_BASE}/order/pending-payments/${paymentId}/clear?restaurantId=${this.restaurantId}`,
           {},
           this.httpOptions
         )

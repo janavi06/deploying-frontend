@@ -245,7 +245,7 @@ loadPastOrders() {
           paid: totalPaid,
           remaining,
 
-paymentMethod: o.paymentMethod ?? 'Pending',
+paymentMethod: o.paymentMethod?.trim() || 'Pending',
           payments: (o.payments ?? []).map((p: any) => ({
             paymentMethod: p.paymentMethod,
             amount: Number(p.amount ?? 0),

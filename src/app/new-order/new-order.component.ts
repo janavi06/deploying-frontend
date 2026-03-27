@@ -163,8 +163,9 @@ startPartialPayment() {
   this.paymentStage = 4;
 }
 async confirmPartialPayment() {
-  const upi = this.partialUpiAmount || 0;
-  const cash = this.partialCashAmount || 0;
+
+  const upi = Number(this.partialUpiAmount || 0);
+  const cash = Number(this.partialCashAmount || 0);
   const total = upi + cash;
 
   if (total <= 0 || total > this.orderTotal) {
@@ -172,14 +173,17 @@ async confirmPartialPayment() {
     return;
   }
 
+  if (this.busyPay) return;
   this.busyPay = true;
 
   try {
+
     // 🔹 UPI PART
     if (upi > 0) {
+
       const u: any = await this.http.post(
-        `${this.API}/order/${this.orderID}/initiate-payment?method=UPI&amount=${upi}&restaurantId=${this.restaurantId}&channel=Waiter`,
-        {}
+        `${this.API}/order/${this.orderID}/initiate-payment?method=UPI&restaurantId=${this.restaurantId}&channel=Waiter`,
+        { amount: upi }
       ).toPromise();
 
       if (u?.paymentId) {
@@ -192,9 +196,10 @@ async confirmPartialPayment() {
 
     // 🔹 CASH PART
     if (cash > 0) {
+
       const c: any = await this.http.post(
-        `${this.API}/order/${this.orderID}/initiate-payment?method=Cash&amount=${cash}&restaurantId=${this.restaurantId}&channel=Waiter`,
-        {}
+        `${this.API}/order/${this.orderID}/initiate-payment?method=Cash&restaurantId=${this.restaurantId}&channel=Waiter`,
+        { amount: cash }
       ).toPromise();
 
       if (c?.paymentId) {
@@ -221,11 +226,11 @@ async confirmPartialPayment() {
   } catch (e) {
     console.error('Partial payment failed', e);
     alert('Partial payment failed');
-  } finally {
+  }
+  finally {
     this.busyPay = false;
   }
 }
-
 async submitWithPreference() {
   if (!this.selectedTable || !this.cart.length) return;
   this.busy = true;
@@ -703,19 +708,23 @@ getItemApproxTotal(c: CartItem): number {
 }
 
 async initiateUPIPayment() {
+
+  if (this.busyPay) return;
   this.busyPay = true;
 
   try {
+
     const details: any = await this.http.get(
       `${this.API}/order/${this.restaurantId}/payment-details`
     ).toPromise();
 
     const resp: any = await this.http.post(
       `${this.API}/order/${this.orderID}/initiate-payment?method=UPI&restaurantId=${this.restaurantId}&channel=Waiter`,
-      {}
+      { amount: this.orderTotal }
     ).toPromise();
 
     this.paymentId = resp?.paymentId ?? null;
+
     this.upiAmount = +resp?.amount || this.orderTotal || 0;
 
     this.upiId = details?.upiID || '';
@@ -733,9 +742,11 @@ async initiateUPIPayment() {
 
     this.paymentStage = 2;
 
-  } catch (e) {
+  }
+  catch (e) {
     console.error('UPI initiation failed:', e);
-  } finally {
+  }
+  finally {
     this.busyPay = false;
   }
 }
@@ -812,40 +823,49 @@ async initiateUPIPayment() {
     }
   }
 
-  async markCashPaid() {
-    this.busyPay = true;
-    try {
-      const started: any = await this.http.post(
-        `${this.API}/order/${this.orderID}/initiate-payment?method=Cash&restaurantId=${this.restaurantId}&channel=Waiter`,
+async markCashPaid() {
+
+  if (this.busyPay) return;
+  this.busyPay = true;
+
+  try {
+
+    const started: any = await this.http.post(
+      `${this.API}/order/${this.orderID}/initiate-payment?method=Cash&restaurantId=${this.restaurantId}&channel=Waiter`,
+      { amount: this.orderTotal }
+    ).toPromise();
+
+    const pid = started?.paymentId;
+
+    if (pid) {
+
+      await this.http.put(
+        `${this.API}/order/pending-payments/${pid}/clear?restaurantId=${this.restaurantId}`,
         {}
       ).toPromise();
-
-      const pid = started?.paymentId;
-      if (pid) {
-        await this.http.put(
-          `${this.API}/order/pending-payments/${pid}/clear?restaurantId=${this.restaurantId}`,
-          {}
-        ).toPromise();
-      }
-
-      await this.printOrderBill(this.orderID);
-
-      this.orderPlaced.emit({
-        orderID: this.orderID,
-        paymentStatus: 'paid',
-        paymentMethod: 'Cash',
-        paymentPreference: 'PayNow'
-      });
-
-      this.pushSuccessAlert(` Order #${this.orderID} placed and paid via Cash! Bill printed.`);
-
-      this.resetAndClose();
-    } catch (e) {
-      console.error('Cash payment failed:', e);
-    } finally {
-      this.busyPay = false;
     }
+
+    await this.printOrderBill(this.orderID);
+
+    this.orderPlaced.emit({
+      orderID: this.orderID,
+      paymentStatus: 'paid',
+      paymentMethod: 'Cash',
+      paymentPreference: 'PayNow'
+    });
+
+    alert(`Order #${this.orderID} placed and paid via Cash!`);
+
+    this.resetAndClose();
+
   }
+  catch (e) {
+    console.error('Cash payment failed:', e);
+  }
+  finally {
+    this.busyPay = false;
+  }
+}
 
   private resetAndClose() {
     this.paymentStage = 0;

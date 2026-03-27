@@ -535,3 +535,37 @@ tbody tr:last-child td {
   background: #f44336;
   color: white;
 }
+
+
+.badge {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-block;
+}
+
+/* 🔥 FIXED CASH BADGE */
+.cash-badge {
+  background-color: #d1ecf1;   /* Light blue */
+  color: #0c5460;              /* Dark text */
+  border: 1px solid #bee5eb;
+}
+
+/* UPI */
+.upi-badge {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+/* MIXED */
+.mixed-badge {
+  background-color: #e2d9f3;
+  color: #5a32a3;
+}
+
+/* PENDING */
+.pending {
+  background-color: #fff3cd;
+  color: #856404;
+}

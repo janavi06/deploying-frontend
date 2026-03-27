@@ -130,12 +130,12 @@
         <td><strong>₹{{ o.total }}</strong></td>
 
         <td>
-       <span class="badge"
+<span class="badge"
   [ngClass]="{
-    'cash-badge': o.paymentMethod === 'Cash',
-    'upi-badge': o.paymentMethod === 'UPI',
+    'cash-badge': o.paymentMethod?.toLowerCase() === 'cash',
+    'upi-badge': o.paymentMethod?.toLowerCase() === 'upi',
     'mixed-badge': o.paymentMethod?.includes('+'),
-    'pending': o.paymentMethod === 'Pending'
+    'pending': o.paymentMethod?.toLowerCase() === 'pending'
   }">
   {{ o.paymentMethod }}
 </span>
@@ -220,7 +220,7 @@
     <hr>
 
 <!-- PAYMENT DETAILS -->
-<h5>Payment Details</h5>
+<!-- <h5>Payment Details</h5>
 
 <div class="summary-line">
   <span>Cash Paid</span>
@@ -230,7 +230,7 @@
 <div class="summary-line">
   <span>UPI Paid</span>
   <span>₹{{ selectedOrder.upiPaid | number:'1.2-2' }}</span>
-</div>
+</div> -->
 
 <hr>
 

@@ -223,15 +223,14 @@
                     </span>
 
                     <!-- Payment Status Badge -->
-                    <span *ngIf="order.latestPayment" class="badge ms-1"
-                      [class]="getPaymentStatusBadgeClass(order.latestPayment.status)">
-                      {{ order.latestPayment.status || 'Pending' }}
-                    </span>
+<!-- ✅ FIXED PAYMENT STATUS -->
+<span *ngIf="isOrderPaid(order)" class="badge bg-success ms-1">
+  Paid
+</span>
 
-                    <!-- No Payment Indicator -->
-                    <span *ngIf="!order.latestPayment" class="badge bg-light text-dark">
-                      Payment Pending
-                    </span>
+<span *ngIf="!isOrderPaid(order)" class="badge bg-warning ms-1">
+  Pending
+</span>
                   </div>
 <!-- 🔥 Offer Info -->
 <div *ngIf="order.discountAmount && order.discountAmount > 0"
@@ -246,7 +245,7 @@
                     [class.text-success]="order.latestPayment?.status === 'Paid' || order.latestPayment?.status === 'Success'"
                     [class.text-primary]="!order.latestPayment || order.latestPayment.status === 'Pending'">
 
-                    ₹{{ (isOrderPaid(order) ? order.latestPayment?.amount : order.totalAmount) | number:'1.2-2' }}
+₹{{ order.totalAmount | number:'1.2-2' }}
                   </div>
                 </div>
               </div>
@@ -284,7 +283,7 @@
 
                     <span *ngIf="order.latestPayment && order.latestPayment.status !== 'Pending'"
                       class="badge text-center" [class]="getPaymentStatusBadgeClass(order.latestPayment.status)">
-                      {{ order.latestPayment.method }}: {{ order.latestPayment.status }}
+                      <!-- {{ order.latestPayment.method }}: {{ order.latestPayment.status }} -->
                     </span>
 
 
@@ -423,15 +422,18 @@
             <div class="mb-4 p-3 bg-light rounded">
               <h4 class="text-primary mb-2">Order #{{markAsPaidModal.orderNumber || markAsPaidModal.orderId}}</h4>
               <!-- ✅ CHANGE -->
-              <div class="row">
-                <div class="col-6">
-                  <strong>Table:</strong> {{markAsPaidModal.tableNo}}
-                </div>
-                <div class="col-6">
-                  <strong>Amount:</strong>
-                  <span class="fs-4 text-success fw-bold">₹{{markAsPaidModal.amount | number:'1.2-2'}}</span>
-                </div>
-              </div>
+            <div class="row">
+  <div class="col-4">
+    <strong>Total:</strong> ₹{{markAsPaidModal.totalAmount}}
+  </div>
+  <div class="col-4">
+    <strong>Paid:</strong> ₹{{markAsPaidModal.paidSoFar}}
+  </div>
+  <div class="col-4">
+    <strong class="text-success">Remaining:</strong>
+    ₹{{markAsPaidModal.remaining}}
+  </div>
+</div>
             </div>
 
             <!-- Payment Method Selection -->
@@ -501,31 +503,38 @@
 <!-- PARTIAL PAYMENT INPUTS -->
 <div *ngIf="markAsPaidModal.paymentType === 'PARTIAL'" class="mt-3">
 
-  <div class="alert alert-warning">
-    <strong>Total Amount:</strong> ₹{{ markAsPaidModal.amount }}
-  </div>
+<div class="alert alert-warning">
+  <strong>Remaining Amount:</strong> ₹{{ markAsPaidModal.remaining }}
+</div>
 
   <div class="row g-2">
+    
+    <!-- UPI -->
     <div class="col-6">
       <label class="form-label">UPI Amount</label>
       <input type="number"
              class="form-control"
              min="0"
-             [(ngModel)]="markAsPaidModal.upiAmount">
+             [(ngModel)]="markAsPaidModal.upiAmount"
+             (ngModelChange)="onSplitChange()">
     </div>
 
+    <!-- CASH -->
     <div class="col-6">
       <label class="form-label">Cash Amount</label>
       <input type="number"
              class="form-control"
              min="0"
-             [(ngModel)]="markAsPaidModal.cashAmount">
+             [(ngModel)]="markAsPaidModal.cashAmount"
+             (ngModelChange)="onSplitChange()">
     </div>
+
   </div>
 
   <small class="text-muted d-block mt-2">
-    Total split must equal order amount.
+    Total split must equal remaining amount.
   </small>
+
 </div>
 
 <!-- MODAL FOOTER -->
@@ -587,7 +596,40 @@
 
         <!-- TOP ROW: LEFT = ITEMS, RIGHT = OFFER & TOTAL -->
         <div class="row g-3 mb-3">
+<div class="mt-3 border-top pt-3">
 
+  <h5>Apply Offer</h5>
+
+  <select class="form-select mb-2"
+          [(ngModel)]="selectedOfferId">
+
+    <option [ngValue]="null">-- Select Offer --</option>
+
+    <option *ngFor="let o of availableOffers"
+            [ngValue]="o.offerID">
+
+      {{ o.name }} 
+      ({{ o.discountType === 'PERCENT' ? o.discountPercent + '%' : '₹' + o.discountAmount }})
+
+    </option>
+  </select>
+
+  <div class="d-flex gap-2">
+
+    <button class="btn btn-success btn-sm"
+            (click)="applySelectedOffer()">
+      Apply Offer
+    </button>
+
+    <button class="btn btn-outline-danger btn-sm"
+            *ngIf="selectedOrderForEdit?.discountAmount > 0"
+            (click)="removeOffer()">
+      Remove
+    </button>
+
+  </div>
+
+</div>
           <!-- LEFT: Ordered Items (editable) -->
           <div class="col-lg-7">
             <div class="border rounded p-2 bg-white h-100">

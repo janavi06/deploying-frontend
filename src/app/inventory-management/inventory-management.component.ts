@@ -71,8 +71,7 @@ interface ProductRecipeRow {
   encapsulation: ViewEncapsulation.None
 })
 export class InventoryManagementComponent implements OnInit, OnDestroy {
-activeTab: 'items' | 'transactions' | 'recipes' | 'conversions' | 'audit' | 'analytics' = 'items';
-  items: InventoryItem[] = [];
+activeTab: 'items' | 'transactions' | 'recipes' | 'conversions' | 'audit' | 'analytics' | 'expenses' = 'items';  items: InventoryItem[] = [];
   transactions: StockTransaction[] = [];
 turnover: any = null;
 deadStock: any[] = [];
@@ -101,7 +100,17 @@ lastLowStockCount = 0;
   isSavingTransaction = false;
   isSavingItem = false;
   isSavingRecipe = false;
+expenses: any[] = [];
+showExpenseModal = false;
 
+currentExpense: any = {
+  category: 0,
+  description: '',
+  amount: 0,
+  inventoryItemID: null,
+  quantity: null,
+  unitCost: null
+};
   restaurantId = Number(localStorage.getItem('restaurantId')) || 1;
 
   currentItem: Partial<InventoryItem> = this.getEmptyItem();
@@ -165,6 +174,37 @@ performAudit() {
       this.loadVarianceReport();
     }
   });
+}
+loadExpenses() {
+  this.http.get<any[]>(`${environment.apiUrl}/expense?restaurantId=${this.restaurantId}`)
+    .subscribe(res => this.expenses = res || []);
+}
+saveExpense() {
+
+  this.currentExpense.restaurantID = this.restaurantId;
+
+  this.http.post(`${environment.apiUrl}/expense`, this.currentExpense)
+    .subscribe({
+      next: () => {
+        this.closeExpenseModal();
+        this.loadExpenses();
+        this.loadItems(); // refresh inventory
+      },
+      error: err => alert(err?.error || 'Failed')
+    });
+}
+openExpenseModal() {
+  this.showExpenseModal = true;
+}
+
+closeExpenseModal() {
+  this.showExpenseModal = false;
+}
+getCategoryLabel(val: number) {
+  return [
+    'Food','Beverage','Labor','Utilities',
+    'Rent','Supplies','Marketing','Maintenance'
+  ][val] || 'Other';
 }
 loadVarianceReport() {
   const url = `${environment.apiUrl}/inventory/variance-report?restaurantId=${this.restaurantId}`;
@@ -393,7 +433,7 @@ loadItems() {
         break;
       case StockTransactionType.Waste:
       case StockTransactionType.Sale:
-        qty = -Math.abs(qty);
+        // qty = -Math.abs(qty);
         break;
       case StockTransactionType.Adjustment:
         // allow positive or negative as entered
@@ -444,6 +484,10 @@ loadItems() {
     });
     this.subs.push(sub);
   }
+
+  createExpense(expense: any) {
+  return this.http.post(`${environment.apiUrl}/expense`, expense);
+}
 
   loadTransactions() {
     let url = `${environment.apiUrl}/inventory/transactions?restaurantId=${this.restaurantId}`;
