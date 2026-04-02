@@ -32,7 +32,7 @@ export class OffersComponent implements OnInit {
     minBillAmount: 0,
     productIds: [] as number[],
     priority: 0,
-    autoApply: true,
+    autoApply: false,
     validFrom: '',
     validTo: ''
   };
