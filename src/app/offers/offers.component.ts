@@ -170,7 +170,7 @@ isFormValid(): boolean {
       minBillAmount: 0,
       productIds: [],
       priority: 0,
-      autoApply: true,
+      autoApply: false,
       validFrom: '',
       validTo: ''
     };
