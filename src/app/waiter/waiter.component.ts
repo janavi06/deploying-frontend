@@ -538,31 +538,38 @@ resetInlineOffer() {
     this.loadPendingByTab();
   }
 
-  async placeWaiterOrder(paymentPreference: 'PayNow' | 'PayLater' = 'PayLater'): Promise<void> {
-    try {
-      const orderPayload = {
+ async placeWaiterOrder(paymentPreference: 'PayNow' | 'PayLater' = 'PayLater'): Promise<void> {
+  try {
+    const orderPayload = {};
 
-      };
+    // STEP 1: Generate order
+    const response: any = await firstValueFrom(
+      this.http.post(
+        `${this.API_BASE}/order/generate?restaurantId=${this.restaurantId}&source=waiter&paymentPreference=${paymentPreference}`,
+        orderPayload,
+        this.httpOptions
+      )
+    );
 
-      const response: any = await firstValueFrom(
-        this.http.post(
-          `${this.API_BASE}/order/generate?restaurantId=${this.restaurantId}&source=waiter&paymentPreference=${paymentPreference}`,
-          orderPayload,
-          this.httpOptions
-        )
-      );
+    console.log("✅ Order Generated:", response.orderID);
 
-      if (paymentPreference === 'PayNow') {
+    // 🔥 STEP 2: CONFIRM ORDER (THIS FIXES KOT)
+    await firstValueFrom(
+      this.http.post(
+        `${this.API_BASE}/order/${response.orderID}/confirm?restaurantId=${this.restaurantId}`,
+        {},
+        this.httpOptions
+      )
+    );
 
-      } else {
+    console.log("🔥 Confirm called → KOT should print");
 
-      }
+    this.getOrders();
 
-      this.getOrders();
-    } catch (error) {
-      console.error('Error placing waiter order:', error);
-    }
+  } catch (error) {
+    console.error('❌ Error placing waiter order:', error);
   }
+}
 
   private setupPaymentPolling(): void {
     this.fetchPendingPayments();
