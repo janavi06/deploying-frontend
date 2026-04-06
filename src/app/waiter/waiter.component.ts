@@ -995,7 +995,7 @@ async initiateUpi(): Promise<void> {
       )
     );
 
-    this.collectModal.paymentId = resp.paymentId;
+this.collectModal.paymentId = resp.paymentID || resp.paymentId;
     this.collectModal.amount = resp.amount;
 
   } catch (e: any) {
@@ -1232,13 +1232,12 @@ async markCashReceived(): Promise<void> {
     if (summary.remainingAmount <= 0) {
       alert('Order already fully paid');
       this.closeCollectModal();
-      this.getOrders(); // Refresh the dashboard
+      this.getOrders();
       return;
     }
 
     const amount = Math.min(this.collectModal.amount, summary.remainingAmount);
 
-    // 1. Initiate
     const started: any = await firstValueFrom(
       this.http.post(`${this.API_BASE}/order/${this.collectModal.orderId}/initiate-payment`, 
         { amount }, 
@@ -1250,20 +1249,21 @@ async markCashReceived(): Promise<void> {
       )
     );
 
-    // Handle the "Already Paid" flag from backend
+    // 🔥 FIX: Check both casings
+    const actualPaymentId = started.paymentID || started.paymentId;
+
     if (started.isFullyPaid) {
       alert('This order was completed by another station.');
     } else {
-      // 2. Complete
-await firstValueFrom(
-  this.http.put(
-    `${this.API_BASE}/order/pending-payments/${started.paymentId}/clear`,
-    {},
-    {
-      params: new HttpParams().set('restaurantId', String(this.restaurantId))
-    }
-  )
-);
+      await firstValueFrom(
+        this.http.put(
+          `${this.API_BASE}/order/pending-payments/${actualPaymentId}/clear`,
+          {},
+          {
+            params: new HttpParams().set('restaurantId', String(this.restaurantId))
+          }
+        )
+      );
       await this.printOrderBill(this.collectModal.orderId);
     }
 
@@ -2154,7 +2154,6 @@ async saveOrderChanges(): Promise<void> {
     }
   }
 
-
 async collectWaiterPayment(orderId: number, method: 'Cash' | 'UPI'): Promise<void> {
   try {
     const summary = await this.getPaymentSummary(orderId);
@@ -2178,23 +2177,26 @@ async collectWaiterPayment(orderId: number, method: 'Cash' | 'UPI'): Promise<voi
       )
     );
 
+    // 🔥 FIX: Extract the ID safely
+    const actualPaymentId = resp.paymentID || resp.paymentId;
+
     if (method === 'Cash') {
-await firstValueFrom(
-  this.http.put(
-    `${this.API_BASE}/order/pending-payments/${resp.paymentId}/clear`,
-    {},
-    {
-      params: new HttpParams().set('restaurantId', String(this.restaurantId))
-    }
-  )
-);
+      await firstValueFrom(
+        this.http.put(
+          `${this.API_BASE}/order/pending-payments/${actualPaymentId}/clear`,
+          {},
+          {
+            params: new HttpParams().set('restaurantId', String(this.restaurantId))
+          }
+        )
+      );
       await this.printOrderBill(orderId);
       this.getOrders();
       this.fetchPendingPayments();
     } else {
       this.openCollectModal({
         orderID: orderId,
-        paymentID: resp.paymentId,
+        paymentID: actualPaymentId, // Ensure this uses the fixed ID
         amount: resp.amount
       });
     }
@@ -2202,6 +2204,7 @@ await firstValueFrom(
     console.error('Collect payment failed', e);
   }
 }
+
 
 
   closeChangeHistoryModal(): void {
