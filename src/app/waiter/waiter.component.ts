@@ -237,6 +237,7 @@ inlineOffer: any = {
 
   busyCollect = false;
 
+private isFetchingPayments = false;
 
   unreadRequests: any[] = [];
   private requestPollingInterval: any;
@@ -374,7 +375,12 @@ inlineOffer: any = {
     }, 15000);
 
 setInterval(() => {
-  if (!this.showEditOrderModal && !this.markAsPaidModal.open && !this.collectModal.open) {
+  if (
+    !this.showEditOrderModal &&
+    !this.markAsPaidModal.open &&
+    !this.collectModal.open &&
+    !this.busyCollect   // 🔥 CRITICAL FIX
+  ) {
     this.getOrders();
   }
 }, 10000);
@@ -970,7 +976,15 @@ onNewOrderClosed() {
 async initiateUpi(): Promise<void> {
   if (!this.restaurantId) return;
 
+  // 🔥 Prevent duplicate clicks
+  if (this.busyCollect) return;
+  if (this.collectModal.paymentId) {
+    console.warn("⚠️ Payment already initiated");
+    return;
+  }
+
   this.busyCollect = true;
+
   try {
     const summary = await this.getPaymentSummary(this.collectModal.orderId);
 
@@ -995,51 +1009,54 @@ async initiateUpi(): Promise<void> {
       )
     );
 
-this.collectModal.paymentId = resp.paymentID || resp.paymentId;
+    // 🔥 Handle idempotent response
+    if (resp.message === "Payment already initiated") {
+      console.warn("⚠️ Reusing existing payment session");
+    }
+
+    const paymentId = this.getPaymentId(resp);
+
+    if (!paymentId) {
+      throw new Error("Invalid paymentId from backend");
+    }
+
+    this.collectModal.paymentId = paymentId;
     this.collectModal.amount = resp.amount;
 
   } catch (e: any) {
-    if (e?.error?.message !== 'Order already fully paid.') {
-      console.error('UPI initiation failed', e);
-    }
+    console.error('UPI initiation failed', e);
+    alert(e?.error?.message || 'UPI initiation failed');
   } finally {
     this.busyCollect = false;
   }
 }
 
 
+fetchPendingPayments(): void {
+  if (!this.restaurantId || this.isFetchingPayments) return;
 
+  this.isFetchingPayments = true;
 
-  fetchPendingPayments(): void {
-    if (!this.restaurantId) {
-      console.log(' No restaurant ID available for fetching payments');
-      return;
-    }
+  this.http.get<any[]>(
+    `${this.API_BASE}/order/pending-payments?restaurantId=${this.restaurantId}`,
+    this.httpOptions
+  )
+  .subscribe({
+    next: (payments) => {
+      this.pendingPayments = (payments || []).map(p => ({
+        ...p,
+        paymentId: this.getPaymentId(p),
+        orderNumber: p.orderNumber || p.orderID
+      }));
 
+      this.splitPending(this.pendingPayments);
+    },
+    error: err => console.error(err),
+    complete: () => this.isFetchingPayments = false
+  });
+}
 
-    this.http.get<any[]>(`${this.API_BASE}/order/pending-payments?restaurantId=${this.restaurantId}`, this.httpOptions)
-      .subscribe({
-        next: (payments) => {
-
-          this.pendingPayments = (payments || []).map(p => ({
-            ...p,
-            paymentId: p.paymentID || p.paymentId || p.id,
-            orderNumber: p.orderNumber || p.orderID
-          }));
-
-          this.splitPending(this.pendingPayments);
-          console.log(' Payments updated:', {
-            total: this.pendingPayments.length,
-            verify: this.verifyPayments.length,
-            collect: this.collectPayments.length
-          });
-        },
-        error: err => {
-          console.error(' Error fetching pending payments:', err);
-          this.error = 'Failed to load pending payments';
-        }
-      });
-  }
+ 
   private checkForNewPendingPayments(): void {
     if (!this.restaurantId || this.selectedSection !== 'pendingPayments') return;
 
@@ -1224,6 +1241,7 @@ await firstValueFrom(
 
 async markCashReceived(): Promise<void> {
   if (this.busyCollect) return;
+
   this.busyCollect = true;
 
   try {
@@ -1238,34 +1256,40 @@ async markCashReceived(): Promise<void> {
 
     const amount = Math.min(this.collectModal.amount, summary.remainingAmount);
 
-    const started: any = await firstValueFrom(
-      this.http.post(`${this.API_BASE}/order/${this.collectModal.orderId}/initiate-payment`, 
-        { amount }, 
-        { params: new HttpParams()
+    const resp: any = await firstValueFrom(
+      this.http.post(
+        `${this.API_BASE}/order/${this.collectModal.orderId}/initiate-payment`,
+        { amount },
+        {
+          params: new HttpParams()
             .set('restaurantId', String(this.restaurantId))
             .set('method', 'CASH')
-            .set('channel', 'Waiter') 
+            .set('channel', 'Waiter')
         }
       )
     );
 
-    // 🔥 FIX: Check both casings
-    const actualPaymentId = started.paymentID || started.paymentId;
-
-    if (started.isFullyPaid) {
-      alert('This order was completed by another station.');
-    } else {
-      await firstValueFrom(
-        this.http.put(
-          `${this.API_BASE}/order/pending-payments/${actualPaymentId}/clear`,
-          {},
-          {
-            params: new HttpParams().set('restaurantId', String(this.restaurantId))
-          }
-        )
-      );
-      await this.printOrderBill(this.collectModal.orderId);
+    if (resp.message === "Payment already initiated") {
+      console.warn("⚠️ Existing payment reused");
     }
+
+    const paymentId = this.getPaymentId(resp);
+
+    if (!paymentId) {
+      throw new Error("Invalid paymentId");
+    }
+
+    await firstValueFrom(
+      this.http.put(
+        `${this.API_BASE}/order/pending-payments/${paymentId}/clear`,
+        {},
+        {
+          params: new HttpParams().set('restaurantId', String(this.restaurantId))
+        }
+      )
+    );
+
+    await this.printOrderBill(this.collectModal.orderId);
 
     this.closeCollectModal();
     this.getOrders();
@@ -1273,12 +1297,11 @@ async markCashReceived(): Promise<void> {
 
   } catch (e: any) {
     console.error('Cash payment failed', e);
-    alert(e.error?.message || 'Payment failed');
+    alert(e?.error?.message || 'Payment failed');
   } finally {
     this.busyCollect = false;
   }
 }
-
 
   debugPaymentData(): void {
     console.log('=== PAYMENT DATA DEBUG ===');
@@ -1708,7 +1731,9 @@ async serveOrder(orderID: number): Promise<void> {
       error: err => console.error('Error accepting request:', err)
     });
   }
-
+private getPaymentId(resp: any): number {
+  return resp?.paymentID || resp?.paymentId || 0;
+}
   completeRequest(requestId: number): void {
     this.http.delete(
       `${this.API_BASE}/order/waiter-requests/${requestId}`,
@@ -2155,6 +2180,10 @@ async saveOrderChanges(): Promise<void> {
   }
 
 async collectWaiterPayment(orderId: number, method: 'Cash' | 'UPI'): Promise<void> {
+  if (this.busyCollect) return;
+
+  this.busyCollect = true;
+
   try {
     const summary = await this.getPaymentSummary(orderId);
 
@@ -2177,31 +2206,44 @@ async collectWaiterPayment(orderId: number, method: 'Cash' | 'UPI'): Promise<voi
       )
     );
 
-    // 🔥 FIX: Extract the ID safely
-    const actualPaymentId = resp.paymentID || resp.paymentId;
+    if (resp.message === "Payment already initiated") {
+      console.warn("⚠️ Payment already exists");
+    }
+
+    const paymentId = this.getPaymentId(resp);
+
+    if (!paymentId) {
+      throw new Error("Invalid paymentId");
+    }
 
     if (method === 'Cash') {
       await firstValueFrom(
         this.http.put(
-          `${this.API_BASE}/order/pending-payments/${actualPaymentId}/clear`,
+          `${this.API_BASE}/order/pending-payments/${paymentId}/clear`,
           {},
           {
             params: new HttpParams().set('restaurantId', String(this.restaurantId))
           }
         )
       );
+
       await this.printOrderBill(orderId);
       this.getOrders();
       this.fetchPendingPayments();
+
     } else {
       this.openCollectModal({
         orderID: orderId,
-        paymentID: actualPaymentId, // Ensure this uses the fixed ID
+        paymentID: paymentId,
         amount: resp.amount
       });
     }
+
   } catch (e: any) {
     console.error('Collect payment failed', e);
+    alert(e?.error?.message || 'Payment failed');
+  } finally {
+    this.busyCollect = false;
   }
 }
 
