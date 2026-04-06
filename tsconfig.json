@@ -1,25 +1,29 @@
 {
-"compilerOptions": {
-  "outDir": "./dist/out-tsc",
-  "strict": true,
-  "noImplicitAny": false,
-  "noImplicitOverride": true,
-  "noPropertyAccessFromIndexSignature": true,
-  "noImplicitReturns": true,
-  "noFallthroughCasesInSwitch": true,
-  "skipLibCheck": true,
-  "isolatedModules": true,
-  "esModuleInterop": true,
-  "experimentalDecorators": true,
-  "moduleResolution": "bundler",
-  "importHelpers": true,
-  "target": "ES2022",
-  "module": "ES2022",
-  "typeRoots": [
-    "node_modules/@types",
-    "node_modules/chart.js"
-  ]
-},
+  "compilerOptions": {
+    "rootDir": "./src",              // <--- ADD THIS
+    "outDir": "./dist/out-tsc",
+    "strict": true,
+    "noImplicitAny": false,
+    "noImplicitOverride": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "experimentalDecorators": true,
+    "moduleResolution": "bundler",
+    "importHelpers": true,
+    "target": "ES2022",
+    "module": "ES2022",
+    "typeRoots": [
+      "node_modules/@types",
+      "node_modules/chart.js"
+    ]
+  },
+  "include": [                       // <--- ADD THIS BLOCK
+    "src/**/*"
+  ],
   "angularCompilerOptions": {
     "enableI18nLegacyMessageIdFormat": false,
     "strictInjectionParameters": true,

@@ -2897,74 +2897,39 @@ async confirmPartialPayment() {
   const cash = Number(this.markAsPaidModal.cashAmount || 0);
   const remaining = this.markAsPaidModal.remaining;
 
-  if (upi + cash !== remaining) {
+  if (Math.abs((upi + cash) - remaining) > 0.01) {
     alert(`Split must equal ₹${remaining}`);
     return;
   }
 
   this.markAsPaidModal.busy = true;
-
   try {
-
-    // 🔥 UPI PAYMENT
+    // Process UPI
     if (upi > 0) {
-      const upiRes: any = await firstValueFrom(
-        this.http.post(
-          `${this.API_BASE}/order/${this.markAsPaidModal.orderId}/initiate-payment`,
-          { amount: upi },
-          {
-            params: new HttpParams()
-              .set('restaurantId', String(this.restaurantId))
-              .set('method', 'UPI')
-              .set('channel', 'Waiter')
-          }
-        )
-      );
-
-      // ✅ COMPLETE UPI ALSO (YOU MISSED THIS)
-      await firstValueFrom(
-        this.http.put(
-          `${this.API_BASE}/order/payments/${upiRes.paymentId}/complete`,
-          {},
-          {
-            params: new HttpParams().set('restaurantId', String(this.restaurantId))
-          }
-        )
-      );
+      const upiRes: any = await firstValueFrom(this.http.post(`${this.API_BASE}/order/${this.markAsPaidModal.orderId}/initiate-payment`, { amount: upi }, {
+          params: new HttpParams().set('restaurantId', String(this.restaurantId)).set('method', 'UPI').set('channel', 'Waiter')
+      }));
+      const upiId = upiRes.paymentID || upiRes.paymentId;
+      await firstValueFrom(this.http.put(`${this.API_BASE}/order/payments/${upiId}/complete`, {}, {
+          params: new HttpParams().set('restaurantId', String(this.restaurantId))
+      }));
     }
 
-    // 🔥 CASH PAYMENT
+    // Process CASH
     if (cash > 0) {
-      const cashRes: any = await firstValueFrom(
-        this.http.post(
-          `${this.API_BASE}/order/${this.markAsPaidModal.orderId}/initiate-payment`,
-          { amount: cash },
-          {
-            params: new HttpParams()
-              .set('restaurantId', String(this.restaurantId))
-              .set('method', 'CASH')
-              .set('channel', 'Waiter')
-          }
-        )
-      );
-
-      await firstValueFrom(
-        this.http.put(
-          `${this.API_BASE}/order/payments/${cashRes.paymentId}/complete`,
-          {},
-          {
-            params: new HttpParams().set('restaurantId', String(this.restaurantId))
-          }
-        )
-      );
+      const cashRes: any = await firstValueFrom(this.http.post(`${this.API_BASE}/order/${this.markAsPaidModal.orderId}/initiate-payment`, { amount: cash }, {
+          params: new HttpParams().set('restaurantId', String(this.restaurantId)).set('method', 'CASH').set('channel', 'Waiter')
+      }));
+      const cashId = cashRes.paymentID || cashRes.paymentId;
+      await firstValueFrom(this.http.put(`${this.API_BASE}/order/payments/${cashId}/complete`, {}, {
+          params: new HttpParams().set('restaurantId', String(this.restaurantId))
+      }));
     }
 
     this.closeMarkAsPaidModal();
     this.getOrders();
-
   } catch (e: any) {
-    console.error(e);
-    alert(e.error?.message || 'Payment failed');
+    alert(e.error?.message || 'Partial payment failed');
   } finally {
     this.markAsPaidModal.busy = false;
   }
@@ -3036,7 +3001,6 @@ async removeOfferFromOrder(): Promise<void> {
 
 async confirmMarkAsPaid() {
   const amount = this.markAsPaidModal.remaining;
-
   this.markAsPaidModal.busy = true;
 
   try {
@@ -3053,22 +3017,26 @@ async confirmMarkAsPaid() {
       )
     );
 
-    // 🔥 ALWAYS COMPLETE
+    // FIX: Check for both casing variants to avoid 'undefined'
+    const actualPaymentId = res.paymentID || res.paymentId;
+
+    if (!actualPaymentId) {
+      throw new Error("Payment ID was not returned by the server.");
+    }
+
     await firstValueFrom(
       this.http.put(
-        `${this.API_BASE}/order/payments/${res.paymentId}/complete`,
+        `${this.API_BASE}/order/payments/${actualPaymentId}/complete`,
         {},
-        {
-          params: new HttpParams().set('restaurantId', String(this.restaurantId))
-        }
+        { params: new HttpParams().set('restaurantId', String(this.restaurantId)) }
       )
     );
 
     this.closeMarkAsPaidModal();
     this.getOrders();
-
-  } catch (e) {
-    console.error(e);
+  } catch (e: any) {
+    console.error("Payment Confirmation Failed:", e);
+    alert(e.error?.message || "Failed to complete payment.");
   } finally {
     this.markAsPaidModal.busy = false;
   }
